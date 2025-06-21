@@ -13,8 +13,12 @@
         <servlet-class>controller.ItemController</servlet-class>
     </servlet>
     <servlet>
-        <servlet-name>AccountController</servlet-name>
-        <servlet-class>controller.AccountController</servlet-class>
+        <servlet-name>AdminController</servlet-name>
+        <servlet-class>controller.admin.AdminController</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>TeacherController</servlet-name>
+        <servlet-class>controller.teacher.TeacherController</servlet-class>
     </servlet>
     <servlet-mapping>
         <servlet-name>TinhServlet</servlet-name>
@@ -33,7 +37,11 @@
         <url-pattern>/list</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
-        <servlet-name>AccountController</servlet-name>
+        <servlet-name>AdminController</servlet-name>
         <url-pattern>/admin</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>TeacherController</servlet-name>
+        <url-pattern>/teacher</url-pattern>
     </servlet-mapping>
 </web-app>

@@ -277,4 +277,15 @@ public class QuestionDAO extends DBContext {
         }
         return list;
     }
+
+    public int countQuestions() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM question";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 0;
+    }
 }

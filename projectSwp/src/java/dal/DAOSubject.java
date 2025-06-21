@@ -10,8 +10,7 @@ public class DAOSubject extends DBContext {
     public List<Subject> findAll() throws SQLException {
         String sql = "SELECT * FROM subject";
         List<Subject> subjects = new ArrayList<>();
-        try (PreparedStatement ps = connection.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+        try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 Subject sub = new Subject();
                 sub.setId(rs.getInt("id"));
@@ -88,5 +87,16 @@ public class DAOSubject extends DBContext {
             }
         }
         return null;
+    }
+
+    public int countSubjects() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM subject";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 0;
     }
 }

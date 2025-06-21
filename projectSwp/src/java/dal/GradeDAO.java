@@ -59,7 +59,7 @@ public class GradeDAO extends DBContext {
         String sql = "INSERT INTO grade ( name, description, teacher_id) "
                 + "VALUES (?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            
+
             ps.setString(1, grade.getName());
             ps.setString(2, grade.getDescription());
             ps.setInt(3, grade.getTeacher_id());
@@ -108,4 +108,14 @@ public class GradeDAO extends DBContext {
         return null; // nếu không tìm thấy
     }
 
+    public int countGrades() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM grade";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 0;
+    }
 }

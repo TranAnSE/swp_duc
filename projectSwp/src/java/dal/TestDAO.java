@@ -7,11 +7,13 @@ package dal;
 import model.Test;
 import java.sql.*;
 import java.util.*;
+
 /**
  *
  * @author Na
  */
 public class TestDAO extends DBContext {
+
     private Connection conn;
 
     // ✅ Constructor khởi tạo kết nối
@@ -31,7 +33,7 @@ public class TestDAO extends DBContext {
             ps.setBoolean(3, test.isIs_practice());
             ps.setInt(4, test.getCategory_id());
             ps.executeUpdate();
-            
+
             // Lấy ID của test vừa tạo
             ResultSet rs = ps.getGeneratedKeys();
             if (rs.next()) {
@@ -61,28 +63,28 @@ public class TestDAO extends DBContext {
         try {
             // Start a transaction
             conn.setAutoCommit(false);
-            
+
             // First delete related records in test_question table
             String deleteTestQuestions = "DELETE FROM test_question WHERE test_id = ?";
             try (PreparedStatement ps = conn.prepareStatement(deleteTestQuestions)) {
                 ps.setInt(1, id);
                 ps.executeUpdate();
             }
-            
+
             // Then delete related records in test_record table
             String deleteTestRecords = "DELETE FROM test_record WHERE test_id = ?";
             try (PreparedStatement ps = conn.prepareStatement(deleteTestRecords)) {
                 ps.setInt(1, id);
                 ps.executeUpdate();
             }
-            
+
             // Finally delete the test itself
             String deleteTest = "DELETE FROM test WHERE id = ?";
             try (PreparedStatement ps = conn.prepareStatement(deleteTest)) {
                 ps.setInt(1, id);
                 ps.executeUpdate();
             }
-            
+
             // Commit the transaction
             conn.commit();
         } catch (SQLException e) {
@@ -110,11 +112,11 @@ public class TestDAO extends DBContext {
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 return new Test(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("description"),
-                    rs.getBoolean("is_practice"),
-                    rs.getInt("category_id")
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("description"),
+                        rs.getBoolean("is_practice"),
+                        rs.getInt("category_id")
                 );
             }
         } catch (SQLException e) {
@@ -130,11 +132,11 @@ public class TestDAO extends DBContext {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 list.add(new Test(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("description"),
-                    rs.getBoolean("is_practice"),
-                    rs.getInt("category_id")
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("description"),
+                        rs.getBoolean("is_practice"),
+                        rs.getInt("category_id")
                 ));
             }
         } catch (SQLException e) {
@@ -152,11 +154,11 @@ public class TestDAO extends DBContext {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 list.add(new Test(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("description"),
-                    rs.getBoolean("is_practice"),
-                    rs.getInt("category_id")
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("description"),
+                        rs.getBoolean("is_practice"),
+                        rs.getInt("category_id")
                 ));
             }
         } catch (SQLException e) {
@@ -174,11 +176,11 @@ public class TestDAO extends DBContext {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 list.add(new Test(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("description"),
-                    rs.getBoolean("is_practice"),
-                    rs.getInt("category_id")
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("description"),
+                        rs.getBoolean("is_practice"),
+                        rs.getInt("category_id")
                 ));
             }
         } catch (SQLException e) {
@@ -190,7 +192,7 @@ public class TestDAO extends DBContext {
     // Kiểm tra và hiển thị thông tin test chi tiết
     public void debugTestInfo(int testId) {
         System.out.println("\n===== DEBUG TEST INFO: ID=" + testId + " =====");
-        
+
         try {
             // 1. Lấy thông tin cơ bản của test
             String testSql = "SELECT * FROM test WHERE id = ?";
@@ -204,12 +206,12 @@ public class TestDAO extends DBContext {
                     System.out.println("  Description: " + rs.getString("description"));
                     System.out.println("  Is Practice: " + rs.getBoolean("is_practice"));
                     System.out.println("  Category ID: " + rs.getInt("category_id"));
-                    
+
                     // Kiểm tra xem có lesson_id không
                     if (rs.getObject("lesson_id") != null) {
                         int lessonId = rs.getInt("lesson_id");
                         System.out.println("  Lesson ID: " + lessonId);
-                        
+
                         // Lấy thông tin lesson
                         String lessonSql = "SELECT * FROM lesson WHERE id = ?";
                         try (PreparedStatement psLesson = conn.prepareStatement(lessonSql)) {
@@ -231,7 +233,7 @@ public class TestDAO extends DBContext {
                     return;
                 }
             }
-            
+
             // 2. Kiểm tra số lượng câu hỏi trong test
             String questionCountSql = "SELECT COUNT(*) as count FROM test_question WHERE test_id = ?";
             try (PreparedStatement ps = conn.prepareStatement(questionCountSql)) {
@@ -240,7 +242,7 @@ public class TestDAO extends DBContext {
                 if (rs.next()) {
                     int count = rs.getInt("count");
                     System.out.println("Questions in test: " + count);
-                    
+
                     // Lấy chi tiết các câu hỏi
                     if (count > 0) {
                         String questionsSql = """
@@ -254,21 +256,21 @@ public class TestDAO extends DBContext {
                         try (PreparedStatement psQ = conn.prepareStatement(questionsSql)) {
                             psQ.setInt(1, testId);
                             ResultSet rsQ = psQ.executeQuery();
-                            
+
                             System.out.println("Question details:");
                             int i = 1;
                             while (rsQ.next()) {
-                                System.out.println("  " + i + ". ID: " + rsQ.getInt("id") + 
-                                                 ", Options: " + rsQ.getInt("option_count") +
-                                                 ", Lesson ID: " + rsQ.getInt("lesson_id") +
-                                                 ", Text: '" + rsQ.getString("question").substring(0, Math.min(30, rsQ.getString("question").length())) + "...'");
+                                System.out.println("  " + i + ". ID: " + rsQ.getInt("id")
+                                        + ", Options: " + rsQ.getInt("option_count")
+                                        + ", Lesson ID: " + rsQ.getInt("lesson_id")
+                                        + ", Text: '" + rsQ.getString("question").substring(0, Math.min(30, rsQ.getString("question").length())) + "...'");
                                 i++;
                             }
                         }
                     }
                 }
             }
-            
+
             // 3. Kiểm tra các bản ghi test đã làm
             String testRecordSql = "SELECT COUNT(*) as count FROM test_record WHERE test_id = ?";
             try (PreparedStatement ps = conn.prepareStatement(testRecordSql)) {
@@ -278,15 +280,15 @@ public class TestDAO extends DBContext {
                     System.out.println("Test records: " + rs.getInt("count"));
                 }
             }
-            
+
         } catch (SQLException e) {
             System.out.println("ERROR in debugTestInfo: " + e.getMessage());
             e.printStackTrace();
         }
-        
+
         System.out.println("===== END DEBUG TEST =====\n");
     }
-    
+
     // Thêm phương thức để lấy lesson_id của test
     public int getLessonIdByTest(int testId) {
         String sql = "SELECT lesson_id FROM test WHERE id = ?";
@@ -300,5 +302,16 @@ public class TestDAO extends DBContext {
             e.printStackTrace();
         }
         return -1; // Trả về -1 nếu không tìm thấy
+    }
+
+    public int countTests() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM test";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 0;
     }
 }

@@ -33,12 +33,14 @@
                                         <c:if test="${sessionScope.account.role == 'admin'}">
                                             <li><a href="#">Admin</a>
                                                 <ul class="submenu">
+                                                    <li><a href="/admin">Dashboard</a></li>
                                                     <li><a href="/admin?action=listAccount">Manage Accounts</a></li>
                                                     <li><a href="/Question">Manage Questions</a></li>
                                                     <li><a href="/test">Manage Tests</a></li>
-                                                    <li><a href="/student">Manage Student</a></li>
+                                                    <li><a href="/student">Manage Students</a></li>
                                                     <li><a href="/invoice">Invoices</a></li>
                                                     <li><a href="/category">Test Categories</a></li>
+                                                    <li><a href="/admin?action=analytics">Analytics</a></li>
                                                 </ul>
                                             </li>
                                         </c:if>
@@ -94,11 +96,11 @@
                                         <li><a href="/contact">Contact</a></li>
 
                                         <!-- Right-side Buttons -->
-                                        
-                                        
-                                        
-                                        
-                                        
+
+
+
+
+
                                         <c:choose>
                                             <c:when test="${sessionScope.role == 'student'}">
                                                 <li class="button-header">
@@ -112,14 +114,14 @@
                                             </c:otherwise>
                                         </c:choose>
 
-   
-   
-   
-   
-  
-  
-   
-   
+
+
+
+
+
+
+
+
                                         <c:if test="${not empty sessionScope.student or not empty sessionScope.account}">
                                             <li class="button-header">
                                                 <a href="/logout" class="btn btn3">Logout</a>

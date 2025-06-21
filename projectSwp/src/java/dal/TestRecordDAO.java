@@ -6,13 +6,16 @@ package dal;
 
 import model.TestRecord;
 import java.sql.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+
 /**
  *
  * @author Na
  */
 public class TestRecordDAO extends DBContext {
+
     private Connection conn;
 
     public TestRecordDAO() {
@@ -30,9 +33,9 @@ public class TestRecordDAO extends DBContext {
             ps.setInt(1, studentId);
             ps.setInt(2, testId);
             ps.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
-            
+
             ps.executeUpdate();
-            
+
             ResultSet rs = ps.getGeneratedKeys();
             if (rs.next()) {
                 return rs.getInt(1);
@@ -50,7 +53,7 @@ public class TestRecordDAO extends DBContext {
             ps.setTimestamp(1, startTime);
             ps.setInt(2, testRecordId);
             int rowsAffected = ps.executeUpdate();
-            
+
             System.out.println("Updated start time for test record ID " + testRecordId + ": " + startTime);
             return rowsAffected > 0;
         } catch (SQLException e) {
@@ -63,7 +66,7 @@ public class TestRecordDAO extends DBContext {
     // Hoàn thành test và tính điểm
     public void finishTestRecord(int testRecordId, double score) {
         System.out.println("\n** SAVING TEST RECORD: ID=" + testRecordId + ", SCORE=" + score + " **\n");
-        
+
         // Method 1: Standard JDBC update
         String sql = "UPDATE test_record SET finish_at = ?, score = ? WHERE id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -71,9 +74,9 @@ public class TestRecordDAO extends DBContext {
             ps.setDouble(2, score);
             ps.setInt(3, testRecordId);
             int updated = ps.executeUpdate();
-            
+
             System.out.println("Method 1: Updated " + updated + " rows");
-            
+
             // Verify save was successful
             String verifySql = "SELECT score FROM test_record WHERE id = ?";
             try (PreparedStatement psVerify = conn.prepareStatement(verifySql)) {
@@ -88,12 +91,12 @@ public class TestRecordDAO extends DBContext {
             }
         } catch (SQLException e) {
             System.out.println("ERROR in finishTestRecord: " + e.getMessage());
-            
+
             // Method 2: Fallback to direct statement
             try {
                 String directSql = "UPDATE test_record SET finish_at = NOW(), score = " + score + " WHERE id = " + testRecordId;
                 System.out.println("Trying direct SQL: " + directSql);
-                
+
                 try (Statement stmt = conn.createStatement()) {
                     int updated = stmt.executeUpdate(directSql);
                     System.out.println("Method 2: Updated " + updated + " rows with direct SQL");
@@ -116,24 +119,24 @@ public class TestRecordDAO extends DBContext {
                 record.setId(rs.getInt("id"));
                 record.setStudent_id(rs.getInt("student_id"));
                 record.setTest_id(rs.getInt("test_id"));
-                
+
                 Timestamp startedAt = rs.getTimestamp("started_at");
                 if (startedAt != null) {
                     record.setStarted_at(startedAt.toLocalDateTime());
                 }
-                
+
                 Timestamp finishAt = rs.getTimestamp("finish_at");
                 if (finishAt != null) {
                     record.setFinish_at(finishAt.toLocalDateTime());
                 }
-                
+
                 double score = rs.getDouble("score");
                 record.setScore(score);
-                
+
                 // DEBUG: Print retrieved score
                 String debugMsg = "GET_TEST_RECORD_DEBUG: id=" + id + ", retrieved score=" + score;
                 System.err.println(debugMsg);
-                
+
                 // Write to file for debug
                 try {
                     java.io.FileWriter fw = new java.io.FileWriter("get_test_record_debug.txt", true);
@@ -142,7 +145,7 @@ public class TestRecordDAO extends DBContext {
                 } catch (Exception fe) {
                     System.err.println("File write error: " + fe.getMessage());
                 }
-                
+
                 return record;
             }
         } catch (SQLException e) {
@@ -164,17 +167,17 @@ public class TestRecordDAO extends DBContext {
                 record.setId(rs.getInt("id"));
                 record.setStudent_id(rs.getInt("student_id"));
                 record.setTest_id(rs.getInt("test_id"));
-                
+
                 Timestamp startedAt = rs.getTimestamp("started_at");
                 if (startedAt != null) {
                     record.setStarted_at(startedAt.toLocalDateTime());
                 }
-                
+
                 Timestamp finishAt = rs.getTimestamp("finish_at");
                 if (finishAt != null) {
                     record.setFinish_at(finishAt.toLocalDateTime());
                 }
-                
+
                 record.setScore(rs.getDouble("score"));
                 records.add(record);
             }
@@ -212,12 +215,12 @@ public class TestRecordDAO extends DBContext {
                 record.setId(rs.getInt("id"));
                 record.setStudent_id(rs.getInt("student_id"));
                 record.setTest_id(rs.getInt("test_id"));
-                
+
                 Timestamp startedAt = rs.getTimestamp("started_at");
                 if (startedAt != null) {
                     record.setStarted_at(startedAt.toLocalDateTime());
                 }
-                
+
                 record.setScore(rs.getDouble("score"));
                 return record;
             }
@@ -226,4 +229,78 @@ public class TestRecordDAO extends DBContext {
         }
         return null;
     }
-} 
+
+    public List<TestRecord> getRecentTestRecords(int limit) throws SQLException {
+        List<TestRecord> records = new ArrayList<>();
+        String sql = "SELECT * FROM test_record ORDER BY started_at DESC LIMIT ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                TestRecord record = new TestRecord();
+                record.setId(rs.getInt("id"));
+                record.setStudent_id(rs.getInt("student_id"));
+                record.setTest_id(rs.getInt("test_id"));
+                record.setScore(rs.getDouble("score"));
+                if (rs.getTimestamp("started_at") != null) {
+                    record.setStarted_at(rs.getTimestamp("started_at").toLocalDateTime());
+                }
+                if (rs.getTimestamp("finish_at") != null) {
+                    record.setFinish_at(rs.getTimestamp("finish_at").toLocalDateTime());
+                }
+                records.add(record);
+            }
+        }
+        return records;
+    }
+
+    public double getAverageTestScore() throws SQLException {
+        String sql = "SELECT AVG(score) FROM test_record WHERE score IS NOT NULL";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getDouble(1);
+            }
+        }
+        return 0.0;
+    }
+
+    public double getTestCompletionRate() throws SQLException {
+        String sql = "SELECT "
+                + "(COUNT(CASE WHEN finish_at IS NOT NULL THEN 1 END) * 100.0 / COUNT(*)) as completion_rate "
+                + "FROM test_record";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getDouble("completion_rate");
+            }
+        }
+        return 0.0;
+    }
+
+    public int getTestCountByMonth(LocalDate month) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM test_record WHERE YEAR(started_at) = ? AND MONTH(started_at) = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, month.getYear());
+            ps.setInt(2, month.getMonthValue());
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 0;
+    }
+
+    public int getCompletedTestCountByMonth(LocalDate month) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM test_record WHERE YEAR(started_at) = ? AND MONTH(started_at) = ? AND finish_at IS NOT NULL";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, month.getYear());
+            ps.setInt(2, month.getMonthValue());
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 0;
+    }
+}

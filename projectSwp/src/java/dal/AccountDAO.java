@@ -9,7 +9,9 @@ import config.PasswordUtil;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import model.Account;
@@ -373,9 +375,9 @@ public class AccountDAO extends DBContext {
     }
 
     // Google Account methods
-    
     /**
      * Tìm Google Account theo ID
+     *
      * @param googleId Google ID cần tìm
      * @return GoogleAccount nếu tìm thấy, null nếu không tìm thấy
      */
@@ -403,9 +405,10 @@ public class AccountDAO extends DBContext {
         }
         return null;
     }
-    
+
     /**
      * Thêm Google Account mới
+     *
      * @param googleAccount GoogleAccount cần thêm
      * @return true nếu thêm thành công, false nếu thất bại
      */
@@ -422,7 +425,7 @@ public class AccountDAO extends DBContext {
             statement.setString(7, googleAccount.getPicture());
             statement.setInt(8, googleAccount.getAccount_id());
             statement.setBoolean(9, googleAccount.isVerified_email());
-            
+
             int rowsAffected = statement.executeUpdate();
             return rowsAffected > 0;
         } catch (SQLException e) {
@@ -430,9 +433,10 @@ public class AccountDAO extends DBContext {
         }
         return false;
     }
-    
+
     /**
      * Cập nhật thông tin Google Account
+     *
      * @param googleAccount GoogleAccount cần cập nhật
      * @return true nếu cập nhật thành công, false nếu thất bại
      */
@@ -448,7 +452,7 @@ public class AccountDAO extends DBContext {
             statement.setString(6, googleAccount.getPicture());
             statement.setBoolean(7, googleAccount.isVerified_email());
             statement.setString(8, googleAccount.getGoogle_id());
-            
+
             int rowsAffected = statement.executeUpdate();
             return rowsAffected > 0;
         } catch (SQLException e) {
@@ -456,9 +460,10 @@ public class AccountDAO extends DBContext {
         }
         return false;
     }
-    
+
     /**
      * Xóa Google Account
+     *
      * @param googleId Google ID cần xóa
      * @return true nếu xóa thành công, false nếu thất bại
      */
@@ -482,4 +487,47 @@ public class AccountDAO extends DBContext {
         return passwordEncode.checkPassword(providedPassword, storedPassword);
     }
 
+    public Map<String, Integer> getUserCountByRole() throws SQLException {
+        Map<String, Integer> roleCount = new HashMap<>();
+        String sql = "SELECT role, COUNT(*) as count FROM account GROUP BY role";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                roleCount.put(rs.getString("role"), rs.getInt("count"));
+            }
+        }
+        return roleCount;
+    }
+
+    public List<Account> getRecentRegistrations(int limit) throws SQLException {
+        List<Account> accounts = new ArrayList<>();
+        String sql = "SELECT * FROM account ORDER BY id DESC LIMIT ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                // Create account object
+                Account acc = new Account();
+                acc.setId(rs.getInt("id"));
+                acc.setEmail(rs.getString("email"));
+                acc.setFull_name(rs.getString("full_name"));
+                acc.setRole(rs.getString("role"));
+                accounts.add(acc);
+            }
+        }
+        return accounts;
+    }
+
+    public int getRegistrationCountByMonth(LocalDate month) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM account WHERE YEAR(created_at) = ? AND MONTH(created_at) = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, month.getYear());
+            ps.setInt(2, month.getMonthValue());
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 0;
+    }
 }

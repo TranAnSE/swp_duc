@@ -107,4 +107,17 @@ public class LessonDAO extends DBContext {
         }
         return list;
     }
+
+    public int countLessons() {
+        String sql = "SELECT COUNT(*) FROM lesson";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
 }
