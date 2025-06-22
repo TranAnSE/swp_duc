@@ -84,6 +84,9 @@ public class AccountController extends HttpServlet {
                 case "teacherDashboard":
                     showTeacherDashboard(request, response);
                     break;
+                case "parentDashboard":
+                    showParentDashboard(request, response);
+                    break;
                 default:
                     response.sendRedirect("/index.html");
                     break;
@@ -497,6 +500,70 @@ public class AccountController extends HttpServlet {
             request.setAttribute("subjectDistributionJson", "[]");
 
             request.getRequestDispatcher("/teacher/home.jsp").forward(request, response);
+        }
+    }
+
+    private void showParentDashboard(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, ServletException, IOException {
+        try {
+            HttpSession session = request.getSession();
+            Account parent = (Account) session.getAttribute("account");
+
+            if (parent == null || !"parent".equals(parent.getRole())) {
+                response.sendRedirect("/error.jsp");
+                return;
+            }
+
+            System.out.println("Loading parent dashboard data for parent: " + parent.getFull_name());
+
+            // Get comprehensive dashboard data
+            Map<String, Object> dashboardData = dashboardDAO.getParentDashboardData(parent.getId());
+
+            // Convert data to JSON for charts
+            Gson gson = new Gson();
+
+            // Monthly progress chart data
+            List<Map<String, Object>> monthlyProgress = (List<Map<String, Object>>) dashboardData.get("monthlyProgress");
+            String monthlyProgressJson = gson.toJson(monthlyProgress != null ? monthlyProgress : new ArrayList<>());
+
+            // Subject performance chart data
+            List<Map<String, Object>> subjectPerformance = (List<Map<String, Object>>) dashboardData.get("subjectPerformance");
+            String subjectPerformanceJson = gson.toJson(subjectPerformance != null ? subjectPerformance : new ArrayList<>());
+
+            // Grade distribution chart data
+            Map<String, Object> gradeDistribution = (Map<String, Object>) dashboardData.get("gradeDistribution");
+            String gradeDistributionJson = gson.toJson(gradeDistribution != null ? gradeDistribution : new HashMap<>());
+
+            // Test performance chart data
+            List<Map<String, Object>> testPerformance = (List<Map<String, Object>>) dashboardData.get("testPerformance");
+            String testPerformanceJson = gson.toJson(testPerformance != null ? testPerformance : new ArrayList<>());
+
+            // Set all attributes
+            request.setAttribute("dashboardData", dashboardData);
+            request.setAttribute("parent", parent);
+
+            // JSON data for charts
+            request.setAttribute("monthlyProgressJson", monthlyProgressJson);
+            request.setAttribute("subjectPerformanceJson", subjectPerformanceJson);
+            request.setAttribute("gradeDistributionJson", gradeDistributionJson);
+            request.setAttribute("testPerformanceJson", testPerformanceJson);
+
+            System.out.println("Parent dashboard data loaded successfully");
+            request.getRequestDispatcher("/parent/home.jsp").forward(request, response);
+
+        } catch (Exception e) {
+            System.err.println("Error in showParentDashboard: " + e.getMessage());
+            e.printStackTrace();
+            request.setAttribute("error", "Error loading parent dashboard: " + e.getMessage());
+
+            // Set empty default values to prevent JSP errors
+            request.setAttribute("dashboardData", new HashMap<String, Object>());
+            request.setAttribute("monthlyProgressJson", "[]");
+            request.setAttribute("subjectPerformanceJson", "[]");
+            request.setAttribute("gradeDistributionJson", "{}");
+            request.setAttribute("testPerformanceJson", "[]");
+
+            request.getRequestDispatcher("/parent/home.jsp").forward(request, response);
         }
     }
 }

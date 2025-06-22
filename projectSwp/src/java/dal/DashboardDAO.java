@@ -440,4 +440,385 @@ public class DashboardDAO extends DBContext {
 
         return stats;
     }
+
+    /**
+     * Get parent dashboard statistics
+     */
+    public Map<String, Object> getParentDashboardData(int parentId) throws SQLException {
+        Map<String, Object> dashboardData = new HashMap<>();
+
+        try {
+            // Get children count and basic info
+            Map<String, Object> childrenStats = getChildrenStatistics(parentId);
+            dashboardData.put("childrenStats", childrenStats);
+
+            // Get test performance data
+            List<Map<String, Object>> testPerformance = getChildrenTestPerformance(parentId);
+            dashboardData.put("testPerformance", testPerformance);
+
+            // Get recent test activities
+            List<Map<String, Object>> recentActivities = getChildrenRecentActivities(parentId);
+            dashboardData.put("recentActivities", recentActivities);
+
+            // Get monthly progress
+            List<Map<String, Object>> monthlyProgress = getChildrenMonthlyProgress(parentId);
+            dashboardData.put("monthlyProgress", monthlyProgress);
+
+            // Get subject performance
+            List<Map<String, Object>> subjectPerformance = getChildrenSubjectPerformance(parentId);
+            dashboardData.put("subjectPerformance", subjectPerformance);
+
+            // Get grade distribution
+            Map<String, Object> gradeDistribution = getChildrenGradeDistribution(parentId);
+            dashboardData.put("gradeDistribution", gradeDistribution);
+
+            // Get invoice summary
+            Map<String, Object> invoiceSummary = getParentInvoiceSummary(parentId);
+            dashboardData.put("invoiceSummary", invoiceSummary);
+
+        } catch (SQLException e) {
+            System.err.println("Error in getParentDashboardData: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+
+        return dashboardData;
+    }
+
+    /**
+     * Get children statistics for parent
+     */
+    public Map<String, Object> getChildrenStatistics(int parentId) throws SQLException {
+        Map<String, Object> stats = new HashMap<>();
+
+        try {
+            String sql = """
+            SELECT 
+                COUNT(DISTINCT s.id) as total_children,
+                COUNT(DISTINCT tr.id) as total_tests_taken,
+                COUNT(DISTINCT CASE WHEN tr.finish_at IS NOT NULL THEN tr.id END) as completed_tests,
+                COALESCE(AVG(CASE WHEN tr.finish_at IS NOT NULL THEN tr.score END), 0) as avg_score,
+                COUNT(DISTINCT CASE WHEN DATE(tr.started_at) = CURDATE() THEN tr.id END) as tests_today
+            FROM student s
+            LEFT JOIN test_record tr ON s.id = tr.student_id
+            WHERE s.parent_id = ?
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, parentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        stats.put("totalChildren", rs.getInt("total_children"));
+                        stats.put("totalTestsTaken", rs.getInt("total_tests_taken"));
+                        stats.put("completedTests", rs.getInt("completed_tests"));
+                        stats.put("avgScore", Math.round(rs.getDouble("avg_score") * 100.0) / 100.0);
+                        stats.put("testsToday", rs.getInt("tests_today"));
+                    }
+                }
+            }
+
+            // Calculate completion rate
+            int totalTests = (Integer) stats.getOrDefault("totalTestsTaken", 0);
+            int completedTests = (Integer) stats.getOrDefault("completedTests", 0);
+            double completionRate = totalTests > 0 ? (double) completedTests / totalTests * 100 : 0;
+            stats.put("completionRate", Math.round(completionRate * 100.0) / 100.0);
+
+        } catch (SQLException e) {
+            System.err.println("Error in getChildrenStatistics: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return stats;
+    }
+
+    /**
+     * Get children test performance data
+     */
+    public List<Map<String, Object>> getChildrenTestPerformance(int parentId) throws SQLException {
+        List<Map<String, Object>> performance = new ArrayList<>();
+
+        try {
+            String sql = """
+            SELECT 
+                s.full_name as student_name,
+                s.id as student_id,
+                COUNT(DISTINCT tr.id) as total_tests,
+                COUNT(DISTINCT CASE WHEN tr.finish_at IS NOT NULL THEN tr.id END) as completed_tests,
+                COALESCE(AVG(CASE WHEN tr.finish_at IS NOT NULL THEN tr.score END), 0) as avg_score,
+                COALESCE(MAX(tr.score), 0) as best_score,
+                g.name as grade_name
+            FROM student s
+            LEFT JOIN test_record tr ON s.id = tr.student_id
+            LEFT JOIN grade g ON s.grade_id = g.id
+            WHERE s.parent_id = ?
+            GROUP BY s.id, s.full_name, g.name
+            ORDER BY avg_score DESC
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, parentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("studentName", rs.getString("student_name"));
+                        data.put("studentId", rs.getInt("student_id"));
+                        data.put("totalTests", rs.getInt("total_tests"));
+                        data.put("completedTests", rs.getInt("completed_tests"));
+                        data.put("avgScore", Math.round(rs.getDouble("avg_score") * 100.0) / 100.0);
+                        data.put("bestScore", Math.round(rs.getDouble("best_score") * 100.0) / 100.0);
+                        data.put("gradeName", rs.getString("grade_name"));
+                        performance.add(data);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error in getChildrenTestPerformance: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return performance;
+    }
+
+    /**
+     * Get children recent activities
+     */
+    public List<Map<String, Object>> getChildrenRecentActivities(int parentId) throws SQLException {
+        List<Map<String, Object>> activities = new ArrayList<>();
+
+        try {
+            String sql = """
+            SELECT 
+                s.full_name as student_name,
+                t.name as test_name,
+                tr.score,
+                tr.finish_at,
+                tr.started_at,
+                CASE WHEN t.is_practice = 1 THEN 'Practice' ELSE 'Official' END as test_type
+            FROM student s
+            JOIN test_record tr ON s.id = tr.student_id
+            JOIN test t ON tr.test_id = t.id
+            WHERE s.parent_id = ?
+            ORDER BY COALESCE(tr.finish_at, tr.started_at) DESC
+            LIMIT 10
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, parentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> activity = new HashMap<>();
+                        activity.put("studentName", rs.getString("student_name"));
+                        activity.put("testName", rs.getString("test_name"));
+                        activity.put("score", rs.getObject("score"));
+                        activity.put("finishAt", rs.getTimestamp("finish_at"));
+                        activity.put("startedAt", rs.getTimestamp("started_at"));
+                        activity.put("testType", rs.getString("test_type"));
+                        activities.add(activity);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error in getChildrenRecentActivities: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return activities;
+    }
+
+    /**
+     * Get children monthly progress
+     */
+    public List<Map<String, Object>> getChildrenMonthlyProgress(int parentId) throws SQLException {
+        List<Map<String, Object>> progress = new ArrayList<>();
+
+        try {
+            String sql = """
+            SELECT 
+                DATE_FORMAT(tr.finish_at, '%Y-%m') as month,
+                COUNT(DISTINCT tr.id) as tests_completed,
+                COALESCE(AVG(tr.score), 0) as avg_score,
+                COUNT(DISTINCT s.id) as active_children
+            FROM student s
+            LEFT JOIN test_record tr ON s.id = tr.student_id AND tr.finish_at IS NOT NULL
+            WHERE s.parent_id = ?
+            AND tr.finish_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+            GROUP BY DATE_FORMAT(tr.finish_at, '%Y-%m')
+            ORDER BY month DESC
+            LIMIT 6
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, parentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("month", rs.getString("month"));
+                        data.put("testsCompleted", rs.getInt("tests_completed"));
+                        data.put("avgScore", Math.round(rs.getDouble("avg_score") * 100.0) / 100.0);
+                        data.put("activeChildren", rs.getInt("active_children"));
+                        progress.add(data);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error in getChildrenMonthlyProgress: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return progress;
+    }
+
+    /**
+     * Get children subject performance
+     */
+    public List<Map<String, Object>> getChildrenSubjectPerformance(int parentId) throws SQLException {
+        List<Map<String, Object>> subjectPerf = new ArrayList<>();
+
+        try {
+            String sql = """
+            SELECT 
+                sub.name as subject_name,
+                COUNT(DISTINCT tr.id) as tests_taken,
+                COALESCE(AVG(tr.score), 0) as avg_score,
+                COUNT(DISTINCT s.id) as students_count
+            FROM student s
+            JOIN grade g ON s.grade_id = g.id
+            JOIN subject sub ON g.id = sub.grade_id
+            LEFT JOIN chapter ch ON sub.id = ch.subject_id
+            LEFT JOIN lesson l ON ch.id = l.chapter_id
+            LEFT JOIN question q ON l.id = q.lesson_id
+            LEFT JOIN test_question tq ON q.id = tq.question_id
+            LEFT JOIN test_record tr ON tq.test_id = tr.test_id AND tr.student_id = s.id AND tr.finish_at IS NOT NULL
+            WHERE s.parent_id = ?
+            GROUP BY sub.id, sub.name
+            HAVING tests_taken > 0
+            ORDER BY avg_score DESC
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, parentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("subjectName", rs.getString("subject_name"));
+                        data.put("testsTaken", rs.getInt("tests_taken"));
+                        data.put("avgScore", Math.round(rs.getDouble("avg_score") * 100.0) / 100.0);
+                        data.put("studentsCount", rs.getInt("students_count"));
+                        subjectPerf.add(data);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error in getChildrenSubjectPerformance: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return subjectPerf;
+    }
+
+    /**
+     * Get children grade distribution
+     */
+    public Map<String, Object> getChildrenGradeDistribution(int parentId) throws SQLException {
+        Map<String, Object> distribution = new HashMap<>();
+
+        try {
+            String sql = """
+            SELECT 
+                g.name as grade_name,
+                COUNT(s.id) as student_count
+            FROM student s
+            JOIN grade g ON s.grade_id = g.id
+            WHERE s.parent_id = ?
+            GROUP BY g.id, g.name
+            ORDER BY g.name
+        """;
+
+            List<Map<String, Object>> gradeData = new ArrayList<>();
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, parentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("gradeName", rs.getString("grade_name"));
+                        data.put("studentCount", rs.getInt("student_count"));
+                        gradeData.add(data);
+                    }
+                }
+            }
+            distribution.put("gradeData", gradeData);
+
+        } catch (SQLException e) {
+            System.err.println("Error in getChildrenGradeDistribution: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return distribution;
+    }
+
+    /**
+     * Get parent invoice summary
+     */
+    public Map<String, Object> getParentInvoiceSummary(int parentId) throws SQLException {
+        Map<String, Object> summary = new HashMap<>();
+
+        try {
+            String sql = """
+            SELECT 
+                COUNT(*) as total_invoices,
+                COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_invoices,
+                COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_invoices,
+                COALESCE(SUM(CASE WHEN status = 'paid' AND total_amount IS NOT NULL AND total_amount != '' 
+                    THEN CAST(total_amount AS DECIMAL(10,2)) END), 0) as total_paid_amount,
+                COALESCE(SUM(CASE WHEN status = 'pending' AND total_amount IS NOT NULL AND total_amount != '' 
+                    THEN CAST(total_amount AS DECIMAL(10,2)) END), 0) as pending_amount
+            FROM invoice
+            WHERE parent_id = ?
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, parentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        summary.put("totalInvoices", rs.getInt("total_invoices"));
+                        summary.put("paidInvoices", rs.getInt("paid_invoices"));
+                        summary.put("pendingInvoices", rs.getInt("pending_invoices"));
+                        summary.put("totalPaidAmount", rs.getDouble("total_paid_amount"));
+                        summary.put("pendingAmount", rs.getDouble("pending_amount"));
+                    }
+                }
+            }
+
+            // Get recent invoices
+            String recentSql = """
+            SELECT id, total_amount, status, created_at
+            FROM invoice
+            WHERE parent_id = ?
+            ORDER BY created_at DESC
+            LIMIT 5
+        """;
+
+            List<Map<String, Object>> recentInvoices = new ArrayList<>();
+            try (PreparedStatement ps = connection.prepareStatement(recentSql)) {
+                ps.setInt(1, parentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> invoice = new HashMap<>();
+                        invoice.put("id", rs.getInt("id"));
+                        invoice.put("amount", rs.getString("total_amount"));
+                        invoice.put("status", rs.getString("status"));
+                        invoice.put("createdAt", rs.getTimestamp("created_at"));
+                        recentInvoices.add(invoice);
+                    }
+                }
+            }
+            summary.put("recentInvoices", recentInvoices);
+
+        } catch (SQLException e) {
+            System.err.println("Error in getParentInvoiceSummary: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return summary;
+    }
 }

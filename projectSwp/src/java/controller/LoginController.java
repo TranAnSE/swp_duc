@@ -161,7 +161,7 @@ public class LoginController extends HttpServlet {
                 redirectToPage(response, request, "/admin?action=teacherDashboard");
                 break;
             case "parent":
-                redirectToPage(response, request, "/parent/home.jsp");
+                redirectToPage(response, request, "/admin?action=parentDashboard");
                 break;
             case "student":
                 redirectToPage(response, request, "/student/home.jsp");

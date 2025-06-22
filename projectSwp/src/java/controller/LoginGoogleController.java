@@ -92,7 +92,7 @@ public class LoginGoogleController extends HttpServlet {
                 redirectToPage(response, request, "/teacher/home.jsp");
                 break;
             case "parent":
-                redirectToPage(response, request, "/parent/home.jsp");
+                redirectToPage(response, request, "/admin?action=parentDashboard");
                 break;
 //            case "student":
 //                redirectToPage(response, request, "/student/home.jsp");

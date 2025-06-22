@@ -78,6 +78,7 @@
                                         <c:if test="${sessionScope.account.role == 'parent'}">
                                             <li><a href="#">Parent</a>
                                                 <ul class="submenu">
+                                                    <li><a href="/admin?action=parentDashboard">Dashboard</a></li>
                                                     <li><a href="/invoice">Invoices</a></li>
                                                     <li><a href="/Grade">Grades</a></li>
                                                     <li><a href="/parent?action=myChildren">My Children</a></li>
