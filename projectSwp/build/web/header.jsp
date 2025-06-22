@@ -47,6 +47,7 @@
                                         <c:if test="${sessionScope.account.role == 'teacher'}">
                                             <li><a href="#">Teacher</a>
                                                 <ul class="submenu">
+                                                    <li><a href="/admin?action=teacherDashboard">Dashboard</a></li>
                                                     <li><a href="/student">Manage Student</a></li>
                                                     <li><a href="/LessonURL">My Lessons</a></li>
                                                     <li><a href="/Question">Question Bank</a></li>

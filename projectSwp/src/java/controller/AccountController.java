@@ -25,6 +25,7 @@ import model.Account;
 import model.Image;
 import dal.DashboardDAO;
 import com.google.gson.Gson;
+import jakarta.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -79,6 +80,9 @@ public class AccountController extends HttpServlet {
                     break;
                 case "dashboard":
                     showDashboard(request, response);
+                    break;
+                case "teacherDashboard":
+                    showTeacherDashboard(request, response);
                     break;
                 default:
                     response.sendRedirect("/index.html");
@@ -437,6 +441,62 @@ public class AccountController extends HttpServlet {
             request.setAttribute("testStatisticsJson", "{}");
 
             request.getRequestDispatcher("/admin/home.jsp").forward(request, response);
+        }
+    }
+
+    private void showTeacherDashboard(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, ServletException, IOException {
+        try {
+            HttpSession session = request.getSession();
+            Account teacher = (Account) session.getAttribute("account");
+
+            if (teacher == null || !"teacher".equals(teacher.getRole())) {
+                response.sendRedirect("/error.jsp");
+                return;
+            }
+
+            System.out.println("Loading teacher dashboard data for teacher: " + teacher.getFull_name());
+
+            Map<String, Integer> teacherData = dashboardDAO.getTotalCounts();
+            List<Map<String, Object>> studentPerformance = dashboardDAO.getGradeDistribution();
+            List<Map<String, Object>> recentActivities = dashboardDAO.getRecentTestActivities();
+            List<Map<String, Object>> monthlyCompletions = dashboardDAO.getMonthlyTestCompletions();
+            List<Map<String, Object>> subjectDistribution = dashboardDAO.getSubjectDistribution();
+
+            // Convert data to JSON for charts with null safety
+            Gson gson = new Gson();
+            String studentPerformanceJson = gson.toJson(studentPerformance != null ? studentPerformance : new ArrayList<>());
+            String monthlyCompletionsJson = gson.toJson(monthlyCompletions != null ? monthlyCompletions : new ArrayList<>());
+            String subjectDistributionJson = gson.toJson(subjectDistribution != null ? subjectDistribution : new ArrayList<>());
+
+            // Set attributes with null safety
+            request.setAttribute("teacherData", teacherData != null ? teacherData : new HashMap<>());
+            request.setAttribute("studentPerformance", studentPerformance != null ? studentPerformance : new ArrayList<>());
+            request.setAttribute("recentActivities", recentActivities != null ? recentActivities : new ArrayList<>());
+            request.setAttribute("teacher", teacher);
+
+            // JSON data for charts
+            request.setAttribute("studentPerformanceJson", studentPerformanceJson);
+            request.setAttribute("monthlyCompletionsJson", monthlyCompletionsJson);
+            request.setAttribute("subjectDistributionJson", subjectDistributionJson);
+
+            System.out.println("Teacher dashboard data loaded successfully");
+            request.getRequestDispatcher("/teacher/home.jsp").forward(request, response);
+
+        } catch (Exception e) {
+            System.err.println("Error in showTeacherDashboard: " + e.getMessage());
+            e.printStackTrace();
+            request.setAttribute("error", "Error loading teacher dashboard: " + e.getMessage());
+
+            // Set empty default values to prevent JSP errors
+            request.setAttribute("teacherData", new HashMap<String, Object>());
+            request.setAttribute("studentPerformance", new ArrayList<>());
+            request.setAttribute("recentActivities", new ArrayList<>());
+            request.setAttribute("studentPerformanceJson", "[]");
+            request.setAttribute("monthlyCompletionsJson", "[]");
+            request.setAttribute("subjectDistributionJson", "[]");
+
+            request.getRequestDispatcher("/teacher/home.jsp").forward(request, response);
         }
     }
 }

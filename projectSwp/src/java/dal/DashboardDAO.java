@@ -192,11 +192,15 @@ public class DashboardDAO extends DBContext {
         List<Map<String, Object>> activities = new ArrayList<>();
 
         try {
-            String sql = "SELECT tr.id, s.full_name as student_name, t.name as test_name, "
-                    + "tr.score, tr.finish_at "
+            String sql = "SELECT s.full_name as student_name, "
+                    + "t.name as test_name, "
+                    + "tr.score, "
+                    + "tr.finish_at, "
+                    + "g.name as grade_name "
                     + "FROM test_record tr "
                     + "JOIN student s ON tr.student_id = s.id "
                     + "JOIN test t ON tr.test_id = t.id "
+                    + "JOIN grade g ON s.grade_id = g.id "
                     + "WHERE tr.finish_at IS NOT NULL "
                     + "ORDER BY tr.finish_at DESC LIMIT 10";
 
@@ -207,6 +211,7 @@ public class DashboardDAO extends DBContext {
                     activity.put("testName", rs.getString("test_name"));
                     activity.put("score", rs.getDouble("score"));
                     activity.put("finishAt", rs.getTimestamp("finish_at"));
+                    activity.put("gradeName", rs.getString("grade_name"));
                     activities.add(activity);
                 }
             }
@@ -256,9 +261,13 @@ public class DashboardDAO extends DBContext {
         List<Map<String, Object>> gradeData = new ArrayList<>();
 
         try {
-            String sql = "SELECT g.name as grade_name, COUNT(s.id) as student_count "
+            String sql = "SELECT g.name as grade_name, "
+                    + "COUNT(DISTINCT s.id) as total_students, "
+                    + "COUNT(DISTINCT tr.id) as total_tests_taken, "
+                    + "COALESCE(AVG(tr.score), 0) as avg_score "
                     + "FROM grade g "
                     + "LEFT JOIN student s ON g.id = s.grade_id "
+                    + "LEFT JOIN test_record tr ON s.id = tr.student_id AND tr.finish_at IS NOT NULL "
                     + "GROUP BY g.id, g.name "
                     + "ORDER BY g.name";
 
@@ -266,7 +275,9 @@ public class DashboardDAO extends DBContext {
                 while (rs.next()) {
                     Map<String, Object> data = new HashMap<>();
                     data.put("gradeName", rs.getString("grade_name"));
-                    data.put("studentCount", rs.getInt("student_count"));
+                    data.put("totalStudents", rs.getInt("total_students"));
+                    data.put("totalTestsTaken", rs.getInt("total_tests_taken"));
+                    data.put("avgScore", Math.round(rs.getDouble("avg_score") * 100.0) / 100.0);
                     gradeData.add(data);
                 }
             }
@@ -276,6 +287,39 @@ public class DashboardDAO extends DBContext {
         }
 
         return gradeData;
+    }
+
+    /**
+     * Get subject distribution data
+     */
+    public List<Map<String, Object>> getSubjectDistribution() throws SQLException {
+        List<Map<String, Object>> subjectData = new ArrayList<>();
+
+        try {
+            String sql = "SELECT s.name as subject_name, "
+                    + "COUNT(DISTINCT ch.id) as chapter_count, "
+                    + "COUNT(DISTINCT l.id) as lesson_count "
+                    + "FROM subject s "
+                    + "LEFT JOIN chapter ch ON s.id = ch.subject_id "
+                    + "LEFT JOIN lesson l ON ch.id = l.chapter_id "
+                    + "GROUP BY s.id, s.name "
+                    + "ORDER BY s.name";
+
+            try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("subjectName", rs.getString("subject_name"));
+                    data.put("chapterCount", rs.getInt("chapter_count"));
+                    data.put("lessonCount", rs.getInt("lesson_count"));
+                    subjectData.add(data);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error in getSubjectDistribution: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return subjectData;
     }
 
     /**
