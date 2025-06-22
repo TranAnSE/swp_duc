@@ -3,643 +3,863 @@
     Created on : May 17, 2025, 3:49:02 PM
     Author     : BuiNgocLinh
 --%>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-
-<!doctype html>
-<html class="no-js" lang="zxx">
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
+<!DOCTYPE html>
+<html>
     <head>
         <meta charset="utf-8">
         <meta http-equiv="x-ua-compatible" content="ie=edge">
-        <title>Courses | Education</title>
+        <title>Parent Dashboard</title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="manifest" href="site.webmanifest">
-        <link rel="shortcut icon" type="image/x-icon" href="assets/img/favicon.ico">
 
-        <!-- CSS here -->
-        <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
-        <link rel="stylesheet" href="/assets/css/owl.carousel.min.css">
-        <link rel="stylesheet" href="/assets/css/slicknav.css">
-        <link rel="stylesheet" href="/assets/css/flaticon.css">
-        <link rel="stylesheet" href="/assets/css/progressbar_barfiller.css">
-        <link rel="stylesheet" href="/assets/css/gijgo.css">
-        <link rel="stylesheet" href="/assets/css/animate.min.css">
-        <link rel="stylesheet" href="/assets/css/animated-headline.css">
-        <link rel="stylesheet" href="/assets/css/magnific-popup.css">
-        <link rel="stylesheet" href="/assets/css/fontawesome-all.min.css">
-        <link rel="stylesheet" href="/assets/css/themify-icons.css">
-        <link rel="stylesheet" href="/assets/css/slick.css">
-        <link rel="stylesheet" href="/assets/css/nice-select.css">
-        <link rel="stylesheet" href="/assets/css/style.css">
+        <!-- CSS Libraries -->
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/bootstrap.min.css">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+
+        <!-- Chart.js -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+        <style>
+            body {
+                background-color: #f8f9fa;
+                padding-top: 100px;
+            }
+
+            .dashboard-header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 2rem 0;
+                margin-bottom: 2rem;
+                border-radius: 10px;
+            }
+
+            .stat-card {
+                background: white;
+                border-radius: 10px;
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                transition: transform 0.3s ease;
+                height: 180px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            .stat-card:hover {
+                transform: translateY(-5px);
+            }
+
+            .stat-icon {
+                font-size: 2.5rem;
+                margin-bottom: 1rem;
+            }
+
+            .stat-number {
+                font-size: 2rem;
+                font-weight: bold;
+                margin-bottom: 0.5rem;
+            }
+
+            .stat-label {
+                color: #6c757d;
+                font-size: 0.9rem;
+            }
+
+            .chart-container {
+                background: white;
+                border-radius: 10px;
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                position: relative;
+            }
+
+            .chart-title {
+                font-size: 1.2rem;
+                font-weight: 600;
+                margin-bottom: 1rem;
+                color: #495057;
+            }
+
+            /* Fixed height containers for charts */
+            .chart-wrapper {
+                position: relative;
+                height: 300px;
+                width: 100%;
+            }
+
+            .chart-wrapper-small {
+                position: relative;
+                height: 250px;
+                width: 100%;
+            }
+
+            .chart-wrapper-medium {
+                position: relative;
+                height: 280px;
+                width: 100%;
+            }
+
+            /* Ensure canvas doesn't exceed container */
+            .chart-wrapper canvas,
+            .chart-wrapper-small canvas,
+            .chart-wrapper-medium canvas {
+                max-height: 100% !important;
+                max-width: 100% !important;
+            }
+
+            .activity-item {
+                padding: 1rem;
+                border-bottom: 1px solid #dee2e6;
+                transition: background-color 0.3s ease;
+            }
+
+            .activity-item:hover {
+                background-color: #f8f9fa;
+            }
+
+            .activity-item:last-child {
+                border-bottom: none;
+            }
+
+            .quick-action-btn {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border: none;
+                color: white;
+                padding: 0.75rem 1.5rem;
+                border-radius: 25px;
+                margin: 0.25rem;
+                transition: all 0.3s ease;
+            }
+
+            .quick-action-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                color: white;
+            }
+
+            .performance-badge {
+                padding: 0.25rem 0.75rem;
+                border-radius: 15px;
+                font-size: 0.8rem;
+                font-weight: 600;
+            }
+
+            .performance-excellent {
+                background-color: #d4edda;
+                color: #155724;
+            }
+
+            .performance-good {
+                background-color: #d1ecf1;
+                color: #0c5460;
+            }
+
+            .performance-average {
+                background-color: #fff3cd;
+                color: #856404;
+            }
+
+            .performance-needs-improvement {
+                background-color: #f8d7da;
+                color: #721c24;
+            }
+
+            .invoice-status-paid {
+                color: #28a745;
+                font-weight: 600;
+            }
+
+            .invoice-status-pending {
+                color: #ffc107;
+                font-weight: 600;
+            }
+
+            .invoice-status-overdue {
+                color: #dc3545;
+                font-weight: 600;
+            }
+
+            .chart-row {
+                margin-bottom: 1rem;
+            }
+
+            .chart-col {
+                margin-bottom: 1rem;
+            }
+
+            /* Activities container with fixed height and scroll */
+            .activities-container {
+                max-height: 400px;
+                overflow-y: auto;
+            }
+
+            /* Side panel containers */
+            .side-panel {
+                height: 100%;
+            }
+
+            .side-panel .chart-container {
+                margin-bottom: 1rem;
+            }
+
+            /* No data message styling */
+            .no-data-message {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 200px;
+                color: #6c757d;
+                text-align: center;
+            }
+
+            .no-data-message i {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+                opacity: 0.5;
+            }
+
+            @media (max-width: 768px) {
+                .chart-wrapper,
+                .chart-wrapper-small,
+                .chart-wrapper-medium {
+                    height: 250px;
+                }
+
+                .stat-card {
+                    height: 150px;
+                    margin-bottom: 1rem;
+                }
+
+                .stat-icon {
+                    font-size: 2rem;
+                }
+
+                .stat-number {
+                    font-size: 1.5rem;
+                }
+
+                .activities-container {
+                    max-height: 300px;
+                }
+            }
+
+            @media (max-width: 576px) {
+                .chart-wrapper,
+                .chart-wrapper-small,
+                .chart-wrapper-medium {
+                    height: 200px;
+                }
+
+                .quick-action-btn {
+                    padding: 0.5rem 1rem;
+                    margin: 0.1rem;
+                    font-size: 0.9rem;
+                }
+            }
+        </style>
     </head>
 
     <body>
+        <jsp:include page="../header.jsp" />
 
-        <!--         ? Preloader Start 
-                <div id="preloader-active">
-                    <div class="preloader d-flex align-items-center justify-content-center">
-                        <div class="preloader-inner position-relative">
-                            <div class="preloader-circle"></div>
-                            <div class="preloader-img pere-text">
-                                <img src="assets/img/logo/loder.png" alt="">
+        <div class="container-fluid">
+            <!-- Dashboard Header -->
+            <div class="dashboard-header">
+                <div class="container">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h1 class="mb-0">Welcome back, ${parent.full_name}!</h1>
+                            <p class="mb-0 mt-2">Here's what's happening with your children's learning progress</p>
+                        </div>
+                        <div class="col-md-4 text-right">
+                            <p class="mb-0"><i class="fas fa-calendar-alt"></i> <fmt:formatDate value="<%=new java.util.Date()%>" pattern="EEEE, MMMM dd, yyyy" /></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="container">
+                <!-- Quick Stats Row -->
+                <div class="row">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stat-card text-center">
+                            <div class="stat-icon text-primary">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-number text-primary">${dashboardData.childrenStats.totalChildren}</div>
+                            <div class="stat-label">Total Children</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stat-card text-center">
+                            <div class="stat-icon text-success">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-number text-success">${dashboardData.childrenStats.completedTests}</div>
+                            <div class="stat-label">Tests Completed</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stat-card text-center">
+                            <div class="stat-icon text-info">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="stat-number text-info">${dashboardData.childrenStats.avgScore}/10</div>
+                            <div class="stat-label">Average Score</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <div class="stat-card text-center">
+                            <div class="stat-icon text-warning">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-number text-warning">${dashboardData.childrenStats.testsToday}</div>
+                            <div class="stat-label">Tests Today</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="chart-container">
+                            <div class="chart-title">
+                                <i class="fas fa-bolt"></i> Quick Actions
+                            </div>
+                            <div class="text-center">
+                                <a href="${pageContext.request.contextPath}/parent?action=myChildren" class="btn quick-action-btn">
+                                    <i class="fas fa-users"></i> View My Children
+                                </a>
+                                <a href="${pageContext.request.contextPath}/invoice" class="btn quick-action-btn">
+                                    <i class="fas fa-file"></i> View Invoices
+                                </a>
+                                <a href="${pageContext.request.contextPath}/study_package" class="btn quick-action-btn">
+                                    <i class="fas fa-archive"></i> Study Packages
+                                </a>
+                                <a href="${pageContext.request.contextPath}/Grade" class="btn quick-action-btn">
+                                    <i class="fas fa-graduation-cap"></i> Grades & Progress
+                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
-                 Preloader Start 
-                 Header Start 
-                <div class="header-area header-transparent">
-                    <div class="main-header ">
-                        <div class="header-bottom  header-sticky">
-                            <div class="container-fluid">
-                                <div class="row align-items-center">
-                                     Logo 
-                                    <div class="col-xl-2 col-lg-2">
-                                        <div class="logo">
-                                            <a href="#"><img src="assets/img/logo/logo.png" alt=""></a>
+
+                <!-- Charts Row 1 -->
+                <div class="row chart-row">
+                    <div class="col-lg-8 chart-col">
+                        <div class="chart-container">
+                            <div class="chart-title">
+                                <i class="fas fa-chart-line"></i> Monthly Progress Overview
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="monthlyProgressChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 chart-col">
+                        <div class="chart-container">
+                            <div class="chart-title">
+                                <i class="fas fa-chart-pie"></i> Grade Distribution
+                            </div>
+                            <div class="chart-wrapper-small">
+                                <canvas id="gradeDistributionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row 2 -->
+                <div class="row chart-row">
+                    <div class="col-lg-6 chart-col">
+                        <div class="chart-container">
+                            <div class="chart-title">
+                                <i class="fas fa-chart-bar"></i> Subject Performance
+                            </div>
+                            <div class="chart-wrapper-medium">
+                                <canvas id="subjectPerformanceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 chart-col">
+                        <div class="chart-container">
+                            <div class="chart-title">
+                                <i class="fas fa-chart-bar"></i> Children Performance Overview
+                            </div>
+                            <div class="chart-wrapper-medium">
+                                <canvas id="childrenPerformanceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activities and Invoice Summary -->
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="chart-container">
+                            <div class="chart-title">
+                                <i class="fas fa-history"></i> Recent Test Activities
+                            </div>
+                            <div class="activities-container">
+                                <c:choose>
+                                    <c:when test="${not empty dashboardData.recentActivities}">
+                                        <c:forEach var="activity" items="${dashboardData.recentActivities}" varStatus="status">
+                                            <c:if test="${status.index < 8}">
+                                                <div class="activity-item">
+                                                    <div class="row align-items-center">
+                                                        <div class="col-md-4">
+                                                            <strong>${activity.studentName}</strong>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <span class="text-muted">${activity.testName}</span>
+                                                            <span class="badge badge-${activity.testType == 'Practice' ? 'info' : 'primary'} ml-2">
+                                                                ${activity.testType}
+                                                            </span>
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <c:choose>
+                                                                <c:when test="${activity.score != null}">
+                                                                    <span class="performance-badge
+                                                                          <c:choose>
+                                                                              <c:when test="${activity.score >= 9}">performance-excellent</c:when>
+                                                                              <c:when test="${activity.score >= 7.5}">performance-good</c:when>
+                                                                              <c:when test="${activity.score >= 6}">performance-average</c:when>
+                                                                              <c:otherwise>performance-needs-improvement</c:otherwise>
+                                                                          </c:choose>">
+                                                                        <fmt:formatNumber value="${activity.score}" maxFractionDigits="1"/>/10
+                                                                    </span>
+                                                                </c:when>
+                                                                <c:otherwise>
+                                                                    <span class="text-muted">In Progress</span>
+                                                                </c:otherwise>
+                                                            </c:choose>
+                                                        </div>
+                                                        <div class="col-md-2 text-right">
+                                                            <small class="text-muted">
+                                                                <c:choose>
+                                                                    <c:when test="${activity.finishAt != null}">
+                                                                        <fmt:formatDate value="${activity.finishAt}" pattern="MMM dd, HH:mm"/>
+                                                                    </c:when>
+                                                                    <c:otherwise>
+                                                                        <fmt:formatDate value="${activity.startedAt}" pattern="MMM dd, HH:mm"/>
+                                                                    </c:otherwise>
+                                                                </c:choose>
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </c:if>
+                                        </c:forEach>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <div class="no-data-message">
+                                            <i class="fas fa-inbox"></i>
+                                            <p>No recent test activities found.</p>
                                         </div>
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="side-panel">
+                            <!-- Invoice Summary -->
+                            <div class="chart-container">
+                                <div class="chart-title">
+                                    <i class="fas fa-credit-card"></i> Invoice Summary
+                                </div>
+                                <div class="row text-center mb-3">
+                                    <div class="col-6">
+                                        <div class="stat-number text-success">${dashboardData.invoiceSummary.paidInvoices}</div>
+                                        <div class="stat-label">Paid</div>
                                     </div>
-                                    <div class="col-xl-10 col-lg-10">
-                                        <div class="menu-wrapper d-flex align-items-center justify-content-end">
-                                             Main-menu 
-                                            <div class="main-menu d-none d-lg-block">
-                                                <nav>
-                                                    <ul id="navigation">                                                                                          
-                                                        <li class="active" ><a href="index.html">Home</a></li>
-                                                        <li><a href="#">Courses</a></li>
-                                                        <li><a href="#">About</a></li>
-                                                        <li><a href="#">Blog</a>
-                                                            <ul class="submenu">
-                                                                <li><a href="#">Blog</a></li>
-                                                                <li><a href="#">Blog Details</a></li>
-                                                                <li><a href="#">Element</a></li>
-                                                            </ul>
-                                                        </li>
-                                                        <li><a href="contact.html">Contact</a></li>
-                                                        Button 
-                                                        <li class="button-header"><a href="/subjects" class="btn btn3">subjects</a></li>
-                                                        <li class="button-header"><a href="/Grade" class="btn btn3">Grades</a></li>
-                                                        <li class="button-header"><a href="/Question" class="btn btn3">Questions</a></li>
-                                                        <li class="button-header"><a href="/invoice" class="btn btn3">invoice</a></li>
-                                                        <li class="button-header"><a href="/student" class="btn btn3">Student</a></li>
-                                                        <li class="button-header"><a href="/admin?action=viewProfile&id=${account.id}" class="btn btn3">View Profile</a></li>
-                                                        <li class="button-header"><a href="/logout" class="btn btn3">Logout</a></li>
-                                                    </ul>
-                                                </nav>
-                                            </div>
-                                        </div>
-                                    </div> 
-                                     Mobile Menu 
+                                    <div class="col-6">
+                                        <div class="stat-number text-warning">${dashboardData.invoiceSummary.pendingInvoices}</div>
+                                        <div class="stat-label">Pending</div>
+                                    </div>
+                                </div>
+                                <div class="row text-center mb-3">
                                     <div class="col-12">
-                                        <div class="mobile_menu d-block d-lg-none"></div>
+                                        <div class="stat-number text-primary">$<fmt:formatNumber value="${dashboardData.invoiceSummary.totalPaidAmount}" maxFractionDigits="2"/></div>
+                                        <div class="stat-label">Total Paid</div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                 Header End -->
 
-        <%@include file="../header.jsp" %>
-        <main>
-            <!--? slider Area Start-->
-            <section class="slider-area slider-area2">
-                <div class="slider-active">
-                    <!-- Single Slider -->
-                    <div class="single-slider slider-height2">
-                        <div class="container">
-                            <div class="row">
-                                <div class="col-xl-8 col-lg-11 col-md-12">
-                                    <div class="hero__caption hero__caption2">
-                                        <h1 data-animation="bounceIn" data-delay="0.2s">Our courses</h1>
-                                        <!-- breadcrumb Start-->
-                                        <nav aria-label="breadcrumb">
-                                            <ol class="breadcrumb">
-                                                <li class="breadcrumb-item"><a href="index.html">Home</a></li>
-                                                <li class="breadcrumb-item"><a href="#">Services</a></li> 
-                                            </ol>
-                                        </nav>
-                                        <!-- breadcrumb End -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>          
-                    </div>
-                </div>
-            </section>
-            <!-- Courses area start -->
-            <div class="courses-area section-padding40 fix">
-                <div class="container">
-                    <div class="row justify-content-center">
-                        <div class="col-xl-7 col-lg-8">
-                            <div class="section-tittle text-center mb-55">
-                                <h2>Our featured courses</h2>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-lg-4">
-                            <div class="properties properties2 mb-30">
-                                <div class="properties__card">
-                                    <div class="properties__img overlay1">
-                                        <a href="#"><img src="/assets/img/gallery/featured1.png" alt=""></a>
-                                    </div>
-                                    <div class="properties__caption">
-                                        <p>User Experience</p>
-                                        <h3><a href="#">Fundamental of UX for Application design</a></h3>
-                                        <p>The automated process all your website tasks. Discover tools and techniques to engage effectively with vulnerable children and young people.
-                                        </p>
-                                        <div class="properties__footer d-flex justify-content-between align-items-center">
-                                            <div class="restaurant-name">
-                                                <div class="rating">
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star-half"></i>
+                                <h6 class="mt-4 mb-3">Recent Invoices</h6>
+                                <c:choose>
+                                    <c:when test="${not empty dashboardData.invoiceSummary.recentInvoices}">
+                                        <c:forEach var="invoice" items="${dashboardData.invoiceSummary.recentInvoices}">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <div>
+                                                    <small class="text-muted">#${invoice.id}</small>
                                                 </div>
-                                                <p><span>(4.5)</span> based on 120</p>
-                                            </div>
-                                            <div class="price">
-                                                <span>$135</span>
-                                            </div>
-                                        </div>
-                                        <a href="#" class="border-btn border-btn2">Find out more</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-4">
-                            <div class="properties properties2 mb-30">
-                                <div class="properties__card">
-                                    <div class="properties__img overlay1">
-                                        <a href="#"><img src="/assets/img/gallery/featured2.png" alt=""></a>
-                                    </div>
-                                    <div class="properties__caption">
-                                        <p>User Experience</p>
-                                        <h3><a href="#">Fundamental of UX for Application design</a></h3>
-                                        <p>The automated process all your website tasks. Discover tools and techniques to engage effectively with vulnerable children and young people.
-
-                                        </p>
-                                        <div class="properties__footer d-flex justify-content-between align-items-center">
-                                            <div class="restaurant-name">
-                                                <div class="rating">
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star-half"></i>
+                                                <div>
+                                                    <span class="invoice-status-${invoice.status}">${invoice.status}</span>
                                                 </div>
-                                                <p><span>(4.5)</span> based on 120</p>
-                                            </div>
-                                            <div class="price">
-                                                <span>$135</span>
-                                            </div>
-                                        </div>
-                                        <a href="#" class="border-btn border-btn2">Find out more</a>
-                                    </div>
-
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-4">
-                            <div class="properties properties2 mb-30">
-                                <div class="properties__card">
-                                    <div class="properties__img overlay1">
-                                        <a href="#"><img src="/assets/img/gallery/featured3.png" alt=""></a>
-                                    </div>
-                                    <div class="properties__caption">
-                                        <p>User Experience</p>
-                                        <h3><a href="#">Fundamental of UX for Application design</a></h3>
-                                        <p>The automated process all your website tasks. Discover tools and techniques to engage effectively with vulnerable children and young people.
-
-                                        </p>
-                                        <div class="properties__footer d-flex justify-content-between align-items-center">
-                                            <div class="restaurant-name">
-                                                <div class="rating">
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star-half"></i>
+                                                <div>
+                                                    <small>$${invoice.amount}</small>
                                                 </div>
-                                                <p><span>(4.5)</span> based on 120</p>
                                             </div>
-                                            <div class="price">
-                                                <span>$135</span>
-                                            </div>
+                                        </c:forEach>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <div class="text-center text-muted">
+                                            <small>No recent invoices</small>
                                         </div>
-                                        <a href="#" class="border-btn border-btn2">Find out more</a>
-                                    </div>
-
-                                </div>
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
-                        </div>
-                        <div class="col-lg-4">
-                            <div class="properties properties2 mb-30">
-                                <div class="properties__card">
-                                    <div class="properties__img overlay1">
-                                        <a href="#"><img src="/assets/img/gallery/featured4.png" alt=""></a>
-                                    </div>
-                                    <div class="properties__caption">
-                                        <p>User Experience</p>
-                                        <h3><a href="#">Fundamental of UX for Application design</a></h3>
-                                        <p>The automated process all your website tasks. Discover tools and techniques to engage effectively with vulnerable children and young people.
 
-                                        </p>
-                                        <div class="properties__footer d-flex justify-content-between align-items-center">
-                                            <div class="restaurant-name">
-                                                <div class="rating">
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star-half"></i>
+                            <!-- Children Performance Summary -->
+                            <div class="chart-container">
+                                <div class="chart-title">
+                                    <i class="fas fa-trophy"></i> Top Performers
+                                </div>
+                                <c:choose>
+                                    <c:when test="${not empty dashboardData.testPerformance}">
+                                        <c:forEach var="performance" items="${dashboardData.testPerformance}" varStatus="status">
+                                            <c:if test="${status.index < 3}">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <div>
+                                                        <div class="font-weight-bold">${performance.studentName}</div>
+                                                        <small class="text-muted">${performance.gradeName}</small>
+                                                    </div>
+                                                    <div class="text-right">
+                                                        <div class="font-weight-bold text-primary">
+                                                            <fmt:formatNumber value="${performance.avgScore}" maxFractionDigits="1"/>/10
+                                                        </div>
+                                                        <small class="text-muted">${performance.completedTests} tests</small>
+                                                    </div>
                                                 </div>
-                                                <p><span>(4.5)</span> based on 120</p>
-                                            </div>
-                                            <div class="price">
-                                                <span>$135</span>
-                                            </div>
+                                            </c:if>
+                                        </c:forEach>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <div class="text-center text-muted">
+                                            <small>No performance data available</small>
                                         </div>
-                                        <a href="#" class="border-btn border-btn2">Find out more</a>
-                                    </div>
-
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-4">
-                            <div class="properties properties2 mb-30">
-                                <div class="properties__card">
-                                    <div class="properties__img overlay1">
-                                        <a href="#"><img src="/assets/img/gallery/featured5.png" alt=""></a>
-                                    </div>
-                                    <div class="properties__caption">
-                                        <p>User Experience</p>
-                                        <h3><a href="#">Fundamental of UX for Application design</a></h3>
-                                        <p>The automated process all your website tasks. Discover tools and techniques to engage effectively with vulnerable children and young people.
-
-                                        </p>
-                                        <div class="properties__footer d-flex justify-content-between align-items-center">
-                                            <div class="restaurant-name">
-                                                <div class="rating">
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star-half"></i>
-                                                </div>
-                                                <p><span>(4.5)</span> based on 120</p>
-                                            </div>
-                                            <div class="price">
-                                                <span>$135</span>
-                                            </div>
-                                        </div>
-                                        <a href="#" class="border-btn border-btn2">Find out more</a>
-                                    </div>
-
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-4">
-                            <div class="properties properties2 mb-30">
-                                <div class="properties__card">
-                                    <div class="properties__img overlay1">
-                                        <a href="#"><img src="/assets/img/gallery/featured6.png" alt=""></a>
-                                    </div>
-                                    <div class="properties__caption">
-                                        <p>User Experience</p>
-                                        <h3><a href="#">Fundamental of UX for Application design</a></h3>
-                                        <p>The automated process all your website tasks. Discover tools and techniques to engage effectively with vulnerable children and young people.
-                                        </p>
-                                        <div class="properties__footer d-flex justify-content-between align-items-center">
-                                            <div class="restaurant-name">
-                                                <div class="rating">
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star"></i>
-                                                    <i class="fas fa-star-half"></i>
-                                                </div>
-                                                <p><span>(4.5)</span> based on 120</p>
-                                            </div>
-                                            <div class="price">
-                                                <span>$135</span>
-                                            </div>
-                                        </div>
-                                        <a href="#" class="border-btn border-btn2">Find out more</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row justify-content-center">
-                        <div class="col-xl-7 col-lg-8">
-                            <div class="section-tittle text-center mt-40">
-                                <a href="#" class="border-btn">Load More</a>
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <!-- Courses area End -->
-            <!--? top subjects Area Start -->
-            <div class="topic-area">
-                <div class="container">
-                    <div class="row justify-content-center">
-                        <div class="col-xl-7 col-lg-8">
-                            <div class="section-tittle text-center mb-55">
-                                <h2>Explore top subjects</h2>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="single-topic text-center mb-30">
-                                <div class="topic-img">
-                                    <img src="/assets/img/gallery/topic1.png" alt="">
-                                    <div class="topic-content-box">
-                                        <div class="topic-content">
-                                            <h3><a href="#">Programing</a></h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="single-topic text-center mb-30">
-                                <div class="topic-img">
-                                    <img src="/assets/img/gallery/topic2.png" alt="">
-                                    <div class="topic-content-box">
-                                        <div class="topic-content">
-                                            <h3><a href="#">Programing</a></h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="single-topic text-center mb-30">
-                                <div class="topic-img">
-                                    <img src="/assets/img/gallery/topic3.png" alt="">
-                                    <div class="topic-content-box">
-                                        <div class="topic-content">
-                                            <h3><a href="#">Programing</a></h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="single-topic text-center mb-30">
-                                <div class="topic-img">
-                                    <img src="/assets/img/gallery/topic4.png" alt="">
-                                    <div class="topic-content-box">
-                                        <div class="topic-content">
-                                            <h3><a href="#">Programing</a></h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="single-topic text-center mb-30">
-                                <div class="topic-img">
-                                    <img src="/assets/img/gallery/topic5.png" alt="">
-                                    <div class="topic-content-box">
-                                        <div class="topic-content">
-                                            <h3><a href="#">Programing</a></h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="single-topic text-center mb-30">
-                                <div class="topic-img">
-                                    <img src="/assets/img/gallery/topic6.png" alt="">
-                                    <div class="topic-content-box">
-                                        <div class="topic-content">
-                                            <h3><a href="#">Programing</a></h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="single-topic text-center mb-30">
-                                <div class="topic-img">
-                                    <img src="/assets/img/gallery/topic7.png" alt="">
-                                    <div class="topic-content-box">
-                                        <div class="topic-content">
-                                            <h3><a href="#">Programing</a></h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-4 col-sm-6">
-                            <div class="single-topic text-center mb-30">
-                                <div class="topic-img">
-                                    <img src="/assets/img/gallery/topic8.png" alt="">
-                                    <div class="topic-content-box">
-                                        <div class="topic-content">
-                                            <h3><a href="#">Programing</a></h3>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row justify-content-center">
-                        <div class="col-xl-12">
-                            <div class="section-tittle text-center mt-20">
-                                <a href="courses.html" class="border-btn">View More Subjects</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- top subjects End -->  
-            <!-- ? services-area -->
-            <div class="services-area services-area2 section-padding40">
-                <div class="container">
-                    <div class="row justify-content-sm-center">
-                        <div class="col-lg-4 col-md-6 col-sm-8">
-                            <div class="single-services mb-30">
-                                <div class="features-icon">
-                                    <img src="/assets/img/icon/icon1.svg" alt="">
-                                </div>
-                                <div class="features-caption">
-                                    <h3>60+ UX courses</h3>
-                                    <p>The automated process all your website tasks.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-4 col-md-6 col-sm-8">
-                            <div class="single-services mb-30">
-                                <div class="features-icon">
-                                    <img src="/assets/img/icon/icon2.svg" alt="">
-                                </div>
-                                <div class="features-caption">
-                                    <h3>Expert instructors</h3>
-                                    <p>The automated process all your website tasks.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-4 col-md-6 col-sm-8">
-                            <div class="single-services mb-30">
-                                <div class="features-icon">
-                                    <img src="/assets/img/icon/icon3.svg" alt="">
-                                </div>
-                                <div class="features-caption">
-                                    <h3>Life time access</h3>
-                                    <p>The automated process all your website tasks.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-        <footer>
-            <div class="footer-wrappper footer-bg">
-                <!-- Footer Start-->
-                <div class="footer-area footer-padding">
-                    <div class="container">
-                        <div class="row justify-content-between">
-                            <div class="col-xl-4 col-lg-5 col-md-4 col-sm-6">
-                                <div class="single-footer-caption mb-50">
-                                    <div class="single-footer-caption mb-30">
-                                        <!-- logo -->
-                                        <div class="footer-logo mb-25">
-                                            <a href="index.html"><img src="/assets/img/logo/logo2_footer.png" alt=""></a>
-                                        </div>
-                                        <div class="footer-tittle">
-                                            <div class="footer-pera">
-                                                <p>The automated process starts as soon as your clothes go into the machine.</p>
-                                            </div>
-                                        </div>
-                                        <!-- social -->
-                                        <div class="footer-social">
-                                            <a href="#"><i class="fab fa-twitter"></i></a>
-                                            <a href="https://bit.ly/sai4ull"><i class="fab fa-facebook-f"></i></a>
-                                            <a href="#"><i class="fab fa-pinterest-p"></i></a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-5">
-                                <div class="single-footer-caption mb-50">
-                                    <div class="footer-tittle">
-                                        <h4>Our solutions</h4>
-                                        <ul>
-                                            <li><a href="#">Design & creatives</a></li>
-                                            <li><a href="#">Telecommunication</a></li>
-                                            <li><a href="#">Restaurant</a></li>
-                                            <li><a href="#">Programing</a></li>
-                                            <li><a href="#">Architecture</a></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6">
-                                <div class="single-footer-caption mb-50">
-                                    <div class="footer-tittle">
-                                        <h4>Support</h4>
-                                        <ul>
-                                            <li><a href="#">Design & creatives</a></li>
-                                            <li><a href="#">Telecommunication</a></li>
-                                            <li><a href="#">Restaurant</a></li>
-                                            <li><a href="#">Programing</a></li>
-                                            <li><a href="#">Architecture</a></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
-                                <div class="single-footer-caption mb-50">
-                                    <div class="footer-tittle">
-                                        <h4>Company</h4>
-                                        <ul>
-                                            <li><a href="#">Design & creatives</a></li>
-                                            <li><a href="#">Telecommunication</a></li>
-                                            <li><a href="#">Restaurant</a></li>
-                                            <li><a href="#">Programing</a></li>
-                                            <li><a href="#">Architecture</a></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- footer-bottom area -->
-                <div class="footer-bottom-area">
-                    <div class="container">
-                        <div class="footer-border">
-                            <div class="row d-flex align-items-center">
-                                <div class="col-xl-12 ">
-                                    <div class="footer-copy-right text-center">
-                                        <p><!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. -->
-                                            Copyright &copy;<script>document.write(new Date().getFullYear());</script> All rights reserved | This template is made with <i class="fa fa-heart" aria-hidden="true"></i> by <a href="https://colorlib.com" target="_blank">Colorlib</a>
-                                            <!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. --></p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Footer End-->
-            </div>
-
-        </footer> 
-        <!-- Scroll Up -->
-        <div id="back-top" >
-            <a title="Go to Top" href="#"> <i class="fas fa-level-up-alt"></i></a>
         </div>
 
-        <!-- JS here -->
-        <script src="${pageContext.request.contextPath}/assets/js/vendor/modernizr-3.5.0.min.js"></script>
-        <!-- Jquery, Popper, Bootstrap -->
+        <jsp:include page="../footer.jsp" />
+
+        <!-- Scripts -->
         <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/popper.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
-        <!-- Jquery Mobile Menu -->
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.slicknav.min.js"></script>
 
-        <!-- Jquery Slick , Owl-Carousel Plugins -->
-        <script src="${pageContext.request.contextPath}/assets/js/owl.carousel.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/slick.min.js"></script>
-        <!-- One Page, Animated-HeadLin -->
-        <script src="${pageContext.request.contextPath}/assets/js/wow.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/animated.headline.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.magnific-popup.js"></script>
+        <script>
+            // Chart.js configuration with fixed aspect ratio
+            const baseChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            };
 
-        <!-- Date Picker -->
-        <script src="${pageContext.request.contextPath}/assets/js/gijgo.min.js"></script>
-        <!-- Nice-select, sticky -->
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.nice-select.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.sticky.js"></script>
-        <!-- Progress -->
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.barfiller.js"></script>
+            // Function to create empty chart message
+            function createEmptyChart(canvasId, message = 'No data available') {
+                const canvas = document.getElementById(canvasId);
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    const container = canvas.parentElement;
 
-        <!-- counter , waypoint,Hover Direction -->
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.counterup.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/waypoints.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.countdown.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/hover-direction-snake.min.js"></script>
+                    // Clear canvas
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        <!-- contact js -->
-        <script src="${pageContext.request.contextPath}/assets/js/contact.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.form.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.validate.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/mail-script.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.ajaxchimp.min.js"></script>
+                    // Set canvas size to container size
+                    canvas.width = container.offsetWidth;
+                    canvas.height = container.offsetHeight;
 
-        <!-- Jquery Plugins, main Jquery -->	
-        <script src="${pageContext.request.contextPath}/assets/js/plugins.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/main.js"></script>
+                    // Draw message
+                    ctx.font = '16px Arial';
+                    ctx.fillStyle = '#6c757d';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+            }
+            }
 
+            // Monthly Progress Chart
+            const monthlyProgressData = ${monthlyProgressJson};
+            if (monthlyProgressData && monthlyProgressData.length > 0) {
+                const ctx1 = document.getElementById('monthlyProgressChart').getContext('2d');
+                new Chart(ctx1, {
+                    type: 'line',
+                    data: {
+                        labels: monthlyProgressData.map(item => item.month || 'N/A'),
+                        datasets: [{
+                                label: 'Tests Completed',
+                                data: monthlyProgressData.map(item => item.testsCompleted || 0),
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                tension: 0.4,
+                                yAxisID: 'y'
+                            }, {
+                                label: 'Average Score (/10)',
+                                data: monthlyProgressData.map(item => item.avgScore || 0),
+                                borderColor: 'rgb(255, 99, 132)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                tension: 0.4,
+                                yAxisID: 'y1'
+                            }]
+                    },
+                    options: {
+                        ...baseChartOptions,
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                title: {
+                                    display: true,
+                                    text: 'Tests Completed'
+                                }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: 'Average Score (/10)'
+                                },
+                                min: 0,
+                                max: 10,
+                                grid: {
+                                    drawOnChartArea: false,
+                                },
+                            }
+                        }
+                    }
+                });
+            } else {
+                createEmptyChart('monthlyProgressChart', 'No monthly progress data');
+            }
+
+            // Subject Performance Chart
+            const subjectPerformanceData = ${subjectPerformanceJson};
+            if (subjectPerformanceData && subjectPerformanceData.length > 0) {
+                const ctx2 = document.getElementById('subjectPerformanceChart').getContext('2d');
+                new Chart(ctx2, {
+                    type: 'bar',
+                    data: {
+                        labels: subjectPerformanceData.map(item => item.subjectName || 'Unknown'),
+                        datasets: [{
+                                label: 'Average Score (/10)',
+                                data: subjectPerformanceData.map(item => item.avgScore || 0),
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.8)',
+                                    'rgba(54, 162, 235, 0.8)',
+                                    'rgba(255, 205, 86, 0.8)',
+                                    'rgba(75, 192, 192, 0.8)',
+                                    'rgba(153, 102, 255, 0.8)',
+                                    'rgba(255, 159, 64, 0.8)'
+                                ],
+                                borderColor: [
+                                    'rgba(255, 99, 132, 1)',
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255, 205, 86, 1)',
+                                    'rgba(75, 192, 192, 1)',
+                                    'rgba(153, 102, 255, 1)',
+                                    'rgba(255, 159, 64, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                    },
+                    options: {
+                        ...baseChartOptions,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 10,
+                                title: {
+                                    display: true,
+                                    text: 'Score (/10)'
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                createEmptyChart('subjectPerformanceChart', 'No subject performance data');
+            }
+
+            // Grade Distribution Chart
+            const gradeDistributionData = ${gradeDistributionJson};
+            if (gradeDistributionData && gradeDistributionData.gradeData && gradeDistributionData.gradeData.length > 0) {
+                const ctx3 = document.getElementById('gradeDistributionChart').getContext('2d');
+                new Chart(ctx3, {
+                    type: 'doughnut',
+                    data: {
+                        labels: gradeDistributionData.gradeData.map(item => item.gradeName || 'Unknown'),
+                        datasets: [{
+                                data: gradeDistributionData.gradeData.map(item => item.studentCount || 0),
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.8)',
+                                    'rgba(54, 162, 235, 0.8)',
+                                    'rgba(255, 205, 86, 0.8)',
+                                    'rgba(75, 192, 192, 0.8)',
+                                    'rgba(153, 102, 255, 0.8)'
+                                ],
+                                borderColor: [
+                                    'rgba(255, 99, 132, 1)',
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255, 205, 86, 1)',
+                                    'rgba(75, 192, 192, 1)',
+                                    'rgba(153, 102, 255, 1)'
+                                ],
+                                borderWidth: 2
+                            }]
+                    },
+                    options: {
+                        ...baseChartOptions,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            } else {
+                createEmptyChart('gradeDistributionChart', 'No grade distribution data');
+            }
+
+            // Children Performance Comparison Chart
+            const testPerformanceData = ${testPerformanceJson};
+            if (testPerformanceData && testPerformanceData.length > 0) {
+                const ctx4 = document.getElementById('childrenPerformanceChart').getContext('2d');
+                new Chart(ctx4, {
+                    type: 'bar',
+                    data: {
+                        labels: testPerformanceData.slice(0, 3).map(student => student.studentName || 'Unknown'),
+                        datasets: [
+                            {
+                                label: 'Average Score (/10)',
+                                data: testPerformanceData.slice(0, 3).map(student => student.avgScore || 0),
+                                backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Best Score (/10)',
+                                data: testPerformanceData.slice(0, 3).map(student => student.bestScore || 0),
+                                backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Tests Completed',
+                                data: testPerformanceData.slice(0, 3).map(student => student.completedTests || 0),
+                                backgroundColor: 'rgba(255, 205, 86, 0.8)',
+                                borderColor: 'rgba(255, 205, 86, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y1'
+                            },
+                            {
+                                label: 'Completion Rate (%)',
+                                data: testPerformanceData.slice(0, 3).map(student => {
+                                    const completionRate = student.totalTests > 0 ? (student.completedTests / student.totalTests) * 100 : 0;
+                                    return Math.round(completionRate * 100) / 100;
+                                }),
+                                backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y2'
+                            }
+                        ]
+                    },
+                    options: {
+                        ...baseChartOptions,
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                title: {
+                                    display: true,
+                                    text: 'Score (/10)'
+                                },
+                                min: 0,
+                                max: 10
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: 'Tests Completed'
+                                },
+                                min: 0,
+                                grid: {
+                                    drawOnChartArea: false,
+                                }
+                            },
+                            y2: {
+                                type: 'linear',
+                                display: false,
+                                min: 0,
+                                max: 100
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (label.includes('Completion Rate')) {
+                                            label += context.parsed.y.toFixed(1) + '%';
+                                        } else if (label.includes('Score')) {
+                                            label += context.parsed.y.toFixed(1) + '/10';
+                                        } else {
+                                            label += context.parsed.y;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                createEmptyChart('childrenPerformanceChart', 'No performance comparison data');
+            }
+
+            // Resize charts when window is resized
+            window.addEventListener('resize', function () {
+                // Chart.js automatically handles resize when responsive: true
+                // But we can force update if needed
+                Chart.helpers.each(Chart.instances, function (instance) {
+                    instance.resize();
+                });
+            });
+
+            // Initialize tooltips if using Bootstrap tooltips
+            $(function () {
+                $('[data-toggle="tooltip"]').tooltip();
+            });
+        </script>
     </body>
 </html>
