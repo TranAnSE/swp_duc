@@ -508,16 +508,16 @@ public class DashboardDAO extends DBContext {
 
         try {
             String sql = """
-            SELECT 
-                COUNT(DISTINCT s.id) as total_children,
-                COUNT(DISTINCT tr.id) as total_tests_taken,
-                COUNT(DISTINCT CASE WHEN tr.finish_at IS NOT NULL THEN tr.id END) as completed_tests,
-                COALESCE(AVG(CASE WHEN tr.finish_at IS NOT NULL THEN tr.score END), 0) as avg_score,
-                COUNT(DISTINCT CASE WHEN DATE(tr.started_at) = CURDATE() THEN tr.id END) as tests_today
-            FROM student s
-            LEFT JOIN test_record tr ON s.id = tr.student_id
-            WHERE s.parent_id = ?
-        """;
+        SELECT 
+            COUNT(DISTINCT s.id) as total_children,
+            COUNT(DISTINCT tr.id) as total_tests_taken,
+            COUNT(DISTINCT CASE WHEN tr.finish_at IS NOT NULL THEN tr.id END) as completed_tests,
+            COALESCE(AVG(CASE WHEN tr.finish_at IS NOT NULL THEN tr.score END), 0) as avg_score,
+            COUNT(DISTINCT CASE WHEN DATE(tr.started_at) = CURDATE() THEN tr.id END) as tests_today
+        FROM student s
+        LEFT JOIN test_record tr ON s.id = tr.student_id
+        WHERE s.parent_id = ?
+    """;
 
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
                 ps.setInt(1, parentId);
@@ -526,6 +526,7 @@ public class DashboardDAO extends DBContext {
                         stats.put("totalChildren", rs.getInt("total_children"));
                         stats.put("totalTestsTaken", rs.getInt("total_tests_taken"));
                         stats.put("completedTests", rs.getInt("completed_tests"));
+                        // Score is already in 0-10 scale, no need to multiply by 100
                         stats.put("avgScore", Math.round(rs.getDouble("avg_score") * 100.0) / 100.0);
                         stats.put("testsToday", rs.getInt("tests_today"));
                     }
@@ -554,21 +555,21 @@ public class DashboardDAO extends DBContext {
 
         try {
             String sql = """
-            SELECT 
-                s.full_name as student_name,
-                s.id as student_id,
-                COUNT(DISTINCT tr.id) as total_tests,
-                COUNT(DISTINCT CASE WHEN tr.finish_at IS NOT NULL THEN tr.id END) as completed_tests,
-                COALESCE(AVG(CASE WHEN tr.finish_at IS NOT NULL THEN tr.score END), 0) as avg_score,
-                COALESCE(MAX(tr.score), 0) as best_score,
-                g.name as grade_name
-            FROM student s
-            LEFT JOIN test_record tr ON s.id = tr.student_id
-            LEFT JOIN grade g ON s.grade_id = g.id
-            WHERE s.parent_id = ?
-            GROUP BY s.id, s.full_name, g.name
-            ORDER BY avg_score DESC
-        """;
+        SELECT 
+            s.full_name as student_name,
+            s.id as student_id,
+            COUNT(DISTINCT tr.id) as total_tests,
+            COUNT(DISTINCT CASE WHEN tr.finish_at IS NOT NULL THEN tr.id END) as completed_tests,
+            COALESCE(AVG(CASE WHEN tr.finish_at IS NOT NULL THEN tr.score END), 0) as avg_score,
+            COALESCE(MAX(tr.score), 0) as best_score,
+            g.name as grade_name
+        FROM student s
+        LEFT JOIN test_record tr ON s.id = tr.student_id
+        LEFT JOIN grade g ON s.grade_id = g.id
+        WHERE s.parent_id = ?
+        GROUP BY s.id, s.full_name, g.name
+        ORDER BY avg_score DESC
+    """;
 
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
                 ps.setInt(1, parentId);
@@ -648,19 +649,19 @@ public class DashboardDAO extends DBContext {
 
         try {
             String sql = """
-            SELECT 
-                DATE_FORMAT(tr.finish_at, '%Y-%m') as month,
-                COUNT(DISTINCT tr.id) as tests_completed,
-                COALESCE(AVG(tr.score), 0) as avg_score,
-                COUNT(DISTINCT s.id) as active_children
-            FROM student s
-            LEFT JOIN test_record tr ON s.id = tr.student_id AND tr.finish_at IS NOT NULL
-            WHERE s.parent_id = ?
-            AND tr.finish_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-            GROUP BY DATE_FORMAT(tr.finish_at, '%Y-%m')
-            ORDER BY month DESC
-            LIMIT 6
-        """;
+        SELECT 
+            DATE_FORMAT(tr.finish_at, '%Y-%m') as month,
+            COUNT(DISTINCT tr.id) as tests_completed,
+            COALESCE(AVG(tr.score), 0) as avg_score,
+            COUNT(DISTINCT s.id) as active_children
+        FROM student s
+        LEFT JOIN test_record tr ON s.id = tr.student_id AND tr.finish_at IS NOT NULL
+        WHERE s.parent_id = ?
+        AND tr.finish_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+        GROUP BY DATE_FORMAT(tr.finish_at, '%Y-%m')
+        ORDER BY month DESC
+        LIMIT 6
+    """;
 
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
                 ps.setInt(1, parentId);
@@ -691,24 +692,24 @@ public class DashboardDAO extends DBContext {
 
         try {
             String sql = """
-            SELECT 
-                sub.name as subject_name,
-                COUNT(DISTINCT tr.id) as tests_taken,
-                COALESCE(AVG(tr.score), 0) as avg_score,
-                COUNT(DISTINCT s.id) as students_count
-            FROM student s
-            JOIN grade g ON s.grade_id = g.id
-            JOIN subject sub ON g.id = sub.grade_id
-            LEFT JOIN chapter ch ON sub.id = ch.subject_id
-            LEFT JOIN lesson l ON ch.id = l.chapter_id
-            LEFT JOIN question q ON l.id = q.lesson_id
-            LEFT JOIN test_question tq ON q.id = tq.question_id
-            LEFT JOIN test_record tr ON tq.test_id = tr.test_id AND tr.student_id = s.id AND tr.finish_at IS NOT NULL
-            WHERE s.parent_id = ?
-            GROUP BY sub.id, sub.name
-            HAVING tests_taken > 0
-            ORDER BY avg_score DESC
-        """;
+        SELECT 
+            sub.name as subject_name,
+            COUNT(DISTINCT tr.id) as tests_taken,
+            COALESCE(AVG(tr.score), 0) as avg_score,
+            COUNT(DISTINCT s.id) as students_count
+        FROM student s
+        JOIN grade g ON s.grade_id = g.id
+        JOIN subject sub ON g.id = sub.grade_id
+        LEFT JOIN chapter ch ON sub.id = ch.subject_id
+        LEFT JOIN lesson l ON ch.id = l.chapter_id
+        LEFT JOIN question q ON l.id = q.lesson_id
+        LEFT JOIN test_question tq ON q.id = tq.question_id
+        LEFT JOIN test_record tr ON tq.test_id = tr.test_id AND tr.student_id = s.id AND tr.finish_at IS NOT NULL
+        WHERE s.parent_id = ?
+        GROUP BY sub.id, sub.name
+        HAVING tests_taken > 0
+        ORDER BY avg_score DESC
+    """;
 
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
                 ps.setInt(1, parentId);
@@ -779,17 +780,23 @@ public class DashboardDAO extends DBContext {
 
         try {
             String sql = """
-            SELECT 
-                COUNT(*) as total_invoices,
-                COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_invoices,
-                COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_invoices,
-                COALESCE(SUM(CASE WHEN status = 'paid' AND total_amount IS NOT NULL AND total_amount != '' 
-                    THEN CAST(total_amount AS DECIMAL(10,2)) END), 0) as total_paid_amount,
-                COALESCE(SUM(CASE WHEN status = 'pending' AND total_amount IS NOT NULL AND total_amount != '' 
-                    THEN CAST(total_amount AS DECIMAL(10,2)) END), 0) as pending_amount
-            FROM invoice
-            WHERE parent_id = ?
-        """;
+        SELECT 
+            COUNT(*) as total_invoices,
+            COUNT(CASE WHEN LOWER(status) IN ('paid', 'completed') THEN 1 END) as paid_invoices,
+            COUNT(CASE WHEN LOWER(status) = 'pending' THEN 1 END) as pending_invoices,
+            COALESCE(SUM(CASE 
+                WHEN LOWER(status) IN ('paid', 'completed') AND total_amount IS NOT NULL AND total_amount != '' 
+                THEN CAST(REPLACE(total_amount, ',', '') AS DECIMAL(15,2)) 
+                ELSE 0 
+            END), 0) as total_paid_amount,
+            COALESCE(SUM(CASE 
+                WHEN LOWER(status) = 'pending' AND total_amount IS NOT NULL AND total_amount != '' 
+                THEN CAST(REPLACE(total_amount, ',', '') AS DECIMAL(15,2)) 
+                ELSE 0 
+            END), 0) as pending_amount
+        FROM invoice
+        WHERE parent_id = ?
+    """;
 
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
                 ps.setInt(1, parentId);
@@ -798,20 +805,28 @@ public class DashboardDAO extends DBContext {
                         summary.put("totalInvoices", rs.getInt("total_invoices"));
                         summary.put("paidInvoices", rs.getInt("paid_invoices"));
                         summary.put("pendingInvoices", rs.getInt("pending_invoices"));
-                        summary.put("totalPaidAmount", rs.getDouble("total_paid_amount"));
-                        summary.put("pendingAmount", rs.getDouble("pending_amount"));
+                        summary.put("totalPaidAmount", Math.round(rs.getDouble("total_paid_amount") * 100.0) / 100.0);
+                        summary.put("pendingAmount", Math.round(rs.getDouble("pending_amount") * 100.0) / 100.0);
                     }
                 }
             }
 
-            // Get recent invoices
+            // Get recent invoices with better formatting
             String recentSql = """
-            SELECT id, total_amount, status, created_at
-            FROM invoice
-            WHERE parent_id = ?
-            ORDER BY created_at DESC
-            LIMIT 5
-        """;
+        SELECT id, 
+               CASE 
+                   WHEN total_amount IS NOT NULL AND total_amount != '' 
+                   THEN CAST(REPLACE(total_amount, ',', '') AS DECIMAL(15,2))
+                   ELSE 0 
+               END as amount_numeric,
+               total_amount,
+               status, 
+               created_at
+        FROM invoice
+        WHERE parent_id = ?
+        ORDER BY created_at DESC
+        LIMIT 5
+    """;
 
             List<Map<String, Object>> recentInvoices = new ArrayList<>();
             try (PreparedStatement ps = connection.prepareStatement(recentSql)) {
@@ -820,7 +835,7 @@ public class DashboardDAO extends DBContext {
                     while (rs.next()) {
                         Map<String, Object> invoice = new HashMap<>();
                         invoice.put("id", rs.getInt("id"));
-                        invoice.put("amount", rs.getString("total_amount"));
+                        invoice.put("amount", String.format("%.2f", rs.getDouble("amount_numeric")));
                         invoice.put("status", rs.getString("status"));
                         invoice.put("createdAt", rs.getTimestamp("created_at"));
                         recentInvoices.add(invoice);

@@ -311,7 +311,7 @@
                             <div class="stat-icon text-info">
                                 <i class="fas fa-chart-line"></i>
                             </div>
-                            <div class="stat-number text-info">${dashboardData.childrenStats.avgScore}%</div>
+                            <div class="stat-number text-info">${dashboardData.childrenStats.avgScore}/10</div>
                             <div class="stat-label">Average Score</div>
                         </div>
                     </div>
@@ -390,7 +390,7 @@
                     <div class="col-lg-6 chart-col">
                         <div class="chart-container">
                             <div class="chart-title">
-                                <i class="fas fa-user"></i> Children Performance Comparison
+                                <i class="fas fa-chart-bar"></i> Children Performance Overview
                             </div>
                             <div class="chart-wrapper-medium">
                                 <canvas id="childrenPerformanceChart"></canvas>
@@ -427,12 +427,12 @@
                                                                 <c:when test="${activity.score != null}">
                                                                     <span class="performance-badge
                                                                           <c:choose>
-                                                                              <c:when test="${activity.score >= 90}">performance-excellent</c:when>
-                                                                              <c:when test="${activity.score >= 75}">performance-good</c:when>
-                                                                              <c:when test="${activity.score >= 60}">performance-average</c:when>
+                                                                              <c:when test="${activity.score >= 9}">performance-excellent</c:when>
+                                                                              <c:when test="${activity.score >= 7.5}">performance-good</c:when>
+                                                                              <c:when test="${activity.score >= 6}">performance-average</c:when>
                                                                               <c:otherwise>performance-needs-improvement</c:otherwise>
                                                                           </c:choose>">
-                                                                        <fmt:formatNumber value="${activity.score}" maxFractionDigits="1"/>%
+                                                                        <fmt:formatNumber value="${activity.score}" maxFractionDigits="1"/>/10
                                                                     </span>
                                                                 </c:when>
                                                                 <c:otherwise>
@@ -533,7 +533,7 @@
                                                     </div>
                                                     <div class="text-right">
                                                         <div class="font-weight-bold text-primary">
-                                                            <fmt:formatNumber value="${performance.avgScore}" maxFractionDigits="1"/>%
+                                                            <fmt:formatNumber value="${performance.avgScore}" maxFractionDigits="1"/>/10
                                                         </div>
                                                         <small class="text-muted">${performance.completedTests} tests</small>
                                                     </div>
@@ -612,7 +612,7 @@
                                 tension: 0.4,
                                 yAxisID: 'y'
                             }, {
-                                label: 'Average Score (%)',
+                                label: 'Average Score (/10)',
                                 data: monthlyProgressData.map(item => item.avgScore || 0),
                                 borderColor: 'rgb(255, 99, 132)',
                                 backgroundColor: 'rgba(255, 99, 132, 0.2)',
@@ -638,8 +638,10 @@
                                 position: 'right',
                                 title: {
                                     display: true,
-                                    text: 'Average Score (%)'
+                                    text: 'Average Score (/10)'
                                 },
+                                min: 0,
+                                max: 10,
                                 grid: {
                                     drawOnChartArea: false,
                                 },
@@ -660,7 +662,7 @@
                     data: {
                         labels: subjectPerformanceData.map(item => item.subjectName || 'Unknown'),
                         datasets: [{
-                                label: 'Average Score (%)',
+                                label: 'Average Score (/10)',
                                 data: subjectPerformanceData.map(item => item.avgScore || 0),
                                 backgroundColor: [
                                     'rgba(255, 99, 132, 0.8)',
@@ -686,10 +688,10 @@
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                max: 100,
+                                max: 10,
                                 title: {
                                     display: true,
-                                    text: 'Score (%)'
+                                    text: 'Score (/10)'
                                 }
                             }
                         }
@@ -744,38 +746,98 @@
             if (testPerformanceData && testPerformanceData.length > 0) {
                 const ctx4 = document.getElementById('childrenPerformanceChart').getContext('2d');
                 new Chart(ctx4, {
-                    type: 'radar',
+                    type: 'bar',
                     data: {
-                        labels: ['Average Score', 'Tests Completed', 'Best Score', 'Completion Rate'],
-                        datasets: testPerformanceData.slice(0, 3).map((student, index) => {
-                            const colors = [
-                                'rgba(255, 99, 132, 0.6)',
-                                'rgba(54, 162, 235, 0.6)',
-                                'rgba(255, 205, 86, 0.6)'
-                            ];
-                            const completionRate = student.totalTests > 0 ? (student.completedTests / student.totalTests) * 100 : 0;
-                            return {
-                                label: student.studentName || 'Unknown',
-                                data: [
-                                    student.avgScore || 0,
-                                    Math.min((student.completedTests || 0) * 10, 100), // Scale for visualization
-                                    student.bestScore || 0,
-                                    completionRate
-                                ],
-                                backgroundColor: colors[index],
-                                borderColor: colors[index].replace('0.6', '1'),
-                                borderWidth: 2
-                            };
-                        })
+                        labels: testPerformanceData.slice(0, 3).map(student => student.studentName || 'Unknown'),
+                        datasets: [
+                            {
+                                label: 'Average Score (/10)',
+                                data: testPerformanceData.slice(0, 3).map(student => student.avgScore || 0),
+                                backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Best Score (/10)',
+                                data: testPerformanceData.slice(0, 3).map(student => student.bestScore || 0),
+                                backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Tests Completed',
+                                data: testPerformanceData.slice(0, 3).map(student => student.completedTests || 0),
+                                backgroundColor: 'rgba(255, 205, 86, 0.8)',
+                                borderColor: 'rgba(255, 205, 86, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y1'
+                            },
+                            {
+                                label: 'Completion Rate (%)',
+                                data: testPerformanceData.slice(0, 3).map(student => {
+                                    const completionRate = student.totalTests > 0 ? (student.completedTests / student.totalTests) * 100 : 0;
+                                    return Math.round(completionRate * 100) / 100;
+                                }),
+                                backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y2'
+                            }
+                        ]
                     },
                     options: {
                         ...baseChartOptions,
                         scales: {
-                            r: {
-                                beginAtZero: true,
-                                max: 100,
-                                ticks: {
-                                    stepSize: 20
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                title: {
+                                    display: true,
+                                    text: 'Score (/10)'
+                                },
+                                min: 0,
+                                max: 10
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: 'Tests Completed'
+                                },
+                                min: 0,
+                                grid: {
+                                    drawOnChartArea: false,
+                                }
+                            },
+                            y2: {
+                                type: 'linear',
+                                display: false,
+                                min: 0,
+                                max: 100
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (label.includes('Completion Rate')) {
+                                            label += context.parsed.y.toFixed(1) + '%';
+                                        } else if (label.includes('Score')) {
+                                            label += context.parsed.y.toFixed(1) + '/10';
+                                        } else {
+                                            label += context.parsed.y;
+                                        }
+                                        return label;
+                                    }
                                 }
                             }
                         }
