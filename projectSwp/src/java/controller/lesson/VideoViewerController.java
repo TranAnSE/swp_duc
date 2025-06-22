@@ -30,8 +30,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
 
 /**
  *
@@ -44,23 +42,30 @@ public class VideoViewerController extends HttpServlet {
     private ChapterDAO chapterDAO = new ChapterDAO();
     private DAOSubject subjectDAO = new DAOSubject();
     private GradeDAO gradeDAO = new GradeDAO();
+    private StudentDAO studentDAO = new StudentDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // Check authentication - allow students, teachers, admin, parents
+        // Check authentication
         if (!AuthUtil.hasRole(request, RoleConstants.STUDENT)
                 && !AuthUtil.hasRole(request, RoleConstants.TEACHER)
                 && !AuthUtil.hasRole(request, RoleConstants.ADMIN)
-                && !AuthUtil.hasRole(request, RoleConstants.PARENT)) {
+//                && !AuthUtil.hasRole(request, RoleConstants.PARENT)
+                ) {
             response.sendRedirect("/login.jsp");
             return;
         }
 
         String lessonIdParam = request.getParameter("lessonId");
         if (lessonIdParam == null || lessonIdParam.isEmpty()) {
-            response.sendRedirect("/LessonURL");
+            try {
+                redirectToFirstAvailableLesson(request, response);
+            } catch (SQLException e) {
+                e.printStackTrace();
+                response.sendRedirect("/LessonURL");
+            }
             return;
         }
 
@@ -75,44 +80,56 @@ public class VideoViewerController extends HttpServlet {
                 return;
             }
 
-            // Get current chapter info
-            Chapter currentChapter = chapterDAO.findChapterById(currentLesson.getChapter_id());
+            // Check permission to view this lesson
+            if (!hasPermissionToViewLesson(request, currentLesson)) {
+                request.setAttribute("error", "You don't have permission to view this lesson");
+                request.getRequestDispatcher("/lesson/lessonList.jsp").forward(request, response);
+                return;
+            }
 
-            // Get current subject info
+            // Get current chapter and subject info
+            Chapter currentChapter = chapterDAO.findChapterById(currentLesson.getChapter_id());
             Subject currentSubject = null;
+            Grade currentGrade = null;
+
             if (currentChapter != null) {
                 currentSubject = subjectDAO.findById(currentChapter.getSubject_id());
+                if (currentSubject != null) {
+                    currentGrade = gradeDAO.getGradeById(currentSubject.getGrade_id());
+                }
             }
 
-            // Get student's grade if student is logged in
-            Integer studentGradeId = null;
-            HttpSession session = request.getSession();
-            Student student = (Student) session.getAttribute("student");
-            if (student != null) {
-                studentGradeId = student.getGrade_id();
-            }
-
-            // Build course structure for sidebar
-            Map<String, Object> courseStructure = buildCourseStructure(studentGradeId);
+            // Build course structure based on user role
+            Map<String, Object> courseStructure = buildCourseStructureByRole(request);
 
             // Get related lessons in same chapter
             List<Lesson> relatedLessons = getRelatedLessons(currentLesson.getChapter_id(), lessonId);
 
             // Get lesson statistics
-            Map<String, Object> lessonStats = getLessonStatistics(lessonId);
+            Map<String, Object> lessonStats = getLessonStatistics(currentLesson);
+
+            // Get user role for UI customization
+            String userRole = getUserRole(request);
 
             // Set attributes
             request.setAttribute("currentLesson", currentLesson);
             request.setAttribute("currentChapter", currentChapter);
             request.setAttribute("currentSubject", currentSubject);
+            request.setAttribute("currentGrade", currentGrade);
             request.setAttribute("courseStructure", courseStructure);
             request.setAttribute("relatedLessons", relatedLessons);
             request.setAttribute("lessonStats", lessonStats);
+            request.setAttribute("userRole", userRole);
 
             request.getRequestDispatcher("/lesson/videoViewer.jsp").forward(request, response);
 
         } catch (NumberFormatException e) {
-            response.sendRedirect("/LessonURL");
+            try {
+                redirectToFirstAvailableLesson(request, response);
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                response.sendRedirect("/LessonURL");
+            }
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("error", "An error occurred while loading the lesson");
@@ -120,15 +137,64 @@ public class VideoViewerController extends HttpServlet {
         }
     }
 
-    private Map<String, Object> buildCourseStructure(Integer studentGradeId) throws SQLException {
+    private boolean hasPermissionToViewLesson(HttpServletRequest request, Lesson lesson) throws SQLException {
+        HttpSession session = request.getSession();
+
+        // Admin and Teacher can view all lessons
+        if (AuthUtil.hasRole(request, RoleConstants.ADMIN) || AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
+            return true;
+        }
+
+        // Student can only view lessons from their grade
+        if (AuthUtil.hasRole(request, RoleConstants.STUDENT)) {
+            Student student = (Student) session.getAttribute("student");
+            if (student != null) {
+                Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
+                if (chapter != null) {
+                    Subject subject = subjectDAO.findById(chapter.getSubject_id());
+                    if (subject != null) {
+                        return subject.getGrade_id() == student.getGrade_id();
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Parent can view lessons from their children's grades
+        if (AuthUtil.hasRole(request, RoleConstants.PARENT)) {
+            Account parent = (Account) session.getAttribute("account");
+            if (parent != null) {
+                List<Student> children = studentDAO.getStudentsByParentId(parent.getId());
+                Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
+                if (chapter != null) {
+                    Subject subject = subjectDAO.findById(chapter.getSubject_id());
+                    if (subject != null) {
+                        for (Student child : children) {
+                            if (child.getGrade_id() == subject.getGrade_id()) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        return false;
+    }
+
+    private Map<String, Object> buildCourseStructureByRole(HttpServletRequest request) throws SQLException {
         Map<String, Object> structure = new HashMap<>();
         List<Map<String, Object>> grades = new ArrayList<>();
+
+        HttpSession session = request.getSession();
+        List<Integer> allowedGradeIds = getAllowedGradeIds(request);
 
         List<Grade> allGrades = gradeDAO.findAllFromGrade();
 
         for (Grade grade : allGrades) {
-            // Fix: So sánh int với Integer đúng cách
-            if (studentGradeId != null && grade.getId() != studentGradeId.intValue()) {
+            // Filter grades based on user role
+            if (!allowedGradeIds.isEmpty() && !allowedGradeIds.contains(grade.getId())) {
                 continue;
             }
 
@@ -159,21 +225,77 @@ public class VideoViewerController extends HttpServlet {
                                 chapterLessons.add(lesson);
                             }
                         }
-                        chapterMap.put("lessons", chapterLessons);
-                        subjectChapters.add(chapterMap);
+
+                        if (!chapterLessons.isEmpty()) {
+                            chapterMap.put("lessons", chapterLessons);
+                            subjectChapters.add(chapterMap);
+                        }
                     }
 
-                    subjectMap.put("chapters", subjectChapters);
-                    gradeSubjects.add(subjectMap);
+                    if (!subjectChapters.isEmpty()) {
+                        subjectMap.put("chapters", subjectChapters);
+                        gradeSubjects.add(subjectMap);
+                    }
                 }
             }
 
-            gradeMap.put("subjects", gradeSubjects);
-            grades.add(gradeMap);
+            if (!gradeSubjects.isEmpty()) {
+                gradeMap.put("subjects", gradeSubjects);
+                grades.add(gradeMap);
+            }
         }
 
         structure.put("grades", grades);
         return structure;
+    }
+
+    private List<Integer> getAllowedGradeIds(HttpServletRequest request) throws SQLException {
+        List<Integer> allowedGradeIds = new ArrayList<>();
+        HttpSession session = request.getSession();
+
+        // Admin and Teacher can see all grades
+        if (AuthUtil.hasRole(request, RoleConstants.ADMIN) || AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
+            return allowedGradeIds; // Empty list means all grades allowed
+        }
+
+        // Student can only see their grade
+        if (AuthUtil.hasRole(request, RoleConstants.STUDENT)) {
+            Student student = (Student) session.getAttribute("student");
+            if (student != null) {
+                allowedGradeIds.add(student.getGrade_id());
+            }
+        }
+
+        // Parent can see their children's grades
+        if (AuthUtil.hasRole(request, RoleConstants.PARENT)) {
+            Account parent = (Account) session.getAttribute("account");
+            if (parent != null) {
+                List<Student> children = studentDAO.getStudentsByParentId(parent.getId());
+                for (Student child : children) {
+                    if (!allowedGradeIds.contains(child.getGrade_id())) {
+                        allowedGradeIds.add(child.getGrade_id());
+                    }
+                }
+            }
+        }
+
+        return allowedGradeIds;
+    }
+
+    private void redirectToFirstAvailableLesson(HttpServletRequest request, HttpServletResponse response)
+            throws IOException, SQLException {
+        List<Integer> allowedGradeIds = getAllowedGradeIds(request);
+        List<Lesson> allLessons = lessonDAO.getAllLessons();
+
+        for (Lesson lesson : allLessons) {
+            if (hasPermissionToViewLesson(request, lesson)) {
+                response.sendRedirect("/video-viewer?lessonId=" + lesson.getId());
+                return;
+            }
+        }
+
+        // No lessons available, redirect to lesson list
+        response.sendRedirect("/LessonURL");
     }
 
     private List<Lesson> getRelatedLessons(int chapterId, int currentLessonId) {
@@ -189,14 +311,33 @@ public class VideoViewerController extends HttpServlet {
         return relatedLessons;
     }
 
-    private Map<String, Object> getLessonStatistics(int lessonId) {
+    private Map<String, Object> getLessonStatistics(Lesson lesson) {
         Map<String, Object> stats = new HashMap<>();
 
-        // Basic stats that don't require database changes
-        stats.put("hasVideo", true); // We can check if video_link is not empty
-        stats.put("estimatedDuration", "15 minutes"); // Default estimation
-        stats.put("difficulty", "Intermediate"); // Default level
+        // Calculate estimated duration based on content length
+        String content = lesson.getContent();
+        int estimatedMinutes = Math.max(5, (content != null ? content.length() / 200 : 5));
+
+        stats.put("hasVideo", lesson.getVideo_link() != null && !lesson.getVideo_link().trim().isEmpty());
+        stats.put("estimatedDuration", estimatedMinutes + " minutes");
+        stats.put("contentLength", content != null ? content.length() : 0);
 
         return stats;
+    }
+
+    private String getUserRole(HttpServletRequest request) {
+        if (AuthUtil.hasRole(request, RoleConstants.ADMIN)) {
+            return "admin";
+        }
+        if (AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
+            return "teacher";
+        }
+        if (AuthUtil.hasRole(request, RoleConstants.PARENT)) {
+            return "parent";
+        }
+        if (AuthUtil.hasRole(request, RoleConstants.STUDENT)) {
+            return "student";
+        }
+        return "guest";
     }
 }
