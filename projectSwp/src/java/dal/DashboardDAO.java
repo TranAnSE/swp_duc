@@ -279,56 +279,119 @@ public class DashboardDAO extends DBContext {
     }
 
     /**
-     * Get package sales data
+     * Get package sales data with accurate revenue calculation
      */
     public Map<String, Object> getPackageStatistics() throws SQLException {
         Map<String, Object> stats = new HashMap<>();
 
         try {
-            // Total revenue - simplified calculation
+            // Calculate total revenue from paid invoices
             double totalRevenue = 0.0;
             try {
-                String sql1 = "SELECT COUNT(*) * 100 as estimated_revenue FROM invoice WHERE status = 'paid'";
+                String sql1 = "SELECT SUM(CAST(total_amount AS DECIMAL(10,2))) as total_revenue "
+                        + "FROM invoice "
+                        + "WHERE status = 'paid' AND total_amount IS NOT NULL AND total_amount != ''";
+
                 try (PreparedStatement ps = connection.prepareStatement(sql1); ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
-                        totalRevenue = rs.getDouble("estimated_revenue");
+                        totalRevenue = rs.getDouble("total_revenue");
+                        if (rs.wasNull()) {
+                            totalRevenue = 0.0;
+                        }
                     }
                 }
             } catch (SQLException e) {
-                System.err.println("Error calculating revenue: " + e.getMessage());
+                System.err.println("Error calculating revenue from invoice total_amount: " + e.getMessage());
+
+                // Fallback: Calculate revenue from package prices
+                try {
+                    String fallbackSql = "SELECT SUM(CAST(sp.price AS DECIMAL(10,2))) as total_revenue "
+                            + "FROM study_package sp "
+                            + "JOIN invoice_line il ON sp.id = il.package_id "
+                            + "JOIN invoice i ON il.invoice_id = i.id "
+                            + "WHERE i.status = 'paid' AND sp.price IS NOT NULL AND sp.price != ''";
+
+                    try (PreparedStatement ps = connection.prepareStatement(fallbackSql); ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            totalRevenue = rs.getDouble("total_revenue");
+                            if (rs.wasNull()) {
+                                totalRevenue = 0.0;
+                            }
+                        }
+                    }
+                } catch (SQLException e2) {
+                    System.err.println("Error in fallback revenue calculation: " + e2.getMessage());
+                    totalRevenue = 0.0;
+                }
             }
             stats.put("totalRevenue", totalRevenue);
 
-            // Package sales count
+            // Get package sales count with accurate data
             List<Map<String, Object>> packageSales = new ArrayList<>();
             try {
                 String sql2 = "SELECT sp.name, "
-                        + "(SELECT COUNT(*) FROM invoice_line il "
-                        + " JOIN invoice i ON il.invoice_id = i.id "
-                        + " WHERE il.package_id = sp.id AND i.status = 'paid') as sales_count "
-                        + "FROM study_package sp";
+                        + "COUNT(il.package_id) as sales_count, "
+                        + "SUM(CASE WHEN sp.price IS NOT NULL AND sp.price != '' "
+                        + "     THEN CAST(sp.price AS DECIMAL(10,2)) ELSE 0 END) as package_revenue "
+                        + "FROM study_package sp "
+                        + "LEFT JOIN invoice_line il ON sp.id = il.package_id "
+                        + "LEFT JOIN invoice i ON il.invoice_id = i.id AND i.status = 'paid' "
+                        + "GROUP BY sp.id, sp.name "
+                        + "ORDER BY sales_count DESC, sp.name";
 
                 try (PreparedStatement ps = connection.prepareStatement(sql2); ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         Map<String, Object> data = new HashMap<>();
                         data.put("packageName", rs.getString("name"));
                         data.put("salesCount", rs.getInt("sales_count"));
+                        data.put("packageRevenue", rs.getDouble("package_revenue"));
                         packageSales.add(data);
                     }
                 }
             } catch (SQLException e) {
                 System.err.println("Error getting package sales: " + e.getMessage());
-                // Add default data if error
+
+                // Add default data if error occurs
                 Map<String, Object> defaultData = new HashMap<>();
-                defaultData.put("packageName", "No Data");
+                defaultData.put("packageName", "No Data Available");
                 defaultData.put("salesCount", 0);
+                defaultData.put("packageRevenue", 0.0);
                 packageSales.add(defaultData);
             }
             stats.put("packageSales", packageSales);
 
+            // Additional statistics
+            try {
+                // Total number of paid invoices
+                String sql3 = "SELECT COUNT(*) as paid_invoices FROM invoice WHERE status = 'paid'";
+                try (PreparedStatement ps = connection.prepareStatement(sql3); ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        stats.put("totalPaidInvoices", rs.getInt("paid_invoices"));
+                    }
+                }
+
+                // Average order value
+                if (totalRevenue > 0) {
+                    int paidInvoices = (Integer) stats.getOrDefault("totalPaidInvoices", 0);
+                    if (paidInvoices > 0) {
+                        double avgOrderValue = totalRevenue / paidInvoices;
+                        stats.put("averageOrderValue", Math.round(avgOrderValue * 100.0) / 100.0);
+                    }
+                }
+
+            } catch (SQLException e) {
+                System.err.println("Error calculating additional statistics: " + e.getMessage());
+            }
+
         } catch (Exception e) {
-            System.err.println("Error in getPackageStatistics: " + e.getMessage());
+            System.err.println("Critical error in getPackageStatistics: " + e.getMessage());
             e.printStackTrace();
+
+            // Set safe default values
+            stats.put("totalRevenue", 0.0);
+            stats.put("packageSales", new ArrayList<>());
+            stats.put("totalPaidInvoices", 0);
+            stats.put("averageOrderValue", 0.0);
         }
 
         return stats;
