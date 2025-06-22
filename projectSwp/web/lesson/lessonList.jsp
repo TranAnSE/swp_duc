@@ -88,15 +88,20 @@
                                 </c:if>
                             </td>
                             <td>
+                                <c:if test="${not empty lesson.video_link}">
+                                    <a href="/video-viewer?lessonId=${lesson.id}" class="btn btn-sm btn-success">
+                                        <i class="fas fa-play"></i> Watch
+                                    </a>
+                                </c:if>
                                 <a href="LessonURL?action=view&id=${lesson.id}" class="btn btn-sm btn-info">
-                                    <i class="fas fa-eye"></i> Xem
+                                    <i class="fas fa-eye"></i> View
                                 </a>
                                 <a href="LessonURL?action=updateForm&id=${lesson.id}" class="btn btn-sm btn-warning">
-                                    <i class="fas fa-edit"></i> Sửa
+                                    <i class="fas fa-edit"></i> Edit
                                 </a>
                                 <a href="LessonURL?action=delete&id=${lesson.id}" class="btn btn-sm btn-danger"
-                                   onclick="return confirm('Bạn có chắc muốn xóa?')">
-                                    <i class="fas fa-trash"></i> Xóa
+                                   onclick="return confirm('Are you sure you want to delete this lesson?')">
+                                    <i class="fas fa-trash"></i> Delete
                                 </a>
                             </td>
                         </tr>
