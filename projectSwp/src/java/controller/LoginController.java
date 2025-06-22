@@ -155,7 +155,7 @@ public class LoginController extends HttpServlet {
     private void redirectBasedOnRole(HttpServletResponse response, HttpServletRequest request, String role) throws IOException {
         switch (role) {
             case "admin":
-                redirectToPage(response, request, "/admin");
+                redirectToPage(response, request, "admin?action=dashboard");
                 break;
             case "teacher":
                 redirectToPage(response, request, "/teacher/home.jsp");
