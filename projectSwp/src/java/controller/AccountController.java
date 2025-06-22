@@ -23,6 +23,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import model.Account;
 import model.Image;
+import dal.DashboardDAO;
+import com.google.gson.Gson;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
@@ -34,6 +39,7 @@ public class AccountController extends HttpServlet {
 
     private AccountDAO accountDAO = new AccountDAO();
     private ImageDAO ImageDAO = new ImageDAO(accountDAO.getConnection());
+    private DashboardDAO dashboardDAO = new DashboardDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -70,6 +76,9 @@ public class AccountController extends HttpServlet {
                     break;
                 case "searchAccount":
                     searchAccount(request, response);
+                    break;
+                case "dashboard":
+                    showDashboard(request, response);
                     break;
                 default:
                     response.sendRedirect("/index.html");
@@ -323,5 +332,111 @@ public class AccountController extends HttpServlet {
         account.setImage_id(imageId);
 
         return account;
+    }
+
+    private void showDashboard(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, ServletException, IOException {
+        try {
+            System.out.println("Loading dashboard data...");
+
+            // Get all dashboard data with error handling
+            Map<String, Integer> totalCounts = new HashMap<>();
+            Map<String, Integer> usersByRole = new HashMap<>();
+            Map<String, Object> testStatistics = new HashMap<>();
+            List<Map<String, Object>> recentActivities = new ArrayList<>();
+            List<Map<String, Object>> monthlyCompletions = new ArrayList<>();
+            List<Map<String, Object>> gradeDistribution = new ArrayList<>();
+            Map<String, Object> packageStats = new HashMap<>();
+
+            try {
+                totalCounts = dashboardDAO.getTotalCounts();
+                System.out.println("Total counts loaded: " + totalCounts);
+            } catch (Exception e) {
+                System.err.println("Error loading total counts: " + e.getMessage());
+            }
+
+            try {
+                usersByRole = dashboardDAO.getUsersByRole();
+                System.out.println("Users by role loaded: " + usersByRole);
+            } catch (Exception e) {
+                System.err.println("Error loading users by role: " + e.getMessage());
+            }
+
+            try {
+                testStatistics = dashboardDAO.getTestStatistics();
+                System.out.println("Test statistics loaded: " + testStatistics);
+            } catch (Exception e) {
+                System.err.println("Error loading test statistics: " + e.getMessage());
+            }
+
+            try {
+                recentActivities = dashboardDAO.getRecentTestActivities();
+                System.out.println("Recent activities loaded: " + recentActivities.size() + " items");
+            } catch (Exception e) {
+                System.err.println("Error loading recent activities: " + e.getMessage());
+            }
+
+            try {
+                monthlyCompletions = dashboardDAO.getMonthlyTestCompletions();
+                System.out.println("Monthly completions loaded: " + monthlyCompletions.size() + " items");
+            } catch (Exception e) {
+                System.err.println("Error loading monthly completions: " + e.getMessage());
+            }
+
+            try {
+                gradeDistribution = dashboardDAO.getGradeDistribution();
+                System.out.println("Grade distribution loaded: " + gradeDistribution.size() + " items");
+            } catch (Exception e) {
+                System.err.println("Error loading grade distribution: " + e.getMessage());
+            }
+
+            try {
+                packageStats = dashboardDAO.getPackageStatistics();
+                System.out.println("Package stats loaded: " + packageStats);
+            } catch (Exception e) {
+                System.err.println("Error loading package stats: " + e.getMessage());
+            }
+
+            // Convert data to JSON for charts
+            Gson gson = new Gson();
+            String usersByRoleJson = gson.toJson(usersByRole);
+            String monthlyCompletionsJson = gson.toJson(monthlyCompletions);
+            String gradeDistributionJson = gson.toJson(gradeDistribution);
+            String testStatisticsJson = gson.toJson(testStatistics);
+
+            // Set attributes
+            request.setAttribute("totalCounts", totalCounts);
+            request.setAttribute("usersByRole", usersByRole);
+            request.setAttribute("testStatistics", testStatistics);
+            request.setAttribute("recentActivities", recentActivities);
+            request.setAttribute("packageStats", packageStats);
+
+            // JSON data for charts
+            request.setAttribute("usersByRoleJson", usersByRoleJson);
+            request.setAttribute("monthlyCompletionsJson", monthlyCompletionsJson);
+            request.setAttribute("gradeDistributionJson", gradeDistributionJson);
+            request.setAttribute("testStatisticsJson", testStatisticsJson);
+
+            System.out.println("Dashboard data loaded successfully, forwarding to JSP...");
+            request.getRequestDispatcher("/admin/home.jsp").forward(request, response);
+
+        } catch (Exception e) {
+            System.err.println("Critical error in showDashboard: " + e.getMessage());
+            e.printStackTrace();
+            request.setAttribute("error", "Error loading dashboard data: " + e.getMessage());
+
+            // Set empty default values to prevent JSP errors
+            request.setAttribute("totalCounts", new HashMap<String, Integer>());
+            request.setAttribute("usersByRole", new HashMap<String, Integer>());
+            request.setAttribute("testStatistics", new HashMap<String, Object>());
+            request.setAttribute("recentActivities", new ArrayList<>());
+            request.setAttribute("packageStats", new HashMap<String, Object>());
+            request.setAttribute("usersByRoleJson", "{}");
+            request.setAttribute("monthlyCompletionsJson", "[]");
+            request.setAttribute("gradeDistributionJson", "[]");
+            request.setAttribute("testStatisticsJson", "{}");
+
+            request.getRequestDispatcher("/admin/home.jsp").forward(request, response);
+        }
     }
 }

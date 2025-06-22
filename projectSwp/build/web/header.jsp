@@ -33,6 +33,7 @@
                                         <c:if test="${sessionScope.account.role == 'admin'}">
                                             <li><a href="#">Admin</a>
                                                 <ul class="submenu">
+                                                    <li><a href="/admin?action=dashboard">Dashboard</a></li>
                                                     <li><a href="/admin?action=listAccount">Manage Accounts</a></li>
                                                     <li><a href="/Question">Manage Questions</a></li>
                                                     <li><a href="/test">Manage Tests</a></li>
@@ -95,10 +96,6 @@
 
                                         <!-- Right-side Buttons -->
                                         
-                                        
-                                        
-                                        
-                                        
                                         <c:choose>
                                             <c:when test="${sessionScope.role == 'student'}">
                                                 <li class="button-header">
@@ -111,14 +108,6 @@
                                                 </li>
                                             </c:otherwise>
                                         </c:choose>
-
-   
-   
-   
-   
-  
-  
-   
    
                                         <c:if test="${not empty sessionScope.student or not empty sessionScope.account}">
                                             <li class="button-header">
