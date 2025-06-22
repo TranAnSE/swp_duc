@@ -16,7 +16,7 @@
         <link rel="manifest" href="site.webmanifest">
         <link rel="shortcut icon" type="image/x-icon" href="/assets/img/favicon.ico">
 
-        <!-- CSS here -->
+        <!-- CSS -->
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
         <link rel="stylesheet" href="/assets/css/owl.carousel.min.css">
         <link rel="stylesheet" href="/assets/css/slicknav.css">
@@ -223,16 +223,24 @@
                 text-align: center;
             }
 
-            .metric-card .metric-label {
-                color: #6c757d;
-                font-size: 0.9rem;
-                margin-top: 5px;
+            .metric-card {
+                margin-bottom: 15px;
+            }
+
+            .metric-value {
+                font-size: 2rem;
+                font-weight: 700;
+                line-height: 1;
+                margin-bottom: 5px;
             }
 
             .metric-label {
                 color: #6c757d;
                 font-size: 0.9rem;
                 margin-top: 5px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                font-weight: 600;
             }
 
             .progress-custom {
@@ -240,10 +248,12 @@
                 border-radius: 10px;
                 background-color: #e9ecef;
                 margin-top: 10px;
+                overflow: hidden;
             }
 
             .progress-custom .progress-bar {
                 border-radius: 10px;
+                transition: width 0.6s ease;
             }
 
             .error-message {
@@ -292,17 +302,45 @@
                 transition: all 0.3s ease;
                 font-size: 0.85rem;
                 font-weight: 600;
+                border: none;
+                width: 100%;
             }
 
             .quick-action-btn:hover {
                 transform: translateY(-2px);
                 text-decoration: none;
                 color: white;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             }
 
             .quick-action-btn i {
                 font-size: 1.5rem;
                 margin-bottom: 5px;
+            }
+
+            /* Package statistics specific styles */
+            .package-stats-container {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+            }
+
+            .package-stats-metrics {
+                flex-shrink: 0;
+            }
+
+            .package-stats-list {
+                flex: 1;
+                min-height: 0;
+            }
+
+            .package-stats-scrollable {
+                max-height: 200px;
+                overflow-y: auto;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                padding: 10px;
+                background-color: #f8f9fa;
             }
 
             /* Responsive adjustments */
@@ -346,6 +384,10 @@
 
                 .quick-action-btn i {
                     font-size: 1.2rem;
+                }
+
+                .metric-value {
+                    font-size: 1.5rem;
                 }
             }
 
@@ -534,123 +576,80 @@
                 <div class="col-xl-4 col-lg-4">
                     <div class="chart-container medium">
                         <h5 class="chart-title"><i class="fas fa-shopping-cart"></i> Package Statistics</h5>
-
-                        <!-- Total Revenue -->
-                        <div class="metric-card">
-                            <div class="metric-value text-success">
-                                $<fmt:formatNumber value="${packageStats.totalRevenue}" pattern="#,##0.00" />
-                            </div>
-                            <div class="metric-label">Total Revenue</div>
-                        </div>
-
-                        <hr>
-
-                        <!-- Additional Metrics Row -->
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <div class="text-center">
-                                    <div class="metric-value text-info" style="font-size: 1.5rem;">
-                                        ${packageStats.totalPaidInvoices}
+                        
+                        <div class="package-stats-container">
+                            <!-- Revenue Metrics -->
+                            <div class="package-stats-metrics">
+                                <!-- Total Revenue -->
+                                <div class="metric-card">
+                                    <div class="metric-value text-success">
+                                        $<fmt:formatNumber value="${packageStats.totalRevenue}" pattern="#,##0.00" />
                                     </div>
-                                    <div class="metric-label" style="font-size: 0.8rem;">Paid Orders</div>
+                                    <div class="metric-label">Total Revenue</div>
                                 </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-center">
-                                    <div class="metric-value text-warning" style="font-size: 1.5rem;">
-                                        $<fmt:formatNumber value="${packageStats.averageOrderValue}" pattern="#,##0.00" />
-                                    </div>
-                                    <div class="metric-label" style="font-size: 0.8rem;">Avg Order</div>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Package Sales List -->
-                        <h6 class="mb-3"><i class="fas fa-list"></i> Package Sales</h6>
-                        <div style="max-height: 200px; overflow-y: auto;">
-                            <c:choose>
-                                <c:when test="${not empty packageStats.packageSales}">
-                                    <c:forEach var="packageSale" items="${packageStats.packageSales}">
-                                        <div class="package-sales-item">
-                                            <div>
-                                                <small class="text-muted">${packageSale.packageName}</small>
-                                                <c:if test="${packageSale.packageRevenue > 0}">
-                                                    <br>
-                                                    <small class="text-success">
-                                                        $<fmt:formatNumber value="${packageSale.packageRevenue}" pattern="#,##0.00" />
-                                                    </small>
-                                                </c:if>
+                                <!-- Additional Metrics Row -->
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <div class="metric-value text-info" style="font-size: 1.5rem;">
+                                                ${packageStats.totalPaidInvoices}
                                             </div>
-                                            <span class="badge badge-primary">${packageSale.salesCount} sales</span>
+                                            <div class="metric-label" style="font-size: 0.8rem;">Paid Orders</div>
                                         </div>
-                                    </c:forEach>
-                                </c:when>
-                                <c:otherwise>
-                                    <div class="text-center text-muted py-3">
-                                        <i class="fas fa-inbox fa-2x mb-2"></i>
-                                        <p class="mb-0">No package sales data</p>
                                     </div>
-                                </c:otherwise>
-                            </c:choose>
-                        </div>
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <div class="metric-value text-warning" style="font-size: 1.5rem;">
+                                                $<fmt:formatNumber value="${packageStats.averageOrderValue}" pattern="#,##0.00" />
+                                            </div>
+                                            <div class="metric-label" style="font-size: 0.8rem;">Avg Order</div>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        <!-- Test Completion Rate (if available) -->
-                        <c:if test="${testStatistics.completionRate != null}">
-                            <hr>
-                            <div class="metric-card">
-                                <div class="metric-value text-info">
-                                    <fmt:formatNumber value="${testStatistics.completionRate}" pattern="#.##" />%
-                                </div>
-                                <div class="metric-label">Test Completion Rate</div>
-                                <div class="progress-custom">
-                                    <div class="progress-bar bg-info" style="width: ${testStatistics.completionRate}%"></div>
-                                </div>
+                                <!-- Test Completion Rate (if available) -->
+                                <c:if test="${testStatistics.completionRate != null}">
+                                    <div class="metric-card">
+                                        <div class="metric-value text-info">
+                                            <fmt:formatNumber value="${testStatistics.completionRate}" pattern="#.##" />%
+                                        </div>
+                                        <div class="metric-label">Test Completion Rate</div>
+                                        <div class="progress-custom">
+                                            <div class="progress-bar bg-info" style="width: ${testStatistics.completionRate}%"></div>
+                                        </div>
+                                    </div>
+                                </c:if>
                             </div>
-                        </c:if>
-                    </div>
-                </div>
 
-                <!-- Quick Actions -->
-                <div class="row">
-                    <div class="col-12">
-                        <div class="chart-container">
-                            <h5 class="chart-title"><i class="fas fa-bolt"></i> Quick Actions</h5>
-                            <div class="row">
-                                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
-                                    <a href="/admin?action=createAccount" class="btn btn-primary quick-action-btn">
-                                        <i class="fas fa-user-plus"></i>
-                                        <span>Add Account</span>
-                                    </a>
-                                </div>
-                                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
-                                    <a href="/test?action=create" class="btn btn-success quick-action-btn">
-                                        <i class="fas fa-plus-circle"></i>
-                                        <span>Create Test</span>
-                                    </a>
-                                </div>
-                                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
-                                    <a href="/Question?action=addForm" class="btn btn-warning quick-action-btn">
-                                        <i class="fas fa-question"></i>
-                                        <span>Add Question</span>
-                                    </a>
-                                </div>
-                                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
-                                    <a href="/LessonURL?action=addForm" class="btn btn-info quick-action-btn">
-                                        <i class="fas fa-book"></i>
-                                        <span>Add Lesson</span>
-                                    </a>
-                                </div>
-                                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
-                                    <a href="/study_package?service=add" class="quick-action-btn" style="background-color: #6f42c1; border-color: #6f42c1; color: white;">
-                                        <i class="fas fa-box"></i>
-                                        <span>Add Package</span>
-                                    </a>
-                                </div>
-                                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
-                                    <a href="/category?action=addForm" class="btn btn-dark quick-action-btn">
-                                        <i class="fas fa-tags"></i>
-                                        <span>Add Category</span>
-                                    </a>
+                            <!-- Package Sales List -->
+                            <div class="package-stats-list">
+                                <h6 class="mb-3"><i class="fas fa-list"></i> Package Sales</h6>
+                                <div class="package-stats-scrollable">
+                                    <c:choose>
+                                        <c:when test="${not empty packageStats.packageSales}">
+                                            <c:forEach var="packageSale" items="${packageStats.packageSales}">
+                                                <div class="package-sales-item">
+                                                    <div>
+                                                        <small class="text-muted">${packageSale.packageName}</small>
+                                                        <c:if test="${packageSale.packageRevenue > 0}">
+                                                            <br>
+                                                            <small class="text-success">
+                                                                $<fmt:formatNumber value="${packageSale.packageRevenue}" pattern="#,##0.00" />
+                                                            </small>
+                                                        </c:if>
+                                                    </div>
+                                                    <span class="badge badge-primary">${packageSale.salesCount} sales</span>
+                                                </div>
+                                            </c:forEach>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <div class="text-center text-muted py-3">
+                                                <i class="fas fa-inbox fa-2x mb-2"></i>
+                                                <p class="mb-0">No package sales data</p>
+                                            </div>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </div>
                             </div>
                         </div>
@@ -658,303 +657,351 @@
                 </div>
             </div>
 
-            <%@include file="../footer.jsp" %>
+            <!-- Quick Actions Section - Separate Row -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="chart-container">
+                        <h5 class="chart-title"><i class="fas fa-bolt"></i> Quick Actions</h5>
+                        <div class="row">
+                            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+                                <a href="/admin?action=createAccount" class="btn btn-primary quick-action-btn">
+                                    <i class="fas fa-user-plus"></i>
+                                    <span>Add Account</span>
+                                </a>
+                            </div>
+                            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+                                <a href="/test?action=create" class="btn btn-success quick-action-btn">
+                                    <i class="fas fa-plus-circle"></i>
+                                    <span>Create Test</span>
+                                </a>
+                            </div>
+                            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+                                <a href="/Question?action=addForm" class="btn btn-warning quick-action-btn">
+                                    <i class="fas fa-question"></i>
+                                    <span>Add Question</span>
+                                </a>
+                            </div>
+                            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+                                <a href="/LessonURL?action=addForm" class="btn btn-info quick-action-btn">
+                                    <i class="fas fa-book"></i>
+                                    <span>Add Lesson</span>
+                                </a>
+                            </div>
+                            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+                                <a href="/study_package?service=add" class="quick-action-btn" style="background-color: #6f42c1; border-color: #6f42c1; color: white;">
+                                    <i class="fas fa-box"></i>
+                                    <span>Add Package</span>
+                                </a>
+                            </div>
+                            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
+                                <a href="/category?action=addForm" class="btn btn-dark quick-action-btn">
+                                    <i class="fas fa-tags"></i>
+                                    <span>Add Category</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            <!-- Chart Scripts -->
-            <script>
-                // Chart.js default configuration
-                Chart.defaults.font.family = 'Arial, sans-serif';
-                Chart.defaults.color = '#495057';
+        <%@include file="../footer.jsp" %>
 
-                // Color palette
-                const colors = {
-                    primary: '#007bff',
-                    success: '#28a745',
-                    warning: '#ffc107',
-                    danger: '#dc3545',
-                    info: '#17a2b8',
-                    purple: '#6f42c1',
-                    orange: '#fd7e14',
-                    teal: '#20c997'
-                };
+        <!-- Chart Scripts -->
+        <script>
+            // Chart.js default configuration
+            Chart.defaults.font.family = 'Arial, sans-serif';
+            Chart.defaults.color = '#495057';
 
-                // User Role Distribution Chart
-                const userRoleData = ${usersByRoleJson};
-                if (userRoleData && Object.keys(userRoleData).length > 0) {
-                    const ctx1 = document.getElementById('userRoleChart').getContext('2d');
-                    new Chart(ctx1, {
-                        type: 'doughnut',
-                        data: {
-                            labels: Object.keys(userRoleData),
-                            datasets: [{
-                                    data: Object.values(userRoleData),
-                                    backgroundColor: [
-                                        colors.primary,
-                                        colors.success,
-                                        colors.warning,
-                                        colors.danger,
-                                        colors.info
-                                    ],
-                                    borderWidth: 0,
-                                    hoverOffset: 10
-                                }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom',
-                                    labels: {
-                                        padding: 15,
-                                        usePointStyle: true,
-                                        font: {
-                                            size: 12
-                                        }
-                                    }
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function (context) {
-                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                            const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
+            // Color palette
+            const colors = {
+                primary: '#007bff',
+                success: '#28a745',
+                warning: '#ffc107',
+                danger: '#dc3545',
+                info: '#17a2b8',
+                purple: '#6f42c1',
+                orange: '#fd7e14',
+                teal: '#20c997'
+            };
 
-                // Monthly Completion Trend Chart
-                const monthlyData = ${monthlyCompletionsJson};
-                if (monthlyData && monthlyData.length > 0) {
-                    const ctx2 = document.getElementById('monthlyCompletionChart').getContext('2d');
-                    new Chart(ctx2, {
-                        type: 'line',
-                        data: {
-                            labels: monthlyData.map(item => {
-                                const date = new Date(item.month + '-01');
-                                return date.toLocaleDateString('en-US', {month: 'short', year: 'numeric'});
-                            }),
-                            datasets: [{
-                                    label: 'Test Completions',
-                                    data: monthlyData.map(item => item.completions),
-                                    borderColor: colors.primary,
-                                    backgroundColor: colors.primary + '20',
-                                    borderWidth: 3,
-                                    fill: true,
-                                    tension: 0.4,
-                                    pointBackgroundColor: colors.primary,
-                                    pointBorderColor: '#fff',
-                                    pointBorderWidth: 2,
-                                    pointRadius: 5,
-                                    pointHoverRadius: 7
-                                }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    grid: {
-                                        color: '#e9ecef'
-                                    },
-                                    ticks: {
-                                        font: {
-                                            size: 11
-                                        }
-                                    }
-                                },
-                                x: {
-                                    grid: {
-                                        display: false
-                                    },
-                                    ticks: {
-                                        font: {
-                                            size: 11
-                                        }
+            // User Role Distribution Chart
+            const userRoleData = ${usersByRoleJson};
+            if (userRoleData && Object.keys(userRoleData).length > 0) {
+                const ctx1 = document.getElementById('userRoleChart').getContext('2d');
+                new Chart(ctx1, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(userRoleData),
+                        datasets: [{
+                                data: Object.values(userRoleData),
+                                backgroundColor: [
+                                    colors.primary,
+                                    colors.success,
+                                    colors.warning,
+                                    colors.danger,
+                                    colors.info
+                                ],
+                                borderWidth: 0,
+                                hoverOffset: 10
+                            }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 15,
+                                    usePointStyle: true,
+                                    font: {
+                                        size: 12
                                     }
                                 }
                             },
-                            plugins: {
-                                legend: {
-                                    display: false
-                                },
-                                tooltip: {
-                                    mode: 'index',
-                                    intersect: false,
-                                    backgroundColor: 'rgba(0,0,0,0.8)',
-                                    titleColor: '#fff',
-                                    bodyColor: '#fff',
-                                    borderColor: colors.primary,
-                                    borderWidth: 1
-                                }
-                            },
-                            interaction: {
-                                mode: 'nearest',
-                                axis: 'x',
-                                intersect: false
-                            }
-                        }
-                    });
-                }
-
-                // Grade Distribution Chart
-                const gradeData = ${gradeDistributionJson};
-                if (gradeData && gradeData.length > 0) {
-                    const ctx3 = document.getElementById('gradeDistributionChart').getContext('2d');
-                    new Chart(ctx3, {
-                        type: 'bar',
-                        data: {
-                            labels: gradeData.map(item => item.gradeName),
-                            datasets: [{
-                                    label: 'Number of Students',
-                                    data: gradeData.map(item => item.studentCount),
-                                    backgroundColor: colors.success + '80',
-                                    borderColor: colors.success,
-                                    borderWidth: 2,
-                                    borderRadius: 6,
-                                    borderSkipped: false
-                                }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    grid: {
-                                        color: '#e9ecef'
-                                    },
-                                    ticks: {
-                                        font: {
-                                            size: 11
-                                        }
-                                    }
-                                },
-                                x: {
-                                    grid: {
-                                        display: false
-                                    },
-                                    ticks: {
-                                        font: {
-                                            size: 11
-                                        }
-                                    }
-                                }
-                            },
-                            plugins: {
-                                legend: {
-                                    display: false
-                                },
-                                tooltip: {
-                                    backgroundColor: 'rgba(0,0,0,0.8)',
-                                    titleColor: '#fff',
-                                    bodyColor: '#fff',
-                                    borderColor: colors.success,
-                                    borderWidth: 1
-                                }
-                            }
-                        }
-                    });
-                }
-
-                // Test Types Chart
-                const testStats = ${testStatisticsJson};
-                if (testStats && testStats.testsByType) {
-                    const testTypesData = testStats.testsByType;
-                    const ctx4 = document.getElementById('testTypesChart').getContext('2d');
-                    new Chart(ctx4, {
-                        type: 'doughnut',
-                        data: {
-                            labels: Object.keys(testTypesData),
-                            datasets: [{
-                                    data: Object.values(testTypesData),
-                                    backgroundColor: [
-                                        colors.warning,
-                                        colors.info
-                                    ],
-                                    borderWidth: 0,
-                                    hoverOffset: 10
-                                }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom',
-                                    labels: {
-                                        padding: 15,
-                                        usePointStyle: true,
-                                        font: {
-                                            size: 12
-                                        }
-                                    }
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function (context) {
-                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                            const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
-                                        }
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                        return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
                                     }
                                 }
                             }
                         }
-                    });
-                }
-
-                // Auto-refresh dashboard every 5 minutes
-                setTimeout(function () {
-                    window.location.reload();
-                }, 300000);
-
-                // Add smooth loading animation
-                document.addEventListener('DOMContentLoaded', function () {
-                    const chartContainers = document.querySelectorAll('.chart-container');
-                    chartContainers.forEach((container, index) => {
-                        container.style.opacity = '0';
-                        container.style.transform = 'translateY(20px)';
-                        container.style.transition = 'all 0.5s ease-in-out';
-                        setTimeout(() => {
-                            container.style.opacity = '1';
-                            container.style.transform = 'translateY(0)';
-                        }, index * 100);
-                    });
+                    }
                 });
-            </script>
+            }
 
-            <!-- JS here -->
-            <script src="${pageContext.request.contextPath}/assets/js/vendor/modernizr-3.5.0.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/popper.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/jquery.slicknav.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/owl.carousel.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/slick.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/wow.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/animated.headline.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/jquery.magnific-popup.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/gijgo.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/jquery.nice-select.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/jquery.sticky.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/jquery.barfiller.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/jquery.counterup.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/waypoints.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/jquery.countdown.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/hover-direction-snake.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/contact.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/jquery.form.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/jquery.validate.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/mail-script.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/jquery.ajaxchimp.min.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/plugins.js"></script>
-            <script src="${pageContext.request.contextPath}/assets/js/main.js"></script>
+            // Monthly Completion Trend Chart
+            const monthlyData = ${monthlyCompletionsJson};
+            if (monthlyData && monthlyData.length > 0) {
+                const ctx2 = document.getElementById('monthlyCompletionChart').getContext('2d');
+                new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: monthlyData.map(item => {
+                            const date = new Date(item.month + '-01');
+                            return date.toLocaleDateString('en-US', {month: 'short', year: 'numeric'});
+                        }),
+                        datasets: [{
+                                label: 'Test Completions',
+                                data: monthlyData.map(item => item.completions),
+                                borderColor: colors.primary,
+                                backgroundColor: colors.primary + '20',
+                                borderWidth: 3,
+                                fill: true,
+                                tension: 0.4,
+                                pointBackgroundColor: colors.primary,
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                                pointRadius: 5,
+                                pointHoverRadius: 7
+                            }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: '#e9ecef'
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                borderColor: colors.primary,
+                                borderWidth: 1
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+            }
+
+            // Grade Distribution Chart
+            const gradeData = ${gradeDistributionJson};
+            if (gradeData && gradeData.length > 0) {
+                const ctx3 = document.getElementById('gradeDistributionChart').getContext('2d');
+                new Chart(ctx3, {
+                    type: 'bar',
+                    data: {
+                        labels: gradeData.map(item => item.gradeName),
+                        datasets: [{
+                                label: 'Number of Students',
+                                data: gradeData.map(item => item.studentCount),
+                                backgroundColor: colors.success + '80',
+                                borderColor: colors.success,
+                                borderWidth: 2,
+                                borderRadius: 6,
+                                borderSkipped: false
+                            }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: '#e9ecef'
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                borderColor: colors.success,
+                                borderWidth: 1
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Test Types Chart
+            const testStats = ${testStatisticsJson};
+            if (testStats && testStats.testsByType) {
+                const testTypesData = testStats.testsByType;
+                const ctx4 = document.getElementById('testTypesChart').getContext('2d');
+                new Chart(ctx4, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(testTypesData),
+                        datasets: [{
+                                data: Object.values(testTypesData),
+                                backgroundColor: [
+                                    colors.warning,
+                                    colors.info
+                                ],
+                                borderWidth: 0,
+                                hoverOffset: 10
+                            }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 15,
+                                    usePointStyle: true,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                        return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Auto-refresh dashboard every 5 minutes
+            setTimeout(function () {
+                window.location.reload();
+            }, 300000);
+
+            // Add smooth loading animation
+            document.addEventListener('DOMContentLoaded', function () {
+                const chartContainers = document.querySelectorAll('.chart-container');
+                chartContainers.forEach((container, index) => {
+                    container.style.opacity = '0';
+                    container.style.transform = 'translateY(20px)';
+                    container.style.transition = 'all 0.5s ease-in-out';
+                    setTimeout(() => {
+                        container.style.opacity = '1';
+                        container.style.transform = 'translateY(0)';
+                    }, index * 100);
+                });
+            });
+        </script>
+
+        <!-- JS -->
+        <script src="${pageContext.request.contextPath}/assets/js/vendor/modernizr-3.5.0.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/popper.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.slicknav.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/owl.carousel.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/slick.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/wow.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/animated.headline.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.magnific-popup.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/gijgo.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.nice-select.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.sticky.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.barfiller.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.counterup.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/waypoints.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.countdown.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/hover-direction-snake.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/contact.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.form.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.validate.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/mail-script.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.ajaxchimp.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/plugins.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/main.js"></script>
 
     </body>
 </html>
