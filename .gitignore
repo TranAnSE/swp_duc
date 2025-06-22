@@ -20,3 +20,4 @@ projectSwp/src/java/dal/DBContext.java
 projectSwp/web/WEB-INF/credentials.json
 projectSwp/build/web/WEB-INF/credentials.json
 test/
+*.txt

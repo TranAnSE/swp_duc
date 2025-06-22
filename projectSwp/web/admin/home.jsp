@@ -556,7 +556,7 @@
                                                 </small>
                                             </div>
                                             <div class="activity-score">
-                                                <fmt:formatNumber value="${activity.score}" pattern="#.##" />%
+                                                <fmt:formatNumber value="${activity.score}" pattern="#.##" />/10
                                             </div>
                                         </div>
                                     </c:forEach>
@@ -576,7 +576,7 @@
                 <div class="col-xl-4 col-lg-4">
                     <div class="chart-container medium">
                         <h5 class="chart-title"><i class="fas fa-shopping-cart"></i> Package Statistics</h5>
-                        
+
                         <div class="package-stats-container">
                             <!-- Revenue Metrics -->
                             <div class="package-stats-metrics">
@@ -608,18 +608,25 @@
                                     </div>
                                 </div>
 
-                                <!-- Test Completion Rate (if available) -->
-                                <c:if test="${testStatistics.completionRate != null}">
-                                    <div class="metric-card">
-                                        <div class="metric-value text-info">
-                                            <fmt:formatNumber value="${testStatistics.completionRate}" pattern="#.##" />%
-                                        </div>
-                                        <div class="metric-label">Test Completion Rate</div>
-                                        <div class="progress-custom">
-                                            <div class="progress-bar bg-info" style="width: ${testStatistics.completionRate}%"></div>
+                                <!-- Additional Statistics -->
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <div class="metric-value text-secondary" style="font-size: 1.2rem;">
+                                                ${packageStats.totalPendingInvoices}
+                                            </div>
+                                            <div class="metric-label" style="font-size: 0.8rem;">Pending</div>
                                         </div>
                                     </div>
-                                </c:if>
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <div class="metric-value text-primary" style="font-size: 1.2rem;">
+                                                ${packageStats.totalInvoices}
+                                            </div>
+                                            <div class="metric-label" style="font-size: 0.8rem;">Total Orders</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Package Sales List -->
@@ -859,7 +866,7 @@
                         labels: gradeData.map(item => item.gradeName),
                         datasets: [{
                                 label: 'Number of Students',
-                                data: gradeData.map(item => item.studentCount),
+                                data: gradeData.map(item => item.totalStudents),
                                 backgroundColor: colors.success + '80',
                                 borderColor: colors.success,
                                 borderWidth: 2,
@@ -879,7 +886,8 @@
                                 ticks: {
                                     font: {
                                         size: 11
-                                    }
+                                    },
+                                    stepSize: 1
                                 }
                             },
                             x: {
@@ -902,7 +910,14 @@
                                 titleColor: '#fff',
                                 bodyColor: '#fff',
                                 borderColor: colors.success,
-                                borderWidth: 1
+                                borderWidth: 1,
+                                callbacks: {
+                                    afterBody: function (context) {
+                                        const dataIndex = context[0].dataIndex;
+                                        const avgScore = gradeData[dataIndex].avgScore;
+                                        return avgScore > 0 ? 'Average Score: ' + avgScore + '/10' : '';
+                                    }
+                                }
                             }
                         }
                     }

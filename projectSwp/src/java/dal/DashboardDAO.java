@@ -192,24 +192,28 @@ public class DashboardDAO extends DBContext {
         List<Map<String, Object>> activities = new ArrayList<>();
 
         try {
-            String sql = "SELECT s.full_name as student_name, "
-                    + "t.name as test_name, "
-                    + "tr.score, "
-                    + "tr.finish_at, "
-                    + "g.name as grade_name "
-                    + "FROM test_record tr "
-                    + "JOIN student s ON tr.student_id = s.id "
-                    + "JOIN test t ON tr.test_id = t.id "
-                    + "JOIN grade g ON s.grade_id = g.id "
-                    + "WHERE tr.finish_at IS NOT NULL "
-                    + "ORDER BY tr.finish_at DESC LIMIT 10";
+            String sql = """
+            SELECT s.full_name as student_name, 
+                   t.name as test_name, 
+                   tr.score, 
+                   tr.finish_at, 
+                   g.name as grade_name 
+            FROM test_record tr 
+            JOIN student s ON tr.student_id = s.id 
+            JOIN test t ON tr.test_id = t.id 
+            JOIN grade g ON s.grade_id = g.id 
+            WHERE tr.finish_at IS NOT NULL 
+            ORDER BY tr.finish_at DESC 
+            LIMIT 10
+        """;
 
             try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Map<String, Object> activity = new HashMap<>();
                     activity.put("studentName", rs.getString("student_name"));
                     activity.put("testName", rs.getString("test_name"));
-                    activity.put("score", rs.getDouble("score"));
+                    // Score is already in 0-10 scale, no need to convert
+                    activity.put("score", Math.round(rs.getDouble("score") * 100.0) / 100.0);
                     activity.put("finishAt", rs.getTimestamp("finish_at"));
                     activity.put("gradeName", rs.getString("grade_name"));
                     activities.add(activity);
@@ -261,15 +265,17 @@ public class DashboardDAO extends DBContext {
         List<Map<String, Object>> gradeData = new ArrayList<>();
 
         try {
-            String sql = "SELECT g.name as grade_name, "
-                    + "COUNT(DISTINCT s.id) as total_students, "
-                    + "COUNT(DISTINCT tr.id) as total_tests_taken, "
-                    + "COALESCE(AVG(tr.score), 0) as avg_score "
-                    + "FROM grade g "
-                    + "LEFT JOIN student s ON g.id = s.grade_id "
-                    + "LEFT JOIN test_record tr ON s.id = tr.student_id AND tr.finish_at IS NOT NULL "
-                    + "GROUP BY g.id, g.name "
-                    + "ORDER BY g.name";
+            String sql = """
+            SELECT g.name as grade_name, 
+                   COUNT(DISTINCT s.id) as total_students,
+                   COUNT(DISTINCT CASE WHEN tr.finish_at IS NOT NULL THEN tr.id END) as total_tests_taken,
+                   COALESCE(AVG(CASE WHEN tr.finish_at IS NOT NULL THEN tr.score END), 0) as avg_score
+            FROM grade g 
+            LEFT JOIN student s ON g.id = s.grade_id 
+            LEFT JOIN test_record tr ON s.id = tr.student_id AND tr.finish_at IS NOT NULL
+            GROUP BY g.id, g.name 
+            ORDER BY g.name
+        """;
 
             try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -277,7 +283,8 @@ public class DashboardDAO extends DBContext {
                     data.put("gradeName", rs.getString("grade_name"));
                     data.put("totalStudents", rs.getInt("total_students"));
                     data.put("totalTestsTaken", rs.getInt("total_tests_taken"));
-                    data.put("avgScore", Math.round(rs.getDouble("avg_score") * 100.0) / 100.0);
+                    double avgScore = rs.getDouble("avg_score");
+                    data.put("avgScore", Math.round(avgScore * 100.0) / 100.0);
                     gradeData.add(data);
                 }
             }
@@ -331,13 +338,24 @@ public class DashboardDAO extends DBContext {
         try {
             // Calculate total revenue from paid invoices
             double totalRevenue = 0.0;
+            int totalPaidInvoices = 0;
+
             try {
-                String sql1 = "SELECT SUM(CAST(total_amount AS DECIMAL(10,2))) as total_revenue "
-                        + "FROM invoice "
-                        + "WHERE status = 'paid' AND total_amount IS NOT NULL AND total_amount != ''";
+                // Get total revenue and count of paid invoices
+                String sql1 = """
+                SELECT COUNT(*) as paid_count,
+                       SUM(CASE 
+                           WHEN total_amount IS NOT NULL AND total_amount != '' 
+                           THEN CAST(total_amount AS DECIMAL(10,2)) 
+                           ELSE 0 
+                       END) as total_revenue
+                FROM invoice 
+                WHERE status = 'paid' OR status = 'completed'
+            """;
 
                 try (PreparedStatement ps = connection.prepareStatement(sql1); ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
+                        totalPaidInvoices = rs.getInt("paid_count");
                         totalRevenue = rs.getDouble("total_revenue");
                         if (rs.wasNull()) {
                             totalRevenue = 0.0;
@@ -345,43 +363,38 @@ public class DashboardDAO extends DBContext {
                     }
                 }
             } catch (SQLException e) {
-                System.err.println("Error calculating revenue from invoice total_amount: " + e.getMessage());
-
-                // Fallback: Calculate revenue from package prices
-                try {
-                    String fallbackSql = "SELECT SUM(CAST(sp.price AS DECIMAL(10,2))) as total_revenue "
-                            + "FROM study_package sp "
-                            + "JOIN invoice_line il ON sp.id = il.package_id "
-                            + "JOIN invoice i ON il.invoice_id = i.id "
-                            + "WHERE i.status = 'paid' AND sp.price IS NOT NULL AND sp.price != ''";
-
-                    try (PreparedStatement ps = connection.prepareStatement(fallbackSql); ResultSet rs = ps.executeQuery()) {
-                        if (rs.next()) {
-                            totalRevenue = rs.getDouble("total_revenue");
-                            if (rs.wasNull()) {
-                                totalRevenue = 0.0;
-                            }
-                        }
-                    }
-                } catch (SQLException e2) {
-                    System.err.println("Error in fallback revenue calculation: " + e2.getMessage());
-                    totalRevenue = 0.0;
-                }
+                System.err.println("Error calculating revenue: " + e.getMessage());
+                totalRevenue = 0.0;
+                totalPaidInvoices = 0;
             }
-            stats.put("totalRevenue", totalRevenue);
 
-            // Get package sales count with accurate data
+            stats.put("totalRevenue", totalRevenue);
+            stats.put("totalPaidInvoices", totalPaidInvoices);
+
+            // Calculate average order value
+            double avgOrderValue = 0.0;
+            if (totalPaidInvoices > 0) {
+                avgOrderValue = totalRevenue / totalPaidInvoices;
+            }
+            stats.put("averageOrderValue", Math.round(avgOrderValue * 100.0) / 100.0);
+
+            // Get package sales breakdown
             List<Map<String, Object>> packageSales = new ArrayList<>();
             try {
-                String sql2 = "SELECT sp.name, "
-                        + "COUNT(il.package_id) as sales_count, "
-                        + "SUM(CASE WHEN sp.price IS NOT NULL AND sp.price != '' "
-                        + "     THEN CAST(sp.price AS DECIMAL(10,2)) ELSE 0 END) as package_revenue "
-                        + "FROM study_package sp "
-                        + "LEFT JOIN invoice_line il ON sp.id = il.package_id "
-                        + "LEFT JOIN invoice i ON il.invoice_id = i.id AND i.status = 'paid' "
-                        + "GROUP BY sp.id, sp.name "
-                        + "ORDER BY sales_count DESC, sp.name";
+                String sql2 = """
+                SELECT sp.name,
+                       COUNT(DISTINCT i.id) as sales_count,
+                       SUM(CASE 
+                           WHEN i.total_amount IS NOT NULL AND i.total_amount != '' 
+                           THEN CAST(i.total_amount AS DECIMAL(10,2)) 
+                           ELSE 0 
+                       END) as package_revenue
+                FROM study_package sp
+                LEFT JOIN invoice_line il ON sp.id = il.package_id
+                LEFT JOIN invoice i ON il.invoice_id = i.id AND i.status = 'paid' OR i.status = 'completed'
+                GROUP BY sp.id, sp.name
+                ORDER BY sales_count DESC, sp.name
+            """;
 
                 try (PreparedStatement ps = connection.prepareStatement(sql2); ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
@@ -394,32 +407,25 @@ public class DashboardDAO extends DBContext {
                 }
             } catch (SQLException e) {
                 System.err.println("Error getting package sales: " + e.getMessage());
-
-                // Add default data if error occurs
-                Map<String, Object> defaultData = new HashMap<>();
-                defaultData.put("packageName", "No Data Available");
-                defaultData.put("salesCount", 0);
-                defaultData.put("packageRevenue", 0.0);
-                packageSales.add(defaultData);
             }
+
             stats.put("packageSales", packageSales);
 
             // Additional statistics
             try {
-                // Total number of paid invoices
-                String sql3 = "SELECT COUNT(*) as paid_invoices FROM invoice WHERE status = 'paid'";
+                // Get total pending invoices
+                String sql3 = "SELECT COUNT(*) as pending_invoices FROM invoice WHERE status = 'pending'";
                 try (PreparedStatement ps = connection.prepareStatement(sql3); ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
-                        stats.put("totalPaidInvoices", rs.getInt("paid_invoices"));
+                        stats.put("totalPendingInvoices", rs.getInt("pending_invoices"));
                     }
                 }
 
-                // Average order value
-                if (totalRevenue > 0) {
-                    int paidInvoices = (Integer) stats.getOrDefault("totalPaidInvoices", 0);
-                    if (paidInvoices > 0) {
-                        double avgOrderValue = totalRevenue / paidInvoices;
-                        stats.put("averageOrderValue", Math.round(avgOrderValue * 100.0) / 100.0);
+                // Get total invoices
+                String sql4 = "SELECT COUNT(*) as total_invoices FROM invoice";
+                try (PreparedStatement ps = connection.prepareStatement(sql4); ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        stats.put("totalInvoices", rs.getInt("total_invoices"));
                     }
                 }
 
@@ -436,6 +442,8 @@ public class DashboardDAO extends DBContext {
             stats.put("packageSales", new ArrayList<>());
             stats.put("totalPaidInvoices", 0);
             stats.put("averageOrderValue", 0.0);
+            stats.put("totalPendingInvoices", 0);
+            stats.put("totalInvoices", 0);
         }
 
         return stats;
