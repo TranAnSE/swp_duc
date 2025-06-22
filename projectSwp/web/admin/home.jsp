@@ -689,7 +689,7 @@
                             </div>
                             <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
                                 <a href="/study_package?service=add" class="quick-action-btn" style="background-color: #6f42c1; border-color: #6f42c1; color: white;">
-                                    <i class="fas fa-box"></i>
+                                    <i class="fas fa-archive"></i>
                                     <span>Add Package</span>
                                 </a>
                             </div>

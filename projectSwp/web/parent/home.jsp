@@ -338,10 +338,10 @@
                                     <i class="fas fa-users"></i> View My Children
                                 </a>
                                 <a href="${pageContext.request.contextPath}/invoice" class="btn quick-action-btn">
-                                    <i class="fas fa-file-invoice"></i> View Invoices
+                                    <i class="fas fa-file"></i> View Invoices
                                 </a>
                                 <a href="${pageContext.request.contextPath}/study_package" class="btn quick-action-btn">
-                                    <i class="fas fa-box"></i> Study Packages
+                                    <i class="fas fa-archive"></i> Study Packages
                                 </a>
                                 <a href="${pageContext.request.contextPath}/Grade" class="btn quick-action-btn">
                                     <i class="fas fa-graduation-cap"></i> Grades & Progress
@@ -390,7 +390,7 @@
                     <div class="col-lg-6 chart-col">
                         <div class="chart-container">
                             <div class="chart-title">
-                                <i class="fas fa-user-graduate"></i> Children Performance Comparison
+                                <i class="fas fa-user"></i> Children Performance Comparison
                             </div>
                             <div class="chart-wrapper-medium">
                                 <canvas id="childrenPerformanceChart"></canvas>
@@ -473,7 +473,7 @@
                             <!-- Invoice Summary -->
                             <div class="chart-container">
                                 <div class="chart-title">
-                                    <i class="fas fa-file-invoice-dollar"></i> Invoice Summary
+                                    <i class="fas fa-credit-card"></i> Invoice Summary
                                 </div>
                                 <div class="row text-center mb-3">
                                     <div class="col-6">

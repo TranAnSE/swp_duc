@@ -59,6 +59,11 @@
                                         </c:if>
 
                                         <c:if test="${sessionScope.role == 'student'}">
+                                            <li><a href="#">Dashboard</a>
+                                                <ul class="submenu">
+                                                    <li><a href="/admin?action=studentDashboard">My Dashboard</a></li>
+                                                </ul>
+                                            </li>
                                             <li><a href="#">Learning</a>
                                                 <ul class="submenu">
                                                     <li><a href="/subjects">My Subjects</a></li>
@@ -97,7 +102,7 @@
                                         <li><a href="/contact">Contact</a></li>
 
                                         <!-- Right-side Buttons -->
-                                        
+
                                         <c:choose>
                                             <c:when test="${sessionScope.role == 'student'}">
                                                 <li class="button-header">
@@ -110,7 +115,7 @@
                                                 </li>
                                             </c:otherwise>
                                         </c:choose>
-   
+
                                         <c:if test="${not empty sessionScope.student or not empty sessionScope.account}">
                                             <li class="button-header">
                                                 <a href="/logout" class="btn btn3">Logout</a>

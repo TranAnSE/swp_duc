@@ -29,6 +29,7 @@ import jakarta.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import model.Student;
 
 /**
  *
@@ -86,6 +87,9 @@ public class AccountController extends HttpServlet {
                     break;
                 case "parentDashboard":
                     showParentDashboard(request, response);
+                    break;
+                case "studentDashboard":
+                    showStudentDashboard(request, response);
                     break;
                 default:
                     response.sendRedirect("/index.html");
@@ -564,6 +568,70 @@ public class AccountController extends HttpServlet {
             request.setAttribute("testPerformanceJson", "[]");
 
             request.getRequestDispatcher("/parent/home.jsp").forward(request, response);
+        }
+    }
+
+    private void showStudentDashboard(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, ServletException, IOException {
+        try {
+            HttpSession session = request.getSession();
+            Student student = (Student) session.getAttribute("student");
+
+            if (student == null) {
+                response.sendRedirect("/login.jsp");
+                return;
+            }
+
+            System.out.println("Loading student dashboard data for student: " + student.getFull_name());
+
+            // Get comprehensive dashboard data for student
+            Map<String, Object> dashboardData = dashboardDAO.getStudentDashboardData(student.getId());
+
+            // Convert data to JSON for charts
+            Gson gson = new Gson();
+
+            // Test performance over time chart data
+            List<Map<String, Object>> testPerformance = (List<Map<String, Object>>) dashboardData.get("testPerformance");
+            String testPerformanceJson = gson.toJson(testPerformance != null ? testPerformance : new ArrayList<>());
+
+            // Subject performance chart data
+            List<Map<String, Object>> subjectPerformance = (List<Map<String, Object>>) dashboardData.get("subjectPerformance");
+            String subjectPerformanceJson = gson.toJson(subjectPerformance != null ? subjectPerformance : new ArrayList<>());
+
+            // Monthly activity chart data
+            List<Map<String, Object>> monthlyActivity = (List<Map<String, Object>>) dashboardData.get("monthlyActivity");
+            String monthlyActivityJson = gson.toJson(monthlyActivity != null ? monthlyActivity : new ArrayList<>());
+
+            // Test type distribution chart data
+            Map<String, Object> testTypeDistribution = (Map<String, Object>) dashboardData.get("testTypeDistribution");
+            String testTypeDistributionJson = gson.toJson(testTypeDistribution != null ? testTypeDistribution : new HashMap<>());
+
+            // Set all attributes
+            request.setAttribute("dashboardData", dashboardData);
+            request.setAttribute("student", student);
+
+            // JSON data for charts
+            request.setAttribute("testPerformanceJson", testPerformanceJson);
+            request.setAttribute("subjectPerformanceJson", subjectPerformanceJson);
+            request.setAttribute("monthlyActivityJson", monthlyActivityJson);
+            request.setAttribute("testTypeDistributionJson", testTypeDistributionJson);
+
+            System.out.println("Student dashboard data loaded successfully");
+            request.getRequestDispatcher("/student/home.jsp").forward(request, response);
+
+        } catch (Exception e) {
+            System.err.println("Error in showStudentDashboard: " + e.getMessage());
+            e.printStackTrace();
+            request.setAttribute("error", "Error loading student dashboard: " + e.getMessage());
+
+            // Set empty default values to prevent JSP errors
+            request.setAttribute("dashboardData", new HashMap<String, Object>());
+            request.setAttribute("testPerformanceJson", "[]");
+            request.setAttribute("subjectPerformanceJson", "[]");
+            request.setAttribute("monthlyActivityJson", "[]");
+            request.setAttribute("testTypeDistributionJson", "{}");
+
+            request.getRequestDispatcher("/student/home.jsp").forward(request, response);
         }
     }
 }

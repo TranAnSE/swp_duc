@@ -821,4 +821,483 @@ public class DashboardDAO extends DBContext {
 
         return summary;
     }
+
+    /**
+     * Get comprehensive dashboard data for student
+     */
+    public Map<String, Object> getStudentDashboardData(int studentId) throws SQLException {
+        Map<String, Object> dashboardData = new HashMap<>();
+
+        try {
+            // Get student basic statistics
+            Map<String, Object> studentStats = getStudentStatistics(studentId);
+            dashboardData.put("studentStats", studentStats);
+
+            // Get test performance over time
+            List<Map<String, Object>> testPerformance = getStudentTestPerformance(studentId);
+            dashboardData.put("testPerformance", testPerformance);
+
+            // Get recent test activities
+            List<Map<String, Object>> recentActivities = getStudentRecentActivities(studentId);
+            dashboardData.put("recentActivities", recentActivities);
+
+            // Get monthly activity
+            List<Map<String, Object>> monthlyActivity = getStudentMonthlyActivity(studentId);
+            dashboardData.put("monthlyActivity", monthlyActivity);
+
+            // Get subject performance
+            List<Map<String, Object>> subjectPerformance = getStudentSubjectPerformance(studentId);
+            dashboardData.put("subjectPerformance", subjectPerformance);
+
+            // Get test type distribution
+            Map<String, Object> testTypeDistribution = getStudentTestTypeDistribution(studentId);
+            dashboardData.put("testTypeDistribution", testTypeDistribution);
+
+            // Get upcoming tests/available tests
+            List<Map<String, Object>> availableTests = getAvailableTestsForStudent(studentId);
+            dashboardData.put("availableTests", availableTests);
+
+            // Get study progress
+            Map<String, Object> studyProgress = getStudentStudyProgress(studentId);
+            dashboardData.put("studyProgress", studyProgress);
+
+        } catch (SQLException e) {
+            System.err.println("Error in getStudentDashboardData: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+
+        return dashboardData;
+    }
+
+    /**
+     * Get student basic statistics
+     */
+    public Map<String, Object> getStudentStatistics(int studentId) throws SQLException {
+        Map<String, Object> stats = new HashMap<>();
+
+        try {
+            String sql = """
+            SELECT 
+                COUNT(DISTINCT tr.id) as total_tests_taken,
+                COUNT(DISTINCT CASE WHEN tr.finish_at IS NOT NULL THEN tr.id END) as completed_tests,
+                COALESCE(AVG(CASE WHEN tr.finish_at IS NOT NULL THEN tr.score END), 0) as avg_score,
+                COALESCE(MAX(tr.score), 0) as best_score,
+                COUNT(DISTINCT CASE WHEN DATE(tr.started_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN tr.id END) as tests_this_week,
+                COUNT(DISTINCT CASE WHEN DATE(tr.started_at) = CURDATE() THEN tr.id END) as tests_today
+            FROM test_record tr
+            WHERE tr.student_id = ?
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, studentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        stats.put("totalTestsTaken", rs.getInt("total_tests_taken"));
+                        stats.put("completedTests", rs.getInt("completed_tests"));
+                        stats.put("avgScore", Math.round(rs.getDouble("avg_score") * 100.0) / 100.0);
+                        stats.put("bestScore", Math.round(rs.getDouble("best_score") * 100.0) / 100.0);
+                        stats.put("testsThisWeek", rs.getInt("tests_this_week"));
+                        stats.put("testsToday", rs.getInt("tests_today"));
+                    }
+                }
+            }
+
+            // Calculate completion rate
+            int totalTests = (Integer) stats.getOrDefault("totalTestsTaken", 0);
+            int completedTests = (Integer) stats.getOrDefault("completedTests", 0);
+            double completionRate = totalTests > 0 ? (double) completedTests / totalTests * 100 : 0;
+            stats.put("completionRate", Math.round(completionRate * 100.0) / 100.0);
+
+            // Get current streak
+            int currentStreak = getStudentCurrentStreak(studentId);
+            stats.put("currentStreak", currentStreak);
+
+        } catch (SQLException e) {
+            System.err.println("Error in getStudentStatistics: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return stats;
+    }
+
+    /**
+     * Get student test performance over time
+     */
+    public List<Map<String, Object>> getStudentTestPerformance(int studentId) throws SQLException {
+        List<Map<String, Object>> performance = new ArrayList<>();
+
+        try {
+            String sql = """
+            SELECT 
+                DATE(tr.finish_at) as test_date,
+                tr.score,
+                t.name as test_name,
+                CASE WHEN t.is_practice = 1 THEN 'Practice' ELSE 'Official' END as test_type
+            FROM test_record tr
+            JOIN test t ON tr.test_id = t.id
+            WHERE tr.student_id = ? AND tr.finish_at IS NOT NULL
+            ORDER BY tr.finish_at DESC
+            LIMIT 20
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, studentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("testDate", rs.getDate("test_date"));
+                        data.put("score", Math.round(rs.getDouble("score") * 100.0) / 100.0);
+                        data.put("testName", rs.getString("test_name"));
+                        data.put("testType", rs.getString("test_type"));
+                        performance.add(data);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error in getStudentTestPerformance: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return performance;
+    }
+
+    /**
+     * Get student recent activities
+     */
+    public List<Map<String, Object>> getStudentRecentActivities(int studentId) throws SQLException {
+        List<Map<String, Object>> activities = new ArrayList<>();
+
+        try {
+            String sql = """
+            SELECT 
+                t.name as test_name,
+                tr.score,
+                tr.finish_at,
+                tr.started_at,
+                CASE WHEN t.is_practice = 1 THEN 'Practice' ELSE 'Official' END as test_type,
+                c.name as category_name
+            FROM test_record tr
+            JOIN test t ON tr.test_id = t.id
+            LEFT JOIN category c ON t.category_id = c.id
+            WHERE tr.student_id = ?
+            ORDER BY COALESCE(tr.finish_at, tr.started_at) DESC
+            LIMIT 10
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, studentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> activity = new HashMap<>();
+                        activity.put("testName", rs.getString("test_name"));
+                        activity.put("score", rs.getObject("score"));
+                        activity.put("finishAt", rs.getTimestamp("finish_at"));
+                        activity.put("startedAt", rs.getTimestamp("started_at"));
+                        activity.put("testType", rs.getString("test_type"));
+                        activity.put("categoryName", rs.getString("category_name"));
+                        activities.add(activity);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error in getStudentRecentActivities: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return activities;
+    }
+
+    /**
+     * Get student monthly activity
+     */
+    public List<Map<String, Object>> getStudentMonthlyActivity(int studentId) throws SQLException {
+        List<Map<String, Object>> activity = new ArrayList<>();
+
+        try {
+            String sql = """
+            SELECT 
+                DATE_FORMAT(tr.finish_at, '%Y-%m') as month,
+                COUNT(DISTINCT tr.id) as tests_completed,
+                COALESCE(AVG(tr.score), 0) as avg_score
+            FROM test_record tr
+            WHERE tr.student_id = ? AND tr.finish_at IS NOT NULL
+            AND tr.finish_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+            GROUP BY DATE_FORMAT(tr.finish_at, '%Y-%m')
+            ORDER BY month DESC
+            LIMIT 6
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, studentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("month", rs.getString("month"));
+                        data.put("testsCompleted", rs.getInt("tests_completed"));
+                        data.put("avgScore", Math.round(rs.getDouble("avg_score") * 100.0) / 100.0);
+                        activity.add(data);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error in getStudentMonthlyActivity: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return activity;
+    }
+
+    /**
+     * Get student subject performance
+     */
+    public List<Map<String, Object>> getStudentSubjectPerformance(int studentId) throws SQLException {
+        List<Map<String, Object>> subjectPerf = new ArrayList<>();
+
+        try {
+            String sql = """
+            SELECT 
+                sub.name as subject_name,
+                COUNT(DISTINCT tr.id) as tests_taken,
+                COALESCE(AVG(tr.score), 0) as avg_score,
+                COALESCE(MAX(tr.score), 0) as best_score
+            FROM student s
+            JOIN grade g ON s.grade_id = g.id
+            JOIN subject sub ON g.id = sub.grade_id
+            LEFT JOIN chapter ch ON sub.id = ch.subject_id
+            LEFT JOIN lesson l ON ch.id = l.chapter_id
+            LEFT JOIN question q ON l.id = q.lesson_id
+            LEFT JOIN test_question tq ON q.id = tq.question_id
+            LEFT JOIN test_record tr ON tq.test_id = tr.test_id AND tr.student_id = s.id AND tr.finish_at IS NOT NULL
+            WHERE s.id = ?
+            GROUP BY sub.id, sub.name
+            HAVING tests_taken > 0
+            ORDER BY avg_score DESC
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, studentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("subjectName", rs.getString("subject_name"));
+                        data.put("testsTaken", rs.getInt("tests_taken"));
+                        data.put("avgScore", Math.round(rs.getDouble("avg_score") * 100.0) / 100.0);
+                        data.put("bestScore", Math.round(rs.getDouble("best_score") * 100.0) / 100.0);
+                        subjectPerf.add(data);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error in getStudentSubjectPerformance: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return subjectPerf;
+    }
+
+    /**
+     * Get student test type distribution
+     */
+    public Map<String, Object> getStudentTestTypeDistribution(int studentId) throws SQLException {
+        Map<String, Object> distribution = new HashMap<>();
+
+        try {
+            String sql = """
+            SELECT 
+                CASE WHEN t.is_practice = 1 THEN 'Practice' ELSE 'Official' END as test_type,
+                COUNT(tr.id) as test_count,
+                COALESCE(AVG(tr.score), 0) as avg_score
+            FROM test_record tr
+            JOIN test t ON tr.test_id = t.id
+            WHERE tr.student_id = ? AND tr.finish_at IS NOT NULL
+            GROUP BY t.is_practice
+        """;
+
+            List<Map<String, Object>> typeData = new ArrayList<>();
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, studentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("testType", rs.getString("test_type"));
+                        data.put("testCount", rs.getInt("test_count"));
+                        data.put("avgScore", Math.round(rs.getDouble("avg_score") * 100.0) / 100.0);
+                        typeData.add(data);
+                    }
+                }
+            }
+            distribution.put("typeData", typeData);
+
+        } catch (SQLException e) {
+            System.err.println("Error in getStudentTestTypeDistribution: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return distribution;
+    }
+
+    /**
+     * Get available tests for student
+     */
+    public List<Map<String, Object>> getAvailableTestsForStudent(int studentId) throws SQLException {
+        List<Map<String, Object>> availableTests = new ArrayList<>();
+
+        try {
+            String sql = """
+            SELECT DISTINCT
+                t.id,
+                t.name as test_name,
+                t.description,
+                CASE WHEN t.is_practice = 1 THEN 'Practice' ELSE 'Official' END as test_type,
+                c.name as category_name,
+                c.duration,
+                CASE WHEN tr.id IS NOT NULL THEN 1 ELSE 0 END as already_taken
+            FROM test t
+            LEFT JOIN category c ON t.category_id = c.id
+            LEFT JOIN test_record tr ON t.id = tr.test_id AND tr.student_id = ? AND tr.finish_at IS NOT NULL
+            WHERE (t.is_practice = 1 OR (t.is_practice = 0 AND tr.id IS NULL))
+            ORDER BY t.is_practice DESC, t.name
+            LIMIT 10
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, studentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> test = new HashMap<>();
+                        test.put("testId", rs.getInt("id"));
+                        test.put("testName", rs.getString("test_name"));
+                        test.put("description", rs.getString("description"));
+                        test.put("testType", rs.getString("test_type"));
+                        test.put("categoryName", rs.getString("category_name"));
+                        test.put("duration", rs.getInt("duration"));
+                        test.put("alreadyTaken", rs.getBoolean("already_taken"));
+                        availableTests.add(test);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error in getAvailableTestsForStudent: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return availableTests;
+    }
+
+    /**
+     * Get student study progress
+     */
+    public Map<String, Object> getStudentStudyProgress(int studentId) throws SQLException {
+        Map<String, Object> progress = new HashMap<>();
+
+        try {
+            // Get total lessons and completed lessons (based on tests taken)
+            String sql = """
+            SELECT 
+                COUNT(DISTINCT l.id) as total_lessons,
+                COUNT(DISTINCT CASE WHEN tr.finish_at IS NOT NULL THEN l.id END) as completed_lessons
+            FROM student s
+            JOIN grade g ON s.grade_id = g.id
+            JOIN subject sub ON g.id = sub.grade_id
+            JOIN chapter ch ON sub.id = ch.subject_id
+            JOIN lesson l ON ch.id = l.chapter_id
+            LEFT JOIN question q ON l.id = q.lesson_id
+            LEFT JOIN test_question tq ON q.id = tq.question_id
+            LEFT JOIN test_record tr ON tq.test_id = tr.test_id AND tr.student_id = s.id
+            WHERE s.id = ?
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, studentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        int totalLessons = rs.getInt("total_lessons");
+                        int completedLessons = rs.getInt("completed_lessons");
+                        double progressPercentage = totalLessons > 0 ? (double) completedLessons / totalLessons * 100 : 0;
+
+                        progress.put("totalLessons", totalLessons);
+                        progress.put("completedLessons", completedLessons);
+                        progress.put("progressPercentage", Math.round(progressPercentage * 100.0) / 100.0);
+                    }
+                }
+            }
+
+            // Get subjects progress
+            String subjectSql = """
+            SELECT 
+                sub.name as subject_name,
+                COUNT(DISTINCT l.id) as total_lessons,
+                COUNT(DISTINCT CASE WHEN tr.finish_at IS NOT NULL THEN l.id END) as completed_lessons
+            FROM student s
+            JOIN grade g ON s.grade_id = g.id
+            JOIN subject sub ON g.id = sub.grade_id
+            JOIN chapter ch ON sub.id = ch.subject_id
+            JOIN lesson l ON ch.id = l.chapter_id
+            LEFT JOIN question q ON l.id = q.lesson_id
+            LEFT JOIN test_question tq ON q.id = tq.question_id
+            LEFT JOIN test_record tr ON tq.test_id = tr.test_id AND tr.student_id = s.id
+            WHERE s.id = ?
+            GROUP BY sub.id, sub.name
+            ORDER BY sub.name
+        """;
+
+            List<Map<String, Object>> subjectProgress = new ArrayList<>();
+            try (PreparedStatement ps = connection.prepareStatement(subjectSql)) {
+                ps.setInt(1, studentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Map<String, Object> data = new HashMap<>();
+                        int totalLessons = rs.getInt("total_lessons");
+                        int completedLessons = rs.getInt("completed_lessons");
+                        double progressPercentage = totalLessons > 0 ? (double) completedLessons / totalLessons * 100 : 0;
+
+                        data.put("subjectName", rs.getString("subject_name"));
+                        data.put("totalLessons", totalLessons);
+                        data.put("completedLessons", completedLessons);
+                        data.put("progressPercentage", Math.round(progressPercentage * 100.0) / 100.0);
+                        subjectProgress.add(data);
+                    }
+                }
+            }
+            progress.put("subjectProgress", subjectProgress);
+
+        } catch (SQLException e) {
+            System.err.println("Error in getStudentStudyProgress: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return progress;
+    }
+
+    /**
+     * Get student current streak (consecutive days with tests)
+     */
+    private int getStudentCurrentStreak(int studentId) throws SQLException {
+        int streak = 0;
+        try {
+            String sql = """
+            SELECT COUNT(*) as streak
+            FROM (
+                SELECT DATE(finish_at) as test_date
+                FROM test_record 
+                WHERE student_id = ? AND finish_at IS NOT NULL
+                GROUP BY DATE(finish_at)
+                ORDER BY test_date DESC
+            ) daily_tests
+        """;
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, studentId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        streak = rs.getInt("streak");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error in getStudentCurrentStreak: " + e.getMessage());
+        }
+        return streak;
+    }
 }
