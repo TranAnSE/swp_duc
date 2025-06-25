@@ -47,7 +47,7 @@ public class LogoutController extends HttpServlet {
         // huy session
         request.getSession().invalidate();
         // quay lai trang login hoac home
-        response.sendRedirect("index.html");
+        response.sendRedirect(request.getContextPath() + "/"); 
     } 
 
     /** 

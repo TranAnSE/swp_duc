@@ -2,7 +2,6 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-
 package dal;
 
 import java.sql.*;
@@ -19,11 +18,11 @@ import java.util.logging.Logger;
  * @author Na
  */
 public class StudyPackageDAO extends DBContext {
-    
+
     //Hien ra list cac goi hoc
     public List<StudyPackage> getStudyPackage(String sql) {
         List<StudyPackage> list = new ArrayList<>();
-        
+
         try {
             Statement state = connection.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
             ResultSet rs = state.executeQuery(sql);
@@ -39,14 +38,14 @@ public class StudyPackageDAO extends DBContext {
         }
         return list;
     }
-    
+
     //add them goi hoc moi
-    public int addStudyPackage (StudyPackage stuPackage) {
+    public int addStudyPackage(StudyPackage stuPackage) {
         int n = 0;
         String sql = "INSERT INTO STUDY_PACKAGE (id, name, price)\n"
                 + "     VALUES\n"
                 + "(?, ?, ?)";
-        
+
         try {
             PreparedStatement pre = connection.prepareStatement(sql);
             pre.setInt(1, stuPackage.getId());
@@ -58,9 +57,9 @@ public class StudyPackageDAO extends DBContext {
         }
         return n;
     }
-    
+
     //update cac goi hoc
-    public int updateStudyPackage (StudyPackage stuPackage) {
+    public int updateStudyPackage(StudyPackage stuPackage) {
         int n = 0;
         String sql = """
                      UPDATE study_package
@@ -68,7 +67,7 @@ public class StudyPackageDAO extends DBContext {
                            ,price = ?
                      WHERE id = ?
                      """;
-        
+
         try {
             PreparedStatement pre = connection.prepareStatement(sql);
             pre.setString(1, stuPackage.getName());
@@ -80,12 +79,12 @@ public class StudyPackageDAO extends DBContext {
         }
         return n;
     }
-    
+
     //delete cac goi hoc
-    public int deleteStudyPackage (int id) {
+    public int deleteStudyPackage(int id) {
         int n = 0;
         String sql = "DELETE FROM study_package WHERE id = ?";
-        
+
         try {
             PreparedStatement pre = connection.prepareStatement(sql);
             pre.setInt(1, id);
@@ -95,20 +94,20 @@ public class StudyPackageDAO extends DBContext {
         }
         return n;
     }
-    
+
     //tim kiem goi hoc theo id
-    public StudyPackage findStudyPackageById (int id) {
+    public StudyPackage findStudyPackageById(int id) {
         String sql = "SELECT * FROM study_package WHERE id = ?";
-        
+
         try {
             PreparedStatement pre = connection.prepareStatement(sql);
             pre.setInt(1, id);
             ResultSet rs = pre.executeQuery();
             while (rs.next()) {
                 return new StudyPackage(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("price")
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("price")
                 );
             }
         } catch (SQLException ex) {
@@ -116,22 +115,22 @@ public class StudyPackageDAO extends DBContext {
         }
         return null;
     }
-    
+
     //tim kiem goi hoc theo ten
-    public List<StudyPackage> findStudyPackageByName (String name) {
+    public List<StudyPackage> findStudyPackageByName(String name) {
         List<StudyPackage> list = new ArrayList<>();
         String sql = "SELECT * FROM STUDY_PACKAGE WHERE name LIKE ?";
-        
+
         try {
             PreparedStatement pre = connection.prepareStatement(sql);
             pre.setString(1, "%" + name + "%");
             ResultSet rs = pre.executeQuery();
             while (rs.next()) {
                 StudyPackage stuPackage = new StudyPackage(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("price")
-                    );
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("price")
+                );
                 list.add(stuPackage);
             }
         } catch (SQLException ex) {
@@ -139,22 +138,44 @@ public class StudyPackageDAO extends DBContext {
         }
         return list;
     }
-    
+
     //tim kiem goi hoc theo price
-    public List<StudyPackage> findStudyPackageByPrice (String price) {
+    public List<StudyPackage> findStudyPackageByPrice(String price) {
         List<StudyPackage> list = new ArrayList<>();
         String sql = "SELECT * FROM study_package WHERE price = ?";
-        
+
         try {
             PreparedStatement pre = connection.prepareStatement(sql);
             pre.setString(1, price);
             ResultSet rs = pre.executeQuery();
             while (rs.next()) {
                 StudyPackage stuPackage = new StudyPackage(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("price")
-                    );
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("price")
+                );
+                list.add(stuPackage);
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(StudyPackageDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return list;
+    }
+
+    public List<StudyPackage> getFeaturedPackages(int limit) {
+        List<StudyPackage> list = new ArrayList<>();
+        String sql = "SELECT * FROM study_package LIMIT ?";
+
+        try {
+            PreparedStatement pre = connection.prepareStatement(sql);
+            pre.setInt(1, limit);
+            ResultSet rs = pre.executeQuery();
+            while (rs.next()) {
+                StudyPackage stuPackage = new StudyPackage(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("price")
+                );
                 list.add(stuPackage);
             }
         } catch (SQLException ex) {
