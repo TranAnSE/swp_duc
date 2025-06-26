@@ -39,7 +39,7 @@ public class QuestionController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN) && !AuthUtil.hasRole(request, RoleConstants.TEACHER)&& !AuthUtil.hasRole(request, RoleConstants.STUDENT)) {
+        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN) && !AuthUtil.hasRole(request, RoleConstants.TEACHER) && !AuthUtil.hasRole(request, RoleConstants.STUDENT)) {
             response.sendRedirect("/error.jsp");
             return;
         }
@@ -84,6 +84,10 @@ public class QuestionController extends HttpServlet {
                     response.sendRedirect("Question");
                     return;
 
+                case "ai":
+                    response.sendRedirect("/ai-question?action=form");
+                    return;
+
                 default:
                     String keyword = request.getParameter("question");
                     List<Question> list;
@@ -118,7 +122,7 @@ public class QuestionController extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-       if (!AuthUtil.hasRole(request, RoleConstants.ADMIN) && !AuthUtil.hasRole(request, RoleConstants.TEACHER)&& !AuthUtil.hasRole(request, RoleConstants.STUDENT)) {
+        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN) && !AuthUtil.hasRole(request, RoleConstants.TEACHER) && !AuthUtil.hasRole(request, RoleConstants.STUDENT)) {
             response.sendRedirect("/error.jsp");
             return;
         }
@@ -158,9 +162,13 @@ public class QuestionController extends HttpServlet {
                 if ("SINGLE".equals(questionType)) {
                     int correctIndex = -1;
                     String correctOption = request.getParameter("correctOption");
-                    if (correctOption != null) correctIndex = Integer.parseInt(correctOption);
+                    if (correctOption != null) {
+                        correctIndex = Integer.parseInt(correctOption);
+                    }
                     correctArr = new boolean[optionContents.length];
-                    for (int i = 0; i < correctArr.length; i++) correctArr[i] = (i == correctIndex);
+                    for (int i = 0; i < correctArr.length; i++) {
+                        correctArr[i] = (i == correctIndex);
+                    }
                 } else {
                     correctArr = new boolean[optionContents.length];
                     for (int i = 0; i < correctArr.length; i++) {
@@ -185,9 +193,13 @@ public class QuestionController extends HttpServlet {
                 if ("SINGLE".equals(questionType)) {
                     int correctIndex = -1;
                     String correctOption = request.getParameter("correctOption");
-                    if (correctOption != null) correctIndex = Integer.parseInt(correctOption);
+                    if (correctOption != null) {
+                        correctIndex = Integer.parseInt(correctOption);
+                    }
                     correctArr = new boolean[optionContents.length];
-                    for (int i = 0; i < correctArr.length; i++) correctArr[i] = (i == correctIndex);
+                    for (int i = 0; i < correctArr.length; i++) {
+                        correctArr[i] = (i == correctIndex);
+                    }
                 } else {
                     correctArr = new boolean[optionContents.length];
                     for (int i = 0; i < correctArr.length; i++) {

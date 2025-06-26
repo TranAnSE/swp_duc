@@ -92,13 +92,20 @@
                 </tbody>
             </table>
 
-            <a href="Question?action=addForm" class="btn btn-success mt-3">Add New Question</a>
+            <div class="mb-3">
+                <a href="Question?action=addForm" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Add New Question (Manual)
+                </a>
+                <a href="/ai-question?action=form" class="btn btn-primary ml-2">
+                    <i class="fas fa-robot"></i> Generate with AI
+                </a>
+            </div>
         </div>
 
         <!-- Include footer -->
         <jsp:include page="/footer.jsp" />
 
-         <!-- JS Libraries -->
+        <!-- JS Libraries -->
         <script src="${pageContext.request.contextPath}/assets/js/vendor/modernizr-3.5.0.min.js"></script>
         <!-- Jquery, Popper, Bootstrap -->
         <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
