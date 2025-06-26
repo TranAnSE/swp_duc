@@ -108,7 +108,7 @@
 <!-- Nút cu?n lên ??u trang -->
 <!-- Giao di?n chatbot + nút Go to Top x?p d?c -->
 <!-- Chatbot + Nút Go to Top -->
-<div id="floating-tools">
+<!--<div id="floating-tools">
   <div id="chatbot-box">
     <div id="chatbot-header">
       <img src="img/chatbot.png" onerror="this.style.display='none'" alt="Bot"> Chat h? tr?
@@ -120,7 +120,7 @@
   <div id="back-top">
     <a title="Go to Top" href="#"><i class="fas fa-level-up-alt"></i></a>
   </div>
-</div>
+</div>-->
 
 <style>
   #floating-tools {
@@ -219,10 +219,10 @@
 </style>
 
 
-<div id="floating-tools">
+<!--<div id="floating-tools">
   <div id="chatbot-box">
     <div id="chatbot-header">
-      <!-- Ki?m tra ?nh chatbot.png có th?t không, n?u không thì thay b?ng emoji -->
+       Ki?m tra ?nh chatbot.png có th?t không, n?u không thì thay b?ng emoji 
       <img src="img/chatbot.png" onerror="this.style.display='none'" alt="Bot"> Chat h? tr?
     </div>
     <div id="chatbot-messages"></div>
@@ -232,7 +232,7 @@
   <div id="back-top">
     <a title="Go to Top" href="#"><i class="fas fa-level-up-alt"></i></a>
   </div>
-</div>
+</div>-->
 
 <script>
   const input = document.getElementById("chatbot-input");

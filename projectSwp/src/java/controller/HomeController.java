@@ -21,7 +21,7 @@ import java.util.*;
  *
  * @author ankha
  */
-@WebServlet(name = "HomeController", urlPatterns = {"/"})
+@WebServlet(name = "HomeController", urlPatterns = {""})
 public class HomeController extends HttpServlet {
     
     private DAOSubject subjectDAO = new DAOSubject();
