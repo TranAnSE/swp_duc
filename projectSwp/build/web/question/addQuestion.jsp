@@ -94,7 +94,7 @@
                             <i class="fas fa-keyboard"></i> Manual Entry
                         </a>
                         <a href="/ai-question?action=form" class="btn btn-outline-primary">
-                            <i class="fas fa-robot"></i> AI Generator
+                            <i class="fas fa-cogs"></i> AI Generator
                         </a>
                     </div>
                 </div>

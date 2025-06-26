@@ -642,14 +642,14 @@
                             <div class="difficulty-option" data-difficulty="easy">
                                 <input type="radio" name="difficulty" value="easy" id="diffEasy" checked>
                                 <label for="diffEasy" class="difficulty-label">
-                                    <i class="fas fa-seedling d-block mb-2"></i>
+                                    <i class="fas fa-leaf d-block mb-2"></i>
                                     Easy
                                 </label>
                             </div>
                             <div class="difficulty-option" data-difficulty="medium">
                                 <input type="radio" name="difficulty" value="medium" id="diffMedium">
                                 <label for="diffMedium" class="difficulty-label">
-                                    <i class="fas fa-mountain d-block mb-2"></i>
+                                    <i class="fas fa-wrench d-block mb-2"></i>
                                     Medium
                                 </label>
                             </div>
@@ -663,7 +663,7 @@
                             <div class="difficulty-option" data-difficulty="mixed">
                                 <input type="radio" name="difficulty" value="mixed" id="diffMixed">
                                 <label for="diffMixed" class="difficulty-label">
-                                    <i class="fas fa-dice d-block mb-2"></i>
+                                    <i class="fas fa-random d-block mb-2"></i>
                                     Mixed
                                 </label>
                             </div>
