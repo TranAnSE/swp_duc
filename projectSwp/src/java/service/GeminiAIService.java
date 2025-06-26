@@ -34,7 +34,7 @@ public class GeminiAIService {
 
     // Replace with your actual Gemini API key from Google AI Studio
     private static final String API_KEY = "YOUR_API_KEY_HERE"; // Enter ur actual API KEY
-    private static final String MODEL = "gemini-2.0-flash-exp";
+    private static final String MODEL = "gemini-2.5-flash";
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent";
 
     private final HttpClient httpClient;
