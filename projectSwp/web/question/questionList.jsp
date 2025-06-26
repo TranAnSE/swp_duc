@@ -92,13 +92,40 @@
                 </tbody>
             </table>
 
-            <div class="mb-3">
-                <a href="Question?action=addForm" class="btn btn-success">
-                    <i class="fas fa-plus"></i> Add New Question (Manual)
-                </a>
-                <a href="/ai-question?action=form" class="btn btn-primary ml-2">
-                    <i class="fas fa-robot"></i> Generate with AI
-                </a>
+            <div class="mb-4">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="btn-group" role="group" aria-label="Question creation options">
+                            <a href="Question?action=addForm" class="btn btn-success btn-lg">
+                                <i class="fas fa-plus me-2"></i>
+                                Manual Entry
+                            </a>
+                            <a href="/ai-question?action=form" class="btn btn-primary btn-lg">
+                                <i class="fas fa-robot me-2"></i>
+                                AI Generator
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-cog me-2"></i>Quick Actions
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/ai-question?action=form&type=single_choice">
+                                        <i class="fas fa-dot-circle me-2"></i>Generate Single Choice
+                                    </a></li>
+                                <li><a class="dropdown-item" href="/ai-question?action=form&type=multiple_choice">
+                                        <i class="fas fa-check-square me-2"></i>Generate Multiple Choice
+                                    </a></li>
+                                <li><a class="dropdown-item" href="/ai-question?action=form&type=true_false">
+                                        <i class="fas fa-balance-scale me-2"></i>Generate True/False
+                                    </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
