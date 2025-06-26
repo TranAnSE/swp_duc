@@ -13,22 +13,7 @@
         <link rel="stylesheet" href="assets/css/nice-select.css" />
         <link rel="stylesheet" href="assets/css/style.css" />
 
-        <style>
-            .error-msg {
-                color: red;
-                font-size: 0.875em;
-            }
-            body {
-                display: flex;
-                flex-direction: column;
-                min-height: 100vh;
-                font-family: Arial, sans-serif;
-                background-color: #f9f9f9;
-                padding-top: 120px;
-            }
-        </style>
-
-        <!-- jQuery + nice-select -->
+        <!-- CSS Libraries -->
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
         <link rel="stylesheet" href="/assets/css/owl.carousel.min.css">
         <link rel="stylesheet" href="/assets/css/slicknav.css">
@@ -43,6 +28,54 @@
         <link rel="stylesheet" href="/assets/css/slick.css">
         <link rel="stylesheet" href="/assets/css/nice-select.css">
         <link rel="stylesheet" href="/assets/css/style.css">
+
+        <style>
+            .error-msg {
+                color: red;
+                font-size: 0.875em;
+            }
+            body {
+                display: flex;
+                flex-direction: column;
+                min-height: 100vh;
+                font-family: Arial, sans-serif;
+                background-color: #f9f9f9;
+                padding-top: 120px;
+            }
+
+            /* Fix cho nice-select dropdown */
+            .nice-select {
+                position: relative !important;
+                z-index: 999 !important;
+            }
+
+            .nice-select .list {
+                position: absolute !important;
+                top: 100% !important;
+                left: 0 !important;
+                right: 0 !important;
+                background: white !important;
+                border: 1px solid #ddd !important;
+                border-radius: 4px !important;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+                max-height: 200px !important;
+                overflow-y: auto !important;
+                display: none !important;
+            }
+
+            .nice-select.open .list {
+                display: block !important;
+            }
+
+            .nice-select .option {
+                padding: 8px 12px !important;
+                cursor: pointer !important;
+            }
+
+            .nice-select .option:hover {
+                background-color: #f8f9fa !important;
+            }
+        </style>
     </head>
 
     <body class="bg-light">
@@ -117,10 +150,58 @@
         <!-- ✅ Include footer đúng chỗ -->
         <jsp:include page="/footer.jsp" />
 
-        <!-- ✅ Re-apply nice-select after DOM ready -->
+        <!-- JS Libraries -->
+        <script src="${pageContext.request.contextPath}/assets/js/vendor/modernizr-3.5.0.min.js"></script>
+        <!-- Jquery, Popper, Bootstrap -->
+        <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/popper.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
+        <!-- Jquery Mobile Menu -->
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.slicknav.min.js"></script>
+
+        <!-- Jquery Slick , Owl-Carousel Plugins -->
+        <script src="${pageContext.request.contextPath}/assets/js/owl.carousel.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/slick.min.js"></script>
+        <!-- One Page, Animated-HeadLin -->
+        <script src="${pageContext.request.contextPath}/assets/js/wow.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/animated.headline.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.magnific-popup.js"></script>
+
+        <!-- Date Picker -->
+        <script src="${pageContext.request.contextPath}/assets/js/gijgo.min.js"></script>
+        <!-- Nice-select, sticky -->
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.nice-select.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.sticky.js"></script>
+        <!-- Progress -->
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.barfiller.js"></script>
+
+        <!-- counter , waypoint,Hover Direction -->
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.counterup.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/waypoints.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.countdown.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/hover-direction-snake.min.js"></script>
+
+        <!-- contact js -->
+        <script src="${pageContext.request.contextPath}/assets/js/contact.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.form.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.validate.min.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/mail-script.js"></script>
+        <script src="${pageContext.request.contextPath}/assets/js/jquery.ajaxchimp.min.js"></script>
+
+        <!-- ✅ Custom Script - Đặt cuối cùng -->
         <script>
             $(document).ready(function () {
+                // Destroy existing nice-select instances
+                $('select').niceSelect('destroy');
+                
+                // Reinitialize nice-select
                 $('select').niceSelect();
+                
+                // Debug: Check if nice-select is working
+                $('.nice-select').on('click', function() {
+                    console.log('Nice-select clicked');
+                    $(this).toggleClass('open');
+                });
 
                 // Option dynamic logic
                 function updateOptionInputs() {
@@ -240,44 +321,5 @@
                 return valid;
             }
         </script>
-
-        <!-- Bootstrap JS Bundle -->
-        <!-- JS Libraries -->
-        <script src="${pageContext.request.contextPath}/assets/js/vendor/modernizr-3.5.0.min.js"></script>
-        <!-- Jquery, Popper, Bootstrap -->
-        <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/popper.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
-        <!-- Jquery Mobile Menu -->
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.slicknav.min.js"></script>
-
-        <!-- Jquery Slick , Owl-Carousel Plugins -->
-        <script src="${pageContext.request.contextPath}/assets/js/owl.carousel.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/slick.min.js"></script>
-        <!-- One Page, Animated-HeadLin -->
-        <script src="${pageContext.request.contextPath}/assets/js/wow.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/animated.headline.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.magnific-popup.js"></script>
-
-        <!-- Date Picker -->
-        <script src="${pageContext.request.contextPath}/assets/js/gijgo.min.js"></script>
-        <!-- Nice-select, sticky -->
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.nice-select.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.sticky.js"></script>
-        <!-- Progress -->
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.barfiller.js"></script>
-
-        <!-- counter , waypoint,Hover Direction -->
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.counterup.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/waypoints.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.countdown.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/hover-direction-snake.min.js"></script>
-
-        <!-- contact js -->
-        <script src="${pageContext.request.contextPath}/assets/js/contact.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.form.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.validate.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/mail-script.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.ajaxchimp.min.js"></script>
     </body>
 </html>
