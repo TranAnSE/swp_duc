@@ -12,6 +12,7 @@
         <title>AI Question Generator</title>
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
         <link rel="stylesheet" href="/assets/css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="/assets/css/nice-select.css">
         <link rel="stylesheet" href="/assets/css/style.css">
         <style>
             :root {
@@ -85,15 +86,16 @@
                 margin: 0;
             }
 
+            /* FIX: Remove overflow hidden and add padding for dropdown space */
             .form-section {
                 margin-bottom: 35px;
-                padding: 25px;
+                padding: 25px 25px 60px 25px; /* Add extra bottom padding for dropdown */
                 border: 1px solid var(--border-color);
                 border-radius: 16px;
                 background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
                 transition: all 0.3s ease;
                 position: relative;
-                overflow: hidden;
+                /* Remove overflow: hidden to allow dropdown to show */
             }
 
             .form-section::before {
@@ -116,6 +118,12 @@
                 transform: translateY(-2px);
                 box-shadow: var(--shadow-md);
                 border-color: var(--primary-color);
+            }
+
+            /* Special styling for sections with dropdowns */
+            .form-section.has-dropdown {
+                overflow: visible !important;
+                padding-bottom: 80px; /* Extra space for dropdown */
             }
 
             .section-title {
@@ -146,6 +154,101 @@
                 border-color: var(--primary-color);
                 box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
                 outline: none;
+            }
+
+            /* Enhanced nice-select styling with higher z-index */
+            .nice-select {
+                border: 2px solid var(--border-color) !important;
+                border-radius: 12px !important;
+                padding: 12px 16px !important;
+                font-size: 1rem !important;
+                background: white !important;
+                height: auto !important;
+                line-height: 1.5 !important;
+                min-height: 48px !important;
+                transition: all 0.3s ease !important;
+                position: relative !important;
+                z-index: 100 !important; /* Higher z-index */
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .nice-select:focus,
+            .nice-select.open {
+                border-color: var(--primary-color) !important;
+                box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1) !important;
+                outline: none !important;
+                z-index: 1000 !important; /* Even higher when open */
+            }
+
+            .nice-select .current {
+                color: var(--text-primary) !important;
+                font-size: 1rem !important;
+                line-height: 1.5 !important;
+                padding-right: 30px !important; /* Space for arrow */
+            }
+
+            .nice-select .list {
+                background: white !important;
+                border: 2px solid var(--primary-color) !important;
+                border-radius: 12px !important;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important; /* Stronger shadow */
+                margin-top: 5px !important;
+                max-height: 250px !important; /* Increased height */
+                overflow-y: auto !important;
+                z-index: 9999 !important; /* Very high z-index */
+                position: absolute !important;
+                top: 100% !important;
+                left: 0 !important;
+                right: 0 !important;
+                display: none !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .nice-select.open .list {
+                display: block !important;
+            }
+
+            .nice-select .option {
+                padding: 12px 16px !important;
+                font-size: 1rem !important;
+                color: var(--text-primary) !important;
+                cursor: pointer !important;
+                transition: background-color 0.2s ease !important;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+            }
+
+            .nice-select .option:last-child {
+                border-bottom: none !important;
+            }
+
+            .nice-select .option:hover {
+                background-color: rgba(79, 70, 229, 0.1) !important;
+                color: var(--primary-color) !important;
+            }
+
+            .nice-select .option.selected {
+                background-color: var(--primary-color) !important;
+                color: white !important;
+            }
+
+            .nice-select::after {
+                border-color: var(--text-secondary) transparent transparent !important;
+                right: 16px !important;
+                top: 50% !important;
+                transform: translateY(-50%) !important;
+                transition: transform 0.3s ease !important;
+            }
+
+            .nice-select.open::after {
+                transform: translateY(-50%) rotate(180deg) !important;
+            }
+
+            /* Ensure dropdown container has proper stacking context */
+            .dropdown-container {
+                position: relative;
+                z-index: 100;
             }
 
             .question-type-grid {
@@ -395,6 +498,10 @@
                     margin-bottom: 25px;
                 }
 
+                .form-section.has-dropdown {
+                    padding-bottom: 70px;
+                }
+
                 .difficulty-grid {
                     grid-template-columns: 1fr;
                 }
@@ -422,19 +529,21 @@
                     <input type="hidden" name="action" value="generate">
 
                     <!-- Lesson Selection -->
-                    <div class="form-section">
+                    <div class="form-section has-dropdown">
                         <div class="section-title">
                             <i class="fas fa-book-open"></i>
                             Select Lesson
                         </div>
-                        <select name="lesson_id" class="form-select" required id="lessonSelect">
-                            <option value="">-- Choose a lesson to generate questions --</option>
-                            <c:forEach var="lesson" items="${lessons}">
-                                <option value="${lesson.id}" data-content="${lesson.content}">
-                                    ${lesson.name}
-                                </option>
-                            </c:forEach>
-                        </select>
+                        <div class="dropdown-container">
+                            <select name="lesson_id" class="form-select wide" required id="lessonSelect">
+                                <option value="">-- Choose a lesson to generate questions --</option>
+                                <c:forEach var="lesson" items="${lessons}">
+                                    <option value="${lesson.id}" data-content="${lesson.content}">
+                                        ${lesson.name}
+                                    </option>
+                                </c:forEach>
+                            </select>
+                        </div>
                         <div class="form-text">
                             <i class="fas fa-info-circle me-1"></i>
                             Select the lesson for which you want to generate questions
@@ -494,7 +603,7 @@
                     </div>
 
                     <!-- Question Settings -->
-                    <div class="form-section">
+                    <div class="form-section has-dropdown">
                         <div class="section-title">
                             <i class="fas fa-cogs"></i>
                             Question Settings
@@ -509,13 +618,15 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="questionCategory" class="form-label">Question Category</label>
-                                <select name="question_category" id="questionCategory" class="form-select" required>
-                                    <option value="conceptual">Conceptual Understanding</option>
-                                    <option value="application">Practical Application</option>
-                                    <option value="analysis">Critical Analysis</option>
-                                    <option value="synthesis">Knowledge Synthesis</option>
-                                    <option value="evaluation">Evaluation & Assessment</option>
-                                </select>
+                                <div class="dropdown-container">
+                                    <select name="question_category" id="questionCategory" class="form-select wide" required>
+                                        <option value="conceptual">Conceptual Understanding</option>
+                                        <option value="application">Practical Application</option>
+                                        <option value="analysis">Critical Analysis</option>
+                                        <option value="synthesis">Knowledge Synthesis</option>
+                                        <option value="evaluation">Evaluation & Assessment</option>
+                                    </select>
+                                </div>
                                 <div class="form-text">Choose the cognitive level for questions</div>
                             </div>
                         </div>
@@ -594,15 +705,20 @@
         <jsp:include page="/footer.jsp" />
 
         <script src="/assets/js/vendor/jquery-1.12.4.min.js"></script>
+        <script src="/assets/js/jquery.nice-select.min.js"></script>
         <script src="/assets/js/bootstrap.min.js"></script>
         <script>
             $(document).ready(function () {
-                // Handle lesson selection
-                $('#lessonSelect').change(function () {
-                    const selectedOption = $(this).find('option:selected');
+                // Initialize nice-select with proper configuration
+                $('select.wide').niceSelect();
+
+                // Handle lesson selection with nice-select compatibility
+                $('#lessonSelect').on('change', function () {
+                    const selectedValue = $(this).val();
+                    const selectedOption = $(this).find('option[value="' + selectedValue + '"]');
                     const content = selectedOption.data('content');
 
-                    if (content) {
+                    if (content && selectedValue) {
                         $('#lessonContent').text(content);
                         $('#lessonPreview').slideDown(300);
                     } else {
@@ -633,6 +749,20 @@
                 // Initialize selected states
                 $('input[name="question_type"]:checked').closest('.question-type-card').addClass('selected');
                 $('input[name="difficulty"]:checked').closest('.difficulty-option').addClass('selected');
+
+                // Enhanced dropdown click handling
+                $(document).on('click', '.nice-select', function (e) {
+                    e.stopPropagation();
+                    $('.nice-select').not(this).removeClass('open');
+                    $(this).toggleClass('open');
+                });
+
+                // Close dropdown when clicking outside
+                $(document).on('click', function (e) {
+                    if (!$(e.target).closest('.nice-select').length) {
+                        $('.nice-select').removeClass('open');
+                    }
+                });
 
                 // Form validation and submission
                 $('#aiQuestionForm').submit(function (e) {
@@ -738,6 +868,45 @@
                     $(this).closest('.form-section').addClass('focused');
                 }).on('blur', function () {
                     $(this).closest('.form-section').removeClass('focused');
+                });
+
+                // Fix for nice-select dropdown positioning
+                $('.nice-select').each(function () {
+                    const $this = $(this);
+                    const $list = $this.find('.list');
+
+                    $this.on('click', function () {
+                        setTimeout(() => {
+                            if ($this.hasClass('open')) {
+                                // Calculate if dropdown goes below viewport
+                                const dropdownBottom = $this.offset().top + $this.outerHeight() + $list.outerHeight();
+                                const viewportBottom = $(window).scrollTop() + $(window).height();
+
+                                if (dropdownBottom > viewportBottom) {
+                                    // Position dropdown above the select
+                                    $list.css({
+                                        'top': 'auto',
+                                        'bottom': '100%',
+                                        'margin-top': '0',
+                                        'margin-bottom': '5px'
+                                    });
+                                } else {
+                                    // Position dropdown below the select (default)
+                                    $list.css({
+                                        'top': '100%',
+                                        'bottom': 'auto',
+                                        'margin-top': '5px',
+                                        'margin-bottom': '0'
+                                    });
+                                }
+                            }
+                        }, 10);
+                    });
+                });
+
+                // Ensure proper z-index stacking
+                $('.form-section.has-dropdown').each(function (index) {
+                    $(this).css('z-index', 100 - index);
                 });
             });
         </script>

@@ -8,6 +8,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -23,27 +24,34 @@ import java.util.logging.Logger;
  *
  * @author ankha
  */
+/**
+ * Service for interacting with Google Gemini AI API Handles question generation
+ * and chat functionality
+ */
 public class GeminiAIService {
 
     private static final Logger logger = Logger.getLogger(GeminiAIService.class.getName());
 
     // Replace with your actual Gemini API key from Google AI Studio
     private static final String API_KEY = "AIzaSyBMZqqgfbxZw9SD6Zd2i8dObIKUtVhIIa8";
-    private static final String MODEL = "gemini-2.5-flash";
+    private static final String MODEL = "gemini-2.0-flash-exp";
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent";
 
     private final HttpClient httpClient;
     private final Gson gson;
-    private final JsonParser jsonParser; // Add JsonParser instance
+    private final JsonParser jsonParser;
 
     public GeminiAIService() {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
         this.gson = new Gson();
-        this.jsonParser = new JsonParser(); // Initialize JsonParser
+        this.jsonParser = new JsonParser();
     }
 
+    /**
+     * Generate questions using AI based on the provided request
+     */
     public List<AIQuestion> generateQuestions(AIGenerationRequest request) throws Exception {
         logger.info("Generating " + request.getNumberOfQuestions() + " questions of type: " + request.getQuestionType());
 
@@ -52,6 +60,9 @@ public class GeminiAIService {
         return parseAIResponse(response, request.getQuestionType());
     }
 
+    /**
+     * Build the prompt for AI question generation
+     */
     private String buildPrompt(AIGenerationRequest request) {
         StringBuilder prompt = new StringBuilder();
 
@@ -86,7 +97,8 @@ public class GeminiAIService {
             prompt.append("\nAdditional Instructions: ").append(request.getAdditionalInstructions()).append("\n");
         }
 
-        prompt.append("\nIMPORTANT: Respond with ONLY a valid JSON array in this exact format:\n");
+        prompt.append("\nCRITICAL: You MUST respond with ONLY a valid JSON array. No additional text before or after.\n");
+        prompt.append("Use this EXACT format:\n");
         prompt.append("[\n");
         prompt.append("  {\n");
         prompt.append("    \"question\": \"Clear, well-written question text\",\n");
@@ -94,16 +106,24 @@ public class GeminiAIService {
         prompt.append("    \"correctAnswers\": [0, 2],\n");
         prompt.append("    \"explanation\": \"Clear explanation of why the answer is correct\"\n");
         prompt.append("  }\n");
-        prompt.append("]\n");
-        prompt.append("\nDo not include any text before or after the JSON array.");
+        prompt.append("]\n\n");
+        prompt.append("IMPORTANT RULES:\n");
+        prompt.append("- correctAnswers contains array indices (0-based) of correct options\n");
+        prompt.append("- For single choice: correctAnswers should have exactly 1 index\n");
+        prompt.append("- For multiple choice: correctAnswers should have 2-3 indices\n");
+        prompt.append("- For true/false: correctAnswers should have exactly 1 index (0 or 1)\n");
+        prompt.append("- Respond with ONLY the JSON array, no markdown formatting, no extra text\n");
 
         return prompt.toString();
     }
 
+    /**
+     * Call the Gemini API with the given prompt
+     */
     private String callGeminiAPI(String prompt) throws Exception {
         logger.info("Calling Gemini API...");
 
-        // Create request body
+        // Create request body with safety settings
         JsonObject requestBody = new JsonObject();
         JsonArray contents = new JsonArray();
         JsonObject requestContent = new JsonObject();
@@ -118,11 +138,30 @@ public class GeminiAIService {
 
         // Add generation config for better responses
         JsonObject generationConfig = new JsonObject();
-        generationConfig.addProperty("temperature", 0.7);
-        generationConfig.addProperty("topK", 40);
-        generationConfig.addProperty("topP", 0.95);
-        generationConfig.addProperty("maxOutputTokens", 2048);
+        generationConfig.addProperty("temperature", 0.3); // Lower temperature for more consistent JSON
+        generationConfig.addProperty("topK", 20);
+        generationConfig.addProperty("topP", 0.8);
+        generationConfig.addProperty("maxOutputTokens", 4096);
         requestBody.add("generationConfig", generationConfig);
+
+        // Add safety settings to prevent blocking
+        JsonArray safetySettings = new JsonArray();
+        String[] categories = {
+            "HARM_CATEGORY_HARASSMENT",
+            "HARM_CATEGORY_HATE_SPEECH",
+            "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            "HARM_CATEGORY_DANGEROUS_CONTENT"
+        };
+
+        for (String category : categories) {
+            JsonObject safetySetting = new JsonObject();
+            safetySetting.addProperty("category", category);
+            safetySetting.addProperty("threshold", "BLOCK_NONE");
+            safetySettings.add(safetySetting);
+        }
+        requestBody.add("safetySettings", safetySettings);
+
+        logger.info("Request body: " + requestBody.toString());
 
         // Create HTTP request
         HttpRequest httpRequest = HttpRequest.newBuilder()
@@ -136,6 +175,7 @@ public class GeminiAIService {
         HttpResponse<String> httpResponse = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
 
         logger.info("API Response Status: " + httpResponse.statusCode());
+        logger.info("API Response Body: " + httpResponse.body());
 
         if (httpResponse.statusCode() != 200) {
             String errorMsg = "API call failed with status: " + httpResponse.statusCode()
@@ -144,114 +184,303 @@ public class GeminiAIService {
             throw new Exception(errorMsg);
         }
 
-        // Parse response to extract generated text - FIXED VERSION
-        JsonObject responseJson = jsonParser.parse(httpResponse.body()).getAsJsonObject();
-
-        if (!responseJson.has("candidates")) {
-            throw new Exception("No candidates in API response");
-        }
-
-        JsonArray candidates = responseJson.getAsJsonArray("candidates");
-
-        if (candidates.size() == 0) {
-            throw new Exception("No candidates returned by API");
-        }
-
-        JsonObject candidate = candidates.get(0).getAsJsonObject();
-
-        if (!candidate.has("content")) {
-            throw new Exception("No content in candidate response");
-        }
-
-        JsonObject responseContent = candidate.getAsJsonObject("content");
-        JsonArray responseParts = responseContent.getAsJsonArray("parts");
-
-        if (responseParts.size() == 0) {
-            throw new Exception("No parts in content response");
-        }
-
-        String generatedText = responseParts.get(0).getAsJsonObject().get("text").getAsString();
-        logger.info("Generated text length: " + generatedText.length());
+        // Parse response to extract generated text
+        String generatedText = extractGeneratedText(httpResponse.body());
+        logger.info("Generated text: " + generatedText);
 
         return generatedText;
     }
 
+    /**
+     * Extract generated text from API response with robust error handling
+     */
+    private String extractGeneratedText(String responseBody) throws Exception {
+        try {
+            JsonObject responseJson = jsonParser.parse(responseBody).getAsJsonObject();
+
+            // Check for API errors
+            if (responseJson.has("error")) {
+                JsonObject error = responseJson.getAsJsonObject("error");
+                String errorMessage = error.has("message") ? error.get("message").getAsString() : "Unknown API error";
+                throw new Exception("API Error: " + errorMessage);
+            }
+
+            // Check if response was blocked by safety filters
+            if (!responseJson.has("candidates") || responseJson.getAsJsonArray("candidates").size() == 0) {
+                logger.warning("No candidates in response - possibly blocked by safety filters");
+                throw new Exception("Response was blocked by safety filters or no content generated");
+            }
+
+            JsonArray candidates = responseJson.getAsJsonArray("candidates");
+            JsonObject candidate = candidates.get(0).getAsJsonObject();
+
+            // Check finish reason
+            if (candidate.has("finishReason")) {
+                String finishReason = candidate.get("finishReason").getAsString();
+                if (!"STOP".equals(finishReason)) {
+                    logger.warning("Generation finished with reason: " + finishReason);
+                    if ("SAFETY".equals(finishReason)) {
+                        throw new Exception("Content was blocked by safety filters");
+                    }
+                }
+            }
+
+            // Extract content
+            if (!candidate.has("content")) {
+                throw new Exception("No content in candidate response");
+            }
+
+            JsonObject responseContent = candidate.getAsJsonObject("content");
+
+            if (!responseContent.has("parts")) {
+                throw new Exception("No parts in content response");
+            }
+
+            JsonArray responseParts = responseContent.getAsJsonArray("parts");
+
+            if (responseParts == null || responseParts.size() == 0) {
+                throw new Exception("Response parts array is null or empty");
+            }
+
+            JsonObject firstPart = responseParts.get(0).getAsJsonObject();
+
+            if (!firstPart.has("text")) {
+                throw new Exception("No text in response part");
+            }
+
+            String generatedText = firstPart.get("text").getAsString();
+
+            if (generatedText == null || generatedText.trim().isEmpty()) {
+                throw new Exception("Generated text is null or empty");
+            }
+
+            return generatedText;
+
+        } catch (JsonSyntaxException e) {
+            logger.severe("Failed to parse API response as JSON: " + e.getMessage());
+            throw new Exception("Invalid JSON response from API: " + e.getMessage());
+        } catch (Exception e) {
+            logger.severe("Error extracting generated text: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Parse AI response into question objects with robust error handling
+     */
     private List<AIQuestion> parseAIResponse(String response, String questionType) {
         List<AIQuestion> questions = new ArrayList<>();
 
         try {
-            logger.info("Parsing AI response...");
+            logger.info("Parsing AI response for question type: " + questionType);
+            logger.info("Raw response: " + response.substring(0, Math.min(500, response.length())));
 
-            // Extract JSON from response (AI might include additional text)
-            String jsonStr = extractJSON(response);
-            logger.info("Extracted JSON: " + jsonStr.substring(0, Math.min(200, jsonStr.length())) + "...");
+            // Clean and extract JSON from response
+            String jsonStr = extractAndCleanJSON(response);
+            logger.info("Cleaned JSON: " + jsonStr);
 
-            // FIXED: Use jsonParser.parse() instead of JsonParser.parseString()
-            JsonArray questionsArray = jsonParser.parse(jsonStr).getAsJsonArray();
-
-            for (int i = 0; i < questionsArray.size(); i++) {
-                JsonObject questionObj = questionsArray.get(i).getAsJsonObject();
-
-                AIQuestion question = new AIQuestion();
-                question.setQuestion(questionObj.get("question").getAsString());
-                question.setExplanation(questionObj.get("explanation").getAsString());
-                question.setQuestionType(questionType);
-
-                // Parse options
-                JsonArray optionsArray = questionObj.getAsJsonArray("options");
-                List<String> options = new ArrayList<>();
-                for (int j = 0; j < optionsArray.size(); j++) {
-                    options.add(optionsArray.get(j).getAsString());
-                }
-                question.setOptions(options);
-
-                // Parse correct answers
-                JsonArray correctArray = questionObj.getAsJsonArray("correctAnswers");
-                List<Integer> correctAnswers = new ArrayList<>();
-                for (int j = 0; j < correctArray.size(); j++) {
-                    correctAnswers.add(correctArray.get(j).getAsInt());
-                }
-                question.setCorrectAnswers(correctAnswers);
-
-                // Set legacy correctAnswerIndex for backward compatibility
-                if (!correctAnswers.isEmpty()) {
-                    question.setCorrectAnswerIndex(correctAnswers.get(0));
-                }
-
-                questions.add(question);
-                logger.info("Parsed question " + (i + 1) + ": " + question.getQuestion().substring(0, Math.min(50, question.getQuestion().length())) + "...");
+            if (jsonStr == null || jsonStr.trim().isEmpty()) {
+                logger.warning("No valid JSON found in response");
+                return createFallbackQuestions(questionType, 3);
             }
 
+            // Parse JSON array
+            JsonArray questionsArray = jsonParser.parse(jsonStr).getAsJsonArray();
+
+            if (questionsArray == null || questionsArray.size() == 0) {
+                logger.warning("Parsed JSON array is null or empty");
+                return createFallbackQuestions(questionType, 3);
+            }
+
+            // Process each question
+            for (int i = 0; i < questionsArray.size(); i++) {
+                try {
+                    JsonObject questionObj = questionsArray.get(i).getAsJsonObject();
+                    AIQuestion question = parseQuestionObject(questionObj, questionType);
+                    if (question != null) {
+                        questions.add(question);
+                        logger.info("Successfully parsed question " + (i + 1) + ": "
+                                + question.getQuestion().substring(0, Math.min(50, question.getQuestion().length())) + "...");
+                    }
+                } catch (Exception e) {
+                    logger.warning("Failed to parse question " + (i + 1) + ": " + e.getMessage());
+                    // Continue with other questions
+                }
+            }
+
+        } catch (JsonSyntaxException e) {
+            logger.log(Level.WARNING, "JSON parsing error: " + e.getMessage(), e);
+            return createFallbackQuestions(questionType, 3);
         } catch (Exception e) {
-            logger.log(Level.WARNING, "Error parsing AI response, creating fallback questions", e);
-            // Create fallback questions if parsing fails
-            questions = createFallbackQuestions(questionType, 3);
+            logger.log(Level.WARNING, "Error parsing AI response: " + e.getMessage(), e);
+            return createFallbackQuestions(questionType, 3);
         }
 
+        // If no questions were successfully parsed, create fallback
+        if (questions.isEmpty()) {
+            logger.warning("No questions were successfully parsed, creating fallback questions");
+            return createFallbackQuestions(questionType, 3);
+        }
+
+        logger.info("Successfully parsed " + questions.size() + " questions");
         return questions;
     }
 
-    private String extractJSON(String response) {
-        // Find JSON array in the response
-        int startIndex = response.indexOf("[");
-        int endIndex = response.lastIndexOf("]") + 1;
-
-        if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
-            return response.substring(startIndex, endIndex);
+    /**
+     * Extract and clean JSON from AI response
+     */
+    private String extractAndCleanJSON(String response) {
+        if (response == null || response.trim().isEmpty()) {
+            return null;
         }
 
-        // If no JSON found, return a fallback structure
-        logger.warning("No JSON array found in response, using fallback");
-        return "[{\"question\":\"Sample question from lesson content\",\"options\":[\"Option A\",\"Option B\",\"Option C\",\"Option D\"],\"correctAnswers\":[0],\"explanation\":\"This is a sample explanation.\"}]";
+        // Remove markdown code block markers if present
+        response = response.replaceAll("```json\\s*", "").replaceAll("```\\s*$", "");
+
+        // Find JSON array boundaries
+        int startIndex = response.indexOf("[");
+        int endIndex = response.lastIndexOf("]");
+
+        if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+            String jsonStr = response.substring(startIndex, endIndex + 1).trim();
+
+            // Basic validation - check if it looks like valid JSON
+            if (jsonStr.startsWith("[") && jsonStr.endsWith("]")) {
+                return jsonStr;
+            }
+        }
+
+        // If no proper JSON array found, try to find any JSON-like structure
+        if (response.contains("{") && response.contains("}")) {
+            // Try to wrap in array if it's a single object
+            String trimmed = response.trim();
+            if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+                return "[" + trimmed + "]";
+            }
+        }
+
+        logger.warning("Could not extract valid JSON from response");
+        return null;
     }
 
+    /**
+     * Parse individual question object from JSON
+     */
+    private AIQuestion parseQuestionObject(JsonObject questionObj, String questionType) {
+        try {
+            AIQuestion question = new AIQuestion();
+
+            // Parse question text
+            if (!questionObj.has("question")) {
+                logger.warning("Question object missing 'question' field");
+                return null;
+            }
+            question.setQuestion(questionObj.get("question").getAsString());
+
+            // Parse explanation
+            String explanation = questionObj.has("explanation")
+                    ? questionObj.get("explanation").getAsString() : "No explanation provided.";
+            question.setExplanation(explanation);
+
+            question.setQuestionType(questionType);
+
+            // Parse options
+            if (!questionObj.has("options")) {
+                logger.warning("Question object missing 'options' field");
+                return null;
+            }
+
+            JsonArray optionsArray = questionObj.getAsJsonArray("options");
+            List<String> options = new ArrayList<>();
+            for (int j = 0; j < optionsArray.size(); j++) {
+                options.add(optionsArray.get(j).getAsString());
+            }
+            question.setOptions(options);
+
+            // Parse correct answers
+            List<Integer> correctAnswers = new ArrayList<>();
+            if (questionObj.has("correctAnswers")) {
+                JsonArray correctArray = questionObj.getAsJsonArray("correctAnswers");
+                for (int j = 0; j < correctArray.size(); j++) {
+                    correctAnswers.add(correctArray.get(j).getAsInt());
+                }
+            } else {
+                // Fallback: assume first option is correct
+                correctAnswers.add(0);
+            }
+
+            // Validate correct answers
+            correctAnswers = validateCorrectAnswers(correctAnswers, options.size(), questionType);
+            question.setCorrectAnswers(correctAnswers);
+
+            // Set legacy correctAnswerIndex for backward compatibility
+            if (!correctAnswers.isEmpty()) {
+                question.setCorrectAnswerIndex(correctAnswers.get(0));
+            }
+
+            return question;
+
+        } catch (Exception e) {
+            logger.warning("Error parsing question object: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Validate and fix correct answers based on question type
+     */
+    private List<Integer> validateCorrectAnswers(List<Integer> correctAnswers, int optionCount, String questionType) {
+        List<Integer> validAnswers = new ArrayList<>();
+
+        // Filter out invalid indices
+        for (Integer answer : correctAnswers) {
+            if (answer != null && answer >= 0 && answer < optionCount) {
+                validAnswers.add(answer);
+            }
+        }
+
+        // Apply question type rules
+        switch (questionType.toLowerCase()) {
+            case "single_choice":
+            case "true_false":
+                // Should have exactly 1 correct answer
+                if (validAnswers.isEmpty()) {
+                    validAnswers.add(0); // Default to first option
+                } else if (validAnswers.size() > 1) {
+                    // Keep only the first correct answer
+                    validAnswers = validAnswers.subList(0, 1);
+                }
+                break;
+
+            case "multiple_choice":
+                // Should have at least 1 correct answer
+                if (validAnswers.isEmpty()) {
+                    validAnswers.add(0); // Default to first option
+                }
+                // For multiple choice, we allow multiple correct answers
+                break;
+
+            default:
+                // Default behavior
+                if (validAnswers.isEmpty()) {
+                    validAnswers.add(0);
+                }
+                break;
+        }
+
+        return validAnswers;
+    }
+
+    /**
+     * Create fallback questions when AI generation fails
+     */
     private List<AIQuestion> createFallbackQuestions(String questionType, int count) {
         List<AIQuestion> questions = new ArrayList<>();
 
         for (int i = 0; i < count; i++) {
             AIQuestion question = new AIQuestion();
-            question.setQuestion("Sample question " + (i + 1) + " (AI generation fallback)");
-            question.setExplanation("This is a fallback question created when AI response parsing failed. Please edit this question.");
+            question.setQuestion("Sample question " + (i + 1) + " (AI generation fallback) - Please edit this question to match your lesson content.");
+            question.setExplanation("This is a fallback question created when AI response parsing failed. Please edit both the question and explanation to match your lesson content.");
             question.setQuestionType(questionType);
 
             // Create options based on question type
@@ -265,18 +494,18 @@ public class GeminiAIService {
                     correctAnswers.add(0);
                     break;
                 case "multiple_choice":
-                    options.add("Option A");
-                    options.add("Option B");
-                    options.add("Option C");
-                    options.add("Option D");
+                    options.add("Option A - Please edit this option");
+                    options.add("Option B - Please edit this option");
+                    options.add("Option C - Please edit this option");
+                    options.add("Option D - Please edit this option");
                     correctAnswers.add(0);
                     correctAnswers.add(2); // Multiple correct answers
                     break;
                 default: // single_choice
-                    options.add("Option A");
-                    options.add("Option B");
-                    options.add("Option C");
-                    options.add("Option D");
+                    options.add("Option A - Please edit this option");
+                    options.add("Option B - Please edit this option");
+                    options.add("Option C - Please edit this option");
+                    options.add("Option D - Please edit this option");
                     correctAnswers.add(0);
                     break;
             }
@@ -290,6 +519,9 @@ public class GeminiAIService {
         return questions;
     }
 
+    /**
+     * Chat with AI functionality
+     */
     public String chatWithAI(String message, String context) throws Exception {
         String prompt = "Context: " + context + "\n\nUser question: " + message
                 + "\n\nPlease provide a helpful response about improving or understanding the educational content. "
@@ -303,7 +535,7 @@ public class GeminiAIService {
         }
     }
 
-    // Inner classes
+    // Inner classes remain the same
     public static class AIGenerationRequest {
 
         private String gradeName;
@@ -385,8 +617,8 @@ public class GeminiAIService {
 
         private String question;
         private List<String> options;
-        private List<Integer> correctAnswers; // Support multiple correct answers
-        private int correctAnswerIndex; // For backward compatibility
+        private List<Integer> correctAnswers;
+        private int correctAnswerIndex;
         private String explanation;
         private String questionType;
 
