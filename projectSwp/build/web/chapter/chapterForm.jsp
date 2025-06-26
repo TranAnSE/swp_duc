@@ -143,6 +143,38 @@
                 margin: 10px 0;
                 text-align: center;
             }
+
+            .nice-select {
+                position: relative !important;
+                z-index: 999 !important;
+            }
+
+            .nice-select .list {
+                position: absolute !important;
+                top: 100% !important;
+                left: 0 !important;
+                right: 0 !important;
+                background: white !important;
+                border: 1px solid #ddd !important;
+                border-radius: 4px !important;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+                max-height: 200px !important;
+                overflow-y: auto !important;
+                display: none !important;
+            }
+
+            .nice-select.open .list {
+                display: block !important;
+            }
+
+            .nice-select .option {
+                padding: 8px 12px !important;
+                cursor: pointer !important;
+            }
+
+            .nice-select .option:hover {
+                background-color: #f8f9fa !important;
+            }
         </style>
     </head>
     <body>
@@ -241,5 +273,19 @@
         <script src="${pageContext.request.contextPath}/assets/js/jquery.ajaxchimp.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/plugins.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/main.js"></script>
+
+        <script>
+            $(document).ready(function () {
+                // Destroy existing nice-select instances
+                $('select').niceSelect('destroy');
+
+                // Reinitialize nice-select
+                $('select').niceSelect();
+
+                $('.nice-select').on('click', function () {
+                    $(this).toggleClass('open');
+                });
+            });
+        </script>
     </body>
 </html>
