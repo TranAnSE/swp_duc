@@ -63,6 +63,22 @@ public class AIQuestionController extends HttpServlet {
                 case "preview":
                     showPreviewPage(request, response);
                     break;
+                // Add new AJAX endpoints for hierarchy loading
+                case "getSubjectsByGrade":
+                    handleGetSubjectsByGrade(request, response);
+                    return;
+                case "getChaptersBySubject":
+                    handleGetChaptersBySubject(request, response);
+                    return;
+                case "getLessonsByChapter":
+                    handleGetLessonsByChapter(request, response);
+                    return;
+                case "getChapterContent":
+                    handleGetChapterContent(request, response);
+                    return;
+                case "getSubjectContent":
+                    handleGetSubjectContent(request, response);
+                    return;
                 default:
                     response.sendRedirect("/Question");
                     break;
@@ -113,7 +129,11 @@ public class AIQuestionController extends HttpServlet {
     private void showAIGenerationForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
+            // Load hierarchy data
+            List<Grade> grades = gradeDAO.findAllFromGrade();
             List<Lesson> lessons = lessonDAO.getAllLessons();
+
+            request.setAttribute("grades", grades);
             request.setAttribute("lessons", lessons);
             request.getRequestDispatcher("/question/aiQuestionForm.jsp").forward(request, response);
         } catch (Exception e) {
@@ -140,28 +160,103 @@ public class AIQuestionController extends HttpServlet {
             throws ServletException, IOException {
         try {
             // Get form parameters
-            int lessonId = Integer.parseInt(request.getParameter("lesson_id"));
+            String generationMode = request.getParameter("generation_mode"); // "lesson", "chapter", "subject"
             int numberOfQuestions = Integer.parseInt(request.getParameter("number_of_questions"));
             String difficulty = request.getParameter("difficulty");
             String questionType = request.getParameter("question_type");
             String additionalInstructions = request.getParameter("additional_instructions");
 
-            // Get lesson and related information
-            Lesson lesson = lessonDAO.getLessonById(lessonId);
-            if (lesson == null) {
-                throw new Exception("Lesson not found");
-            }
+            // Build content based on generation mode
+            StringBuilder contentBuilder = new StringBuilder();
+            String contextName = "";
 
-            Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
-            Subject subject = subjectDAO.findById(chapter.getSubject_id());
-            Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
+            if ("lesson".equals(generationMode)) {
+                int lessonId = Integer.parseInt(request.getParameter("lesson_id"));
+                Lesson lesson = lessonDAO.getLessonById(lessonId);
+                if (lesson == null) {
+                    throw new Exception("Lesson not found");
+                }
+                contentBuilder.append(lesson.getContent());
+                contextName = lesson.getName();
+
+                // Get lesson context
+                Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
+                Subject subject = subjectDAO.findById(chapter.getSubject_id());
+                Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
+
+                // Store context for AI request
+                request.setAttribute("contextGrade", grade);
+                request.setAttribute("contextSubject", subject);
+                request.setAttribute("contextChapter", chapter);
+                request.setAttribute("contextLesson", lesson);
+
+            } else if ("chapter".equals(generationMode)) {
+                int chapterId = Integer.parseInt(request.getParameter("chapter_id"));
+                Chapter chapter = chapterDAO.findChapterById(chapterId);
+                if (chapter == null) {
+                    throw new Exception("Chapter not found");
+                }
+
+                // Get all lessons in this chapter
+                List<Lesson> lessons = lessonDAO.getAllLessons();
+                for (Lesson lesson : lessons) {
+                    if (lesson.getChapter_id() == chapterId) {
+                        contentBuilder.append("Lesson: ").append(lesson.getName()).append("\n");
+                        contentBuilder.append(lesson.getContent()).append("\n\n");
+                    }
+                }
+                contextName = chapter.getName();
+
+                // Get chapter context
+                Subject subject = subjectDAO.findById(chapter.getSubject_id());
+                Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
+
+                request.setAttribute("contextGrade", grade);
+                request.setAttribute("contextSubject", subject);
+                request.setAttribute("contextChapter", chapter);
+
+            } else if ("subject".equals(generationMode)) {
+                int subjectId = Integer.parseInt(request.getParameter("subject_id"));
+                Subject subject = subjectDAO.findById(subjectId);
+                if (subject == null) {
+                    throw new Exception("Subject not found");
+                }
+
+                // Get all chapters and lessons in this subject
+                List<Chapter> chapters = chapterDAO.findChapterBySubjectId(subjectId);
+                for (Chapter chapter : chapters) {
+                    contentBuilder.append("Chapter: ").append(chapter.getName()).append("\n");
+                    contentBuilder.append(chapter.getDescription()).append("\n");
+
+                    List<Lesson> lessons = lessonDAO.getAllLessons();
+                    for (Lesson lesson : lessons) {
+                        if (lesson.getChapter_id() == chapter.getId()) {
+                            contentBuilder.append("  Lesson: ").append(lesson.getName()).append("\n");
+                            contentBuilder.append("  ").append(lesson.getContent()).append("\n");
+                        }
+                    }
+                    contentBuilder.append("\n");
+                }
+                contextName = subject.getName();
+
+                // Get subject context
+                Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
+
+                request.setAttribute("contextGrade", grade);
+                request.setAttribute("contextSubject", subject);
+            }
 
             // Build AI request
             GeminiAIService.AIGenerationRequest aiRequest = new GeminiAIService.AIGenerationRequest();
-            aiRequest.setGradeName(grade.getName());
-            aiRequest.setSubjectName(subject.getName());
-            aiRequest.setLessonName(lesson.getName());
-            aiRequest.setLessonContent(lesson.getContent());
+
+            // Set context based on what we have
+            Grade grade = (Grade) request.getAttribute("contextGrade");
+            Subject subject = (Subject) request.getAttribute("contextSubject");
+
+            aiRequest.setGradeName(grade != null ? grade.getName() : "Unknown Grade");
+            aiRequest.setSubjectName(subject != null ? subject.getName() : "Unknown Subject");
+            aiRequest.setLessonName(contextName);
+            aiRequest.setLessonContent(contentBuilder.toString());
             aiRequest.setNumberOfQuestions(numberOfQuestions);
             aiRequest.setDifficulty(difficulty);
             aiRequest.setQuestionType(questionType);
@@ -173,8 +268,8 @@ public class AIQuestionController extends HttpServlet {
             // Store in session for preview
             HttpSession session = request.getSession();
             session.setAttribute("generatedQuestions", generatedQuestions);
-            session.setAttribute("selectedLessonId", lessonId);
-            session.setAttribute("aiGenerationContext", buildContextString(grade, subject, lesson));
+            session.setAttribute("generationMode", generationMode);
+            session.setAttribute("aiGenerationContext", buildContextString(grade, subject, contextName));
 
             response.sendRedirect("/ai-question?action=preview");
 
@@ -217,9 +312,9 @@ public class AIQuestionController extends HttpServlet {
             HttpSession session = request.getSession();
             List<GeminiAIService.AIQuestion> generatedQuestions
                     = (List<GeminiAIService.AIQuestion>) session.getAttribute("generatedQuestions");
-            Integer lessonId = (Integer) session.getAttribute("selectedLessonId");
+            String generationMode = (String) session.getAttribute("generationMode");
 
-            if (generatedQuestions == null || lessonId == null) {
+            if (generatedQuestions == null) {
                 throw new Exception("No generated questions found in session");
             }
 
@@ -267,6 +362,9 @@ public class AIQuestionController extends HttpServlet {
                         break;
                 }
 
+                // For chapter/subject mode, we need to assign to a representative lesson
+                int lessonId = getRepresentativeLessonId(session, generationMode);
+
                 // Save question to database
                 Question question = new Question();
                 question.setQuestion(finalQuestionText);
@@ -303,7 +401,7 @@ public class AIQuestionController extends HttpServlet {
 
             // Clear session data
             session.removeAttribute("generatedQuestions");
-            session.removeAttribute("selectedLessonId");
+            session.removeAttribute("generationMode");
             session.removeAttribute("aiGenerationContext");
 
             // Set success message
@@ -317,8 +415,224 @@ public class AIQuestionController extends HttpServlet {
         }
     }
 
-    private String buildContextString(Grade grade, Subject subject, Lesson lesson) {
-        return String.format("Grade: %s, Subject: %s, Lesson: %s - %s",
-                grade.getName(), subject.getName(), lesson.getName(), lesson.getContent());
+    // Helper method to get representative lesson ID for chapter/subject mode
+    private int getRepresentativeLessonId(HttpSession session, String generationMode) {
+        try {
+            if ("lesson".equals(generationMode)) {
+                // Already have lesson ID from generation
+                return (Integer) session.getAttribute("selectedLessonId");
+            } else if ("chapter".equals(generationMode)) {
+                // Get first lesson in the chapter
+                int chapterId = (Integer) session.getAttribute("selectedChapterId");
+                List<Lesson> lessons = lessonDAO.getAllLessons();
+                for (Lesson lesson : lessons) {
+                    if (lesson.getChapter_id() == chapterId) {
+                        return lesson.getId();
+                    }
+                }
+            } else if ("subject".equals(generationMode)) {
+                // Get first lesson in the first chapter of the subject
+                int subjectId = (Integer) session.getAttribute("selectedSubjectId");
+                List<Chapter> chapters = chapterDAO.findChapterBySubjectId(subjectId);
+                if (!chapters.isEmpty()) {
+                    List<Lesson> lessons = lessonDAO.getAllLessons();
+                    for (Lesson lesson : lessons) {
+                        if (lesson.getChapter_id() == chapters.get(0).getId()) {
+                            return lesson.getId();
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "Error getting representative lesson ID", e);
+        }
+
+        // Fallback: return first available lesson
+        List<Lesson> allLessons = lessonDAO.getAllLessons();
+        return allLessons.isEmpty() ? 1 : allLessons.get(0).getId();
+    }
+
+    // AJAX handlers for hierarchical data loading (same as in QuestionController)
+    private void handleGetSubjectsByGrade(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int gradeId = Integer.parseInt(request.getParameter("gradeId"));
+            List<Subject> subjects = subjectDAO.findAll();
+
+            StringBuilder json = new StringBuilder("[");
+            boolean first = true;
+            for (Subject subject : subjects) {
+                if (subject.getGrade_id() == gradeId) {
+                    if (!first) {
+                        json.append(",");
+                    }
+                    json.append("{\"id\":").append(subject.getId())
+                            .append(",\"name\":\"").append(subject.getName().replace("\"", "\\\"")).append("\"}");
+                    first = false;
+                }
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            response.getWriter().write("[]");
+        }
+    }
+
+    private void handleGetChaptersBySubject(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int subjectId = Integer.parseInt(request.getParameter("subjectId"));
+            List<Chapter> chapters = chapterDAO.findChapterBySubjectId(subjectId);
+
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < chapters.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Chapter chapter = chapters.get(i);
+                json.append("{\"id\":").append(chapter.getId())
+                        .append(",\"name\":\"").append(chapter.getName().replace("\"", "\\\"")).append("\"}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            response.getWriter().write("[]");
+        }
+    }
+
+    private void handleGetLessonsByChapter(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int chapterId = Integer.parseInt(request.getParameter("chapterId"));
+            List<Lesson> allLessons = lessonDAO.getAllLessons();
+
+            StringBuilder json = new StringBuilder("[");
+            boolean first = true;
+            for (Lesson lesson : allLessons) {
+                if (lesson.getChapter_id() == chapterId) {
+                    if (!first) {
+                        json.append(",");
+                    }
+                    json.append("{\"id\":").append(lesson.getId())
+                            .append(",\"name\":\"").append(lesson.getName().replace("\"", "\\\"")).append("\"}");
+                    first = false;
+                }
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            response.getWriter().write("[]");
+        }
+    }
+
+    // New methods for getting aggregated content
+    private void handleGetChapterContent(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int chapterId = Integer.parseInt(request.getParameter("chapterId"));
+            Chapter chapter = chapterDAO.findChapterById(chapterId);
+
+            if (chapter == null) {
+                response.getWriter().write("{\"error\": \"Chapter not found\"}");
+                return;
+            }
+
+            StringBuilder contentBuilder = new StringBuilder();
+            contentBuilder.append("Chapter: ").append(chapter.getName()).append("\\n");
+            contentBuilder.append("Description: ").append(chapter.getDescription()).append("\\n\\n");
+
+            // Get all lessons in this chapter
+            List<Lesson> lessons = lessonDAO.getAllLessons();
+            int lessonCount = 0;
+            for (Lesson lesson : lessons) {
+                if (lesson.getChapter_id() == chapterId) {
+                    contentBuilder.append("Lesson ").append(++lessonCount).append(": ")
+                            .append(lesson.getName()).append("\\n");
+                    contentBuilder.append(lesson.getContent().replace("\"", "\\\"").replace("\n", "\\n"))
+                            .append("\\n\\n");
+                }
+            }
+
+            String json = "{\"content\": \"" + contentBuilder.toString() + "\", \"lessonCount\": " + lessonCount + "}";
+            response.getWriter().write(json);
+        } catch (Exception e) {
+            response.getWriter().write("{\"error\": \"Failed to load chapter content\"}");
+        }
+    }
+
+    private void handleGetSubjectContent(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int subjectId = Integer.parseInt(request.getParameter("subjectId"));
+            Subject subject = subjectDAO.findById(subjectId);
+
+            if (subject == null) {
+                response.getWriter().write("{\"error\": \"Subject not found\"}");
+                return;
+            }
+
+            StringBuilder contentBuilder = new StringBuilder();
+            contentBuilder.append("Subject: ").append(subject.getName()).append("\\n");
+            contentBuilder.append("Description: ").append(subject.getDescription()).append("\\n\\n");
+
+            // Get all chapters in this subject
+            List<Chapter> chapters = chapterDAO.findChapterBySubjectId(subjectId);
+            int totalLessons = 0;
+
+            for (Chapter chapter : chapters) {
+                contentBuilder.append("Chapter: ").append(chapter.getName()).append("\\n");
+                contentBuilder.append(chapter.getDescription()).append("\\n");
+
+                // Get lessons in this chapter
+                List<Lesson> lessons = lessonDAO.getAllLessons();
+                int chapterLessons = 0;
+                for (Lesson lesson : lessons) {
+                    if (lesson.getChapter_id() == chapter.getId()) {
+                        chapterLessons++;
+                        totalLessons++;
+                        contentBuilder.append("  Lesson ").append(chapterLessons).append(": ")
+                                .append(lesson.getName()).append("\\n");
+                        // Truncate lesson content for subject overview
+                        String lessonContent = lesson.getContent();
+                        if (lessonContent.length() > 200) {
+                            lessonContent = lessonContent.substring(0, 200) + "...";
+                        }
+                        contentBuilder.append("  ").append(lessonContent.replace("\"", "\\\"").replace("\n", "\\n"))
+                                .append("\\n");
+                    }
+                }
+                contentBuilder.append("\\n");
+            }
+
+            String json = "{\"content\": \"" + contentBuilder.toString() + "\", \"chapterCount\": " + chapters.size() + ", \"lessonCount\": " + totalLessons + "}";
+            response.getWriter().write(json);
+        } catch (Exception e) {
+            response.getWriter().write("{\"error\": \"Failed to load subject content\"}");
+        }
+    }
+
+    private String buildContextString(Grade grade, Subject subject, String contextName) {
+        return String.format("Grade: %s, Subject: %s, Context: %s",
+                grade != null ? grade.getName() : "Unknown",
+                subject != null ? subject.getName() : "Unknown",
+                contextName);
     }
 }
