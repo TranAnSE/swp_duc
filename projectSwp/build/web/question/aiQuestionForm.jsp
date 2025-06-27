@@ -12,7 +12,11 @@
         <title>AI Question Generator</title>
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
         <link rel="stylesheet" href="/assets/css/fontawesome-all.min.css">
-        <link rel="stylesheet" href="/assets/css/nice-select.css">
+
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
         <link rel="stylesheet" href="/assets/css/style.css">
         <style>
             :root {
@@ -88,7 +92,7 @@
 
             .form-section {
                 margin-bottom: 35px;
-                padding: 25px 25px 60px 25px;
+                padding: 25px;
                 border: 1px solid var(--border-color);
                 border-radius: 16px;
                 background: linear-gradient(135deg, #fafbff 0%, #f8fafc 100%);
@@ -117,11 +121,6 @@
                 transform: translateY(-2px);
                 box-shadow: var(--shadow-md);
                 border-color: var(--primary-color);
-            }
-
-            .form-section.has-dropdown {
-                overflow: visible !important;
-                padding-bottom: 80px;
             }
 
             .section-title {
@@ -320,98 +319,114 @@
                 outline: none;
             }
 
-            /* Enhanced nice-select styling */
-            .nice-select {
+            /* Enhanced Select2 Custom Styling */
+            .select2-container--bootstrap-5 .select2-selection {
                 border: 2px solid var(--border-color) !important;
                 border-radius: 12px !important;
-                padding: 12px 16px !important;
-                font-size: 1rem !important;
-                background: white !important;
-                height: auto !important;
-                line-height: 1.5 !important;
-                min-height: 48px !important;
+                min-height: 50px !important;
+                padding: 8px 12px !important;
+                font-size: 16px !important;
                 transition: all 0.3s ease !important;
-                position: relative !important;
-                z-index: 100 !important;
-                width: 100% !important;
-                box-sizing: border-box !important;
+                background: white !important;
             }
 
-            .nice-select:focus,
-            .nice-select.open {
+            .select2-container--bootstrap-5 .select2-selection--single {
+                height: 50px !important;
+                display: flex !important;
+                align-items: center !important;
+            }
+
+            .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+                line-height: 34px !important;
+                padding-left: 0 !important;
+                padding-right: 30px !important;
+                font-size: 16px !important;
+                color: var(--text-primary) !important;
+                text-align: center !important;
+                width: 100% !important;
+                display: block !important;
+            }
+
+            /* Center placeholder text specifically */
+            .select2-container--bootstrap-5 .select2-selection--single .select2-selection__placeholder {
+                color: var(--text-secondary) !important;
+                font-size: 16px !important;
+                text-align: center !important;
+                width: 100% !important;
+                display: block !important;
+                font-style: italic !important;
+            }
+
+            .select2-container--bootstrap-5 .select2-selection__arrow {
+                height: 48px !important;
+                position: absolute !important;
+                top: 1px !important;
+                right: 10px !important;
+                width: 20px !important;
+            }
+
+            .select2-container--bootstrap-5.select2-container--focus .select2-selection,
+            .select2-container--bootstrap-5.select2-container--open .select2-selection {
                 border-color: var(--primary-color) !important;
                 box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1) !important;
                 outline: none !important;
-                z-index: 1000 !important;
             }
 
-            .nice-select .current {
-                color: var(--text-primary) !important;
-                font-size: 1rem !important;
-                line-height: 1.5 !important;
-                padding-right: 30px !important;
-            }
-
-            .nice-select .list {
+            /* Dropdown styling */
+            .select2-dropdown {
                 background: white !important;
                 border: 2px solid var(--primary-color) !important;
                 border-radius: 12px !important;
                 box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
                 margin-top: 5px !important;
-                max-height: 250px !important;
-                overflow-y: auto !important;
                 z-index: 9999 !important;
-                position: absolute !important;
-                top: 100% !important;
-                left: 0 !important;
-                right: 0 !important;
-                display: none !important;
-                width: 100% !important;
-                box-sizing: border-box !important;
+                font-size: 16px !important;
             }
 
-            .nice-select.open .list {
-                display: block !important;
+            .select2-container--bootstrap-5 .select2-dropdown .select2-results__options {
+                max-height: 300px !important;
             }
 
-            .nice-select .option {
+            .select2-container--bootstrap-5 .select2-results__option {
                 padding: 12px 16px !important;
-                font-size: 1rem !important;
+                font-size: 16px !important;
                 color: var(--text-primary) !important;
+                text-align: center !important;
                 cursor: pointer !important;
                 transition: background-color 0.2s ease !important;
-                border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
             }
 
-            .nice-select .option:last-child {
-                border-bottom: none !important;
-            }
-
-            .nice-select .option:hover {
-                background-color: rgba(79, 70, 229, 0.1) !important;
-                color: var(--primary-color) !important;
-            }
-
-            .nice-select .option.selected {
+            .select2-container--bootstrap-5 .select2-results__option:hover,
+            .select2-container--bootstrap-5 .select2-results__option--highlighted {
                 background-color: var(--primary-color) !important;
                 color: white !important;
             }
 
-            .nice-select::after {
-                border-color: var(--text-secondary) transparent transparent !important;
-                right: 16px !important;
-                top: 50% !important;
-                transform: translateY(-50%) !important;
-                transition: transform 0.3s ease !important;
+            .select2-container--bootstrap-5 .select2-results__option[aria-selected="true"] {
+                background-color: rgba(79, 70, 229, 0.1) !important;
+                color: var(--primary-color) !important;
+                font-weight: 600 !important;
             }
 
-            .nice-select.open::after {
-                transform: translateY(-50%) rotate(180deg) !important;
+            /* Ensure proper width and z-index */
+            .select2-container {
+                width: 100% !important;
+                z-index: 1000 !important;
             }
 
-            .dropdown-container {
-                position: relative;
-                z-index: 100;
+            .select2-container--open {
+                z-index: 9999 !important;
+            }
+
+            /* Fix for disabled state */
+            .select2-container--bootstrap-5.select2-container--disabled .select2-selection {
+                background-color: #f3f4f6 !important;
+                color: #9ca3af !important;
+                cursor: not-allowed !important;
+            }
+
+            .select2-container--bootstrap-5.select2-container--disabled .select2-selection--single .select2-selection__rendered {
+                color: #9ca3af !important;
             }
 
             /* Question type and difficulty grids */
@@ -643,10 +658,6 @@
                     margin-bottom: 25px;
                 }
 
-                .form-section.has-dropdown {
-                    padding-bottom: 70px;
-                }
-
                 .difficulty-grid {
                     grid-template-columns: 1fr;
                 }
@@ -683,7 +694,7 @@
                             <div class="mode-card" data-mode="lesson">
                                 <input type="radio" name="generation_mode" value="lesson" id="modeLesson">
                                 <label for="modeLesson">
-                                    <i class="fas fa-book-open mode-icon"></i>
+                                    <i class="fas fa-book mode-icon"></i>
                                     <div class="mode-title">Single Lesson</div>
                                     <div class="mode-description">
                                         Generate questions based on one specific lesson's content
@@ -720,7 +731,7 @@
                     </div>
 
                     <!-- Hierarchy Selection -->
-                    <div class="form-section has-dropdown">
+                    <div class="form-section">
                         <div class="section-title">
                             <i class="fas fa-sitemap"></i>
                             Learning Path Selection
@@ -731,38 +742,30 @@
                             <div class="hierarchy-steps">
                                 <div class="hierarchy-step">
                                     <label for="gradeSelectLesson">Grade</label>
-                                    <div class="dropdown-container">
-                                        <select id="gradeSelectLesson" class="form-select wide">
-                                            <option value="">-- Select Grade --</option>
-                                            <c:forEach var="grade" items="${grades}">
-                                                <option value="${grade.id}">${grade.name}</option>
-                                            </c:forEach>
-                                        </select>
-                                    </div>
+                                    <select id="gradeSelectLesson" class="form-select select2-dropdown">
+                                        <option value="">-- Select Grade --</option>
+                                        <c:forEach var="grade" items="${grades}">
+                                            <option value="${grade.id}">${grade.name}</option>
+                                        </c:forEach>
+                                    </select>
                                 </div>
                                 <div class="hierarchy-step">
                                     <label for="subjectSelectLesson">Subject</label>
-                                    <div class="dropdown-container">
-                                        <select id="subjectSelectLesson" class="form-select wide" disabled>
-                                            <option value="">-- Select Subject --</option>
-                                        </select>
-                                    </div>
+                                    <select id="subjectSelectLesson" class="form-select select2-dropdown" disabled>
+                                        <option value="">-- Select Subject --</option>
+                                    </select>
                                 </div>
                                 <div class="hierarchy-step">
                                     <label for="chapterSelectLesson">Chapter</label>
-                                    <div class="dropdown-container">
-                                        <select id="chapterSelectLesson" class="form-select wide" disabled>
-                                            <option value="">-- Select Chapter --</option>
-                                        </select>
-                                    </div>
+                                    <select id="chapterSelectLesson" class="form-select select2-dropdown" disabled>
+                                        <option value="">-- Select Chapter --</option>
+                                    </select>
                                 </div>
                                 <div class="hierarchy-step">
                                     <label for="lessonSelect">Lesson</label>
-                                    <div class="dropdown-container">
-                                        <select name="lesson_id" id="lessonSelect" class="form-select wide" disabled>
-                                            <option value="">-- Select Lesson --</option>
-                                        </select>
-                                    </div>
+                                    <select name="lesson_id" id="lessonSelect" class="form-select select2-dropdown" disabled>
+                                        <option value="">-- Select Lesson --</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -772,30 +775,24 @@
                             <div class="hierarchy-steps">
                                 <div class="hierarchy-step">
                                     <label for="gradeSelectChapter">Grade</label>
-                                    <div class="dropdown-container">
-                                        <select id="gradeSelectChapter" class="form-select wide">
-                                            <option value="">-- Select Grade --</option>
-                                            <c:forEach var="grade" items="${grades}">
-                                                <option value="${grade.id}">${grade.name}</option>
-                                            </c:forEach>
-                                        </select>
-                                    </div>
+                                    <select id="gradeSelectChapter" class="form-select select2-dropdown">
+                                        <option value="">-- Select Grade --</option>
+                                        <c:forEach var="grade" items="${grades}">
+                                            <option value="${grade.id}">${grade.name}</option>
+                                        </c:forEach>
+                                    </select>
                                 </div>
                                 <div class="hierarchy-step">
                                     <label for="subjectSelectChapter">Subject</label>
-                                    <div class="dropdown-container">
-                                        <select id="subjectSelectChapter" class="form-select wide" disabled>
-                                            <option value="">-- Select Subject --</option>
-                                        </select>
-                                    </div>
+                                    <select id="subjectSelectChapter" class="form-select select2-dropdown" disabled>
+                                        <option value="">-- Select Subject --</option>
+                                    </select>
                                 </div>
                                 <div class="hierarchy-step">
                                     <label for="chapterSelect">Chapter</label>
-                                    <div class="dropdown-container">
-                                        <select name="chapter_id" id="chapterSelect" class="form-select wide" disabled>
-                                            <option value="">-- Select Chapter --</option>
-                                        </select>
-                                    </div>
+                                    <select name="chapter_id" id="chapterSelect" class="form-select select2-dropdown" disabled>
+                                        <option value="">-- Select Chapter --</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -805,22 +802,18 @@
                             <div class="hierarchy-steps">
                                 <div class="hierarchy-step">
                                     <label for="gradeSelectSubject">Grade</label>
-                                    <div class="dropdown-container">
-                                        <select id="gradeSelectSubject" class="form-select wide">
-                                            <option value="">-- Select Grade --</option>
-                                            <c:forEach var="grade" items="${grades}">
-                                                <option value="${grade.id}">${grade.name}</option>
-                                            </c:forEach>
-                                        </select>
-                                    </div>
+                                    <select id="gradeSelectSubject" class="form-select select2-dropdown">
+                                        <option value="">-- Select Grade --</option>
+                                        <c:forEach var="grade" items="${grades}">
+                                            <option value="${grade.id}">${grade.name}</option>
+                                        </c:forEach>
+                                    </select>
                                 </div>
                                 <div class="hierarchy-step">
                                     <label for="subjectSelectMain">Subject</label>
-                                    <div class="dropdown-container">
-                                        <select name="subject_id" id="subjectSelectMain" class="form-select wide" disabled>
-                                            <option value="">-- Select Subject --</option>
-                                        </select>
-                                    </div>
+                                    <select name="subject_id" id="subjectSelectMain" class="form-select select2-dropdown" disabled>
+                                        <option value="">-- Select Subject --</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -886,7 +879,7 @@
                     </div>
 
                     <!-- Question Settings -->
-                    <div class="form-section has-dropdown">
+                    <div class="form-section">
                         <div class="section-title">
                             <i class="fas fa-cogs"></i>
                             Question Settings
@@ -901,16 +894,14 @@
                             </div>
                             <div class="col-md-6">
                                 <label for="questionCategory" class="form-label">Question Focus</label>
-                                <div class="dropdown-container">
-                                    <select name="question_category" id="questionCategory" class="form-select wide" required>
-                                        <option value="conceptual">Conceptual Understanding</option>
-                                        <option value="application">Practical Application</option>
-                                        <option value="analysis">Critical Analysis</option>
-                                        <option value="synthesis">Knowledge Synthesis</option>
-                                        <option value="evaluation">Evaluation & Assessment</option>
-                                        <option value="mixed">Mixed (Recommended)</option>
-                                    </select>
-                                </div>
+                                <select name="question_category" id="questionCategory" class="form-select select2-dropdown" required>
+                                    <option value="conceptual">Conceptual Understanding</option>
+                                    <option value="application">Practical Application</option>
+                                    <option value="analysis">Critical Analysis</option>
+                                    <option value="synthesis">Knowledge Synthesis</option>
+                                    <option value="evaluation">Evaluation & Assessment</option>
+                                    <option value="mixed">Mixed (Recommended)</option>
+                                </select>
                                 <div class="form-text">Choose the cognitive level for questions</div>
                             </div>
                         </div>
@@ -989,15 +980,107 @@
         <jsp:include page="/footer.jsp" />
 
         <script src="/assets/js/vendor/jquery-1.12.4.min.js"></script>
-        <script src="/assets/js/jquery.nice-select.min.js"></script>
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <script src="/assets/js/bootstrap.min.js"></script>
+
         <script>
             $(document).ready(function () {
-                // Initialize nice-select
-                $('select.wide').niceSelect();
-
                 let currentMode = '';
                 let selectedContent = null;
+                let select2Initialized = new Set(); // Track initialized Select2 instances
+
+                // Enhanced Select2 initialization function
+                function initializeSelect2(selector) {
+                    const $element = $(selector);
+
+                    // Skip if already initialized
+                    if (select2Initialized.has(selector)) {
+                        return;
+                    }
+
+                    // Check if element exists and is not already a Select2
+                    if ($element.length && !$element.hasClass('select2-hidden-accessible')) {
+                        try {
+                            $element.select2({
+                                theme: 'bootstrap-5',
+                                width: '100%',
+                                placeholder: function () {
+                                    return $(this).find('option:first').text();
+                                },
+                                allowClear: false,
+                                dropdownParent: $('body'),
+                                escapeMarkup: function (markup) {
+                                    return markup;
+                                }
+                            });
+
+                            // Mark as initialized
+                            select2Initialized.add(selector);
+
+                            console.log('Select2 initialized for:', selector);
+                        } catch (error) {
+                            console.error('Failed to initialize Select2 for', selector, error);
+                        }
+                    }
+                }
+
+                // Initialize all Select2 dropdowns on page load
+                function initializeAllSelect2() {
+                    $('.select2-dropdown').each(function () {
+                        const selector = '#' + $(this).attr('id');
+                        initializeSelect2(selector);
+                    });
+                }
+
+                // Safely destroy Select2 instance
+                function destroySelect2(selector) {
+                    const $element = $(selector);
+                    if ($element.hasClass('select2-hidden-accessible')) {
+                        try {
+                            $element.select2('destroy');
+                            select2Initialized.delete(selector);
+                            console.log('Select2 destroyed for:', selector);
+                        } catch (error) {
+                            console.error('Failed to destroy Select2 for', selector, error);
+                        }
+                    }
+                }
+
+                // Helper function to reset and populate select with proper Select2 handling
+                function resetSelect(selector, placeholder) {
+                    const $select = $(selector);
+
+                    // Destroy existing Select2 instance
+                    destroySelect2(selector);
+
+                    // Reset select content
+                    $select.empty().append('<option value="">' + placeholder + '</option>');
+                    $select.prop('disabled', true);
+
+                    // Reinitialize Select2
+                    initializeSelect2(selector);
+                }
+
+                function populateSelect(selector, data, placeholder) {
+                    const $select = $(selector);
+
+                    // Destroy existing Select2 instance
+                    destroySelect2(selector);
+
+                    // Populate select
+                    $select.empty().append('<option value="">' + placeholder + '</option>');
+                    $.each(data, function (i, item) {
+                        $select.append('<option value="' + item.id + '">' + item.name + '</option>');
+                    });
+                    $select.prop('disabled', false);
+
+                    // Reinitialize Select2
+                    initializeSelect2(selector);
+                }
+
+                // Initialize Select2 on page load
+                initializeAllSelect2();
 
                 // Handle generation mode selection
                 $('.mode-card').click(function () {
@@ -1017,9 +1100,23 @@
                     $('#contentPreviewSection').hide();
                     $('#generateBtn').prop('disabled', true);
 
-                    // Reset all selects
-                    resetAllSelects();
+                    // Reset all selects in the active hierarchy
+                    resetAllSelectsInHierarchy();
                 });
+
+                function resetAllSelectsInHierarchy() {
+                    const activeHierarchy = $('.hierarchy-selection.active');
+                    activeHierarchy.find('select').each(function () {
+                        const $select = $(this);
+                        const selector = '#' + $select.attr('id');
+                        const placeholder = $select.find('option:first').text();
+
+                        // Keep grade selects populated, reset others
+                        if (!$select.attr('id').includes('grade')) {
+                            resetSelect(selector, placeholder);
+                        }
+                    });
+                }
 
                 // Handle question type selection
                 $('.question-type-card').click(function () {
@@ -1040,26 +1137,26 @@
                 $('input[name="difficulty"]:checked').closest('.difficulty-option').addClass('selected');
 
                 // Hierarchy selection handlers for Lesson Mode
-                $('#gradeSelectLesson').change(function () {
+                $('#gradeSelectLesson').on('change', function () {
                     const gradeId = $(this).val();
                     if (gradeId) {
                         loadSubjects(gradeId, '#subjectSelectLesson');
-                        resetSelect('#chapterSelectLesson');
-                        resetSelect('#lessonSelect');
+                        resetSelect('#chapterSelectLesson', '-- Select Chapter --');
+                        resetSelect('#lessonSelect', '-- Select Lesson --');
                         hideContentPreview();
                     }
                 });
 
-                $('#subjectSelectLesson').change(function () {
+                $('#subjectSelectLesson').on('change', function () {
                     const subjectId = $(this).val();
                     if (subjectId) {
                         loadChapters(subjectId, '#chapterSelectLesson');
-                        resetSelect('#lessonSelect');
+                        resetSelect('#lessonSelect', '-- Select Lesson --');
                         hideContentPreview();
                     }
                 });
 
-                $('#chapterSelectLesson').change(function () {
+                $('#chapterSelectLesson').on('change', function () {
                     const chapterId = $(this).val();
                     if (chapterId) {
                         loadLessons(chapterId, '#lessonSelect');
@@ -1067,7 +1164,7 @@
                     }
                 });
 
-                $('#lessonSelect').change(function () {
+                $('#lessonSelect').on('change', function () {
                     const lessonId = $(this).val();
                     if (lessonId) {
                         loadLessonContent(lessonId);
@@ -1075,16 +1172,16 @@
                 });
 
                 // Hierarchy selection handlers for Chapter Mode
-                $('#gradeSelectChapter').change(function () {
+                $('#gradeSelectChapter').on('change', function () {
                     const gradeId = $(this).val();
                     if (gradeId) {
                         loadSubjects(gradeId, '#subjectSelectChapter');
-                        resetSelect('#chapterSelect');
+                        resetSelect('#chapterSelect', '-- Select Chapter --');
                         hideContentPreview();
                     }
                 });
 
-                $('#subjectSelectChapter').change(function () {
+                $('#subjectSelectChapter').on('change', function () {
                     const subjectId = $(this).val();
                     if (subjectId) {
                         loadChapters(subjectId, '#chapterSelect');
@@ -1092,7 +1189,7 @@
                     }
                 });
 
-                $('#chapterSelect').change(function () {
+                $('#chapterSelect').on('change', function () {
                     const chapterId = $(this).val();
                     if (chapterId) {
                         loadChapterContent(chapterId);
@@ -1100,7 +1197,7 @@
                 });
 
                 // Hierarchy selection handlers for Subject Mode
-                $('#gradeSelectSubject').change(function () {
+                $('#gradeSelectSubject').on('change', function () {
                     const gradeId = $(this).val();
                     if (gradeId) {
                         loadSubjects(gradeId, '#subjectSelectMain');
@@ -1108,44 +1205,24 @@
                     }
                 });
 
-                $('#subjectSelectMain').change(function () {
+                $('#subjectSelectMain').on('change', function () {
                     const subjectId = $(this).val();
                     if (subjectId) {
                         loadSubjectContent(subjectId);
                     }
                 });
 
-                // Helper functions
-                function resetAllSelects() {
-                    $('select').each(function () {
-                        if ($(this).attr('id') && $(this).attr('id').includes('grade')) {
-                            // Don't reset grade selects
-                            return;
-                        }
-                        $(this).empty().append('<option value="">-- Select --</option>').prop('disabled', true);
-                    });
-                    $('select').niceSelect('destroy');
-                    $('select').niceSelect();
-                }
-
-                function resetSelect(selector) {
-                    $(selector).empty().append('<option value="">-- Select --</option>').prop('disabled', true);
-                    $('select').niceSelect('destroy');
-                    $('select').niceSelect();
-                }
-
+                // Helper functions for AJAX calls
                 function loadSubjects(gradeId, targetSelector) {
                     $.get('/ai-question', {
                         action: 'getSubjectsByGrade',
                         gradeId: gradeId
                     }, function (data) {
-                        $(targetSelector).empty().append('<option value="">-- Select Subject --</option>');
-                        $.each(data, function (i, subject) {
-                            $(targetSelector).append('<option value="' + subject.id + '">' + subject.name + '</option>');
-                        });
-                        $(targetSelector).prop('disabled', false);
-                        $('select').niceSelect('destroy');
-                        $('select').niceSelect();
+                        populateSelect(targetSelector, data, '-- Select Subject --');
+                    }).fail(function () {
+                        console.error('Failed to load subjects');
+                        resetSelect(targetSelector, '-- Select Subject --');
+                        showAlert('Failed to load subjects. Please try again.', 'danger');
                     });
                 }
 
@@ -1154,13 +1231,11 @@
                         action: 'getChaptersBySubject',
                         subjectId: subjectId
                     }, function (data) {
-                        $(targetSelector).empty().append('<option value="">-- Select Chapter --</option>');
-                        $.each(data, function (i, chapter) {
-                            $(targetSelector).append('<option value="' + chapter.id + '">' + chapter.name + '</option>');
-                        });
-                        $(targetSelector).prop('disabled', false);
-                        $('select').niceSelect('destroy');
-                        $('select').niceSelect();
+                        populateSelect(targetSelector, data, '-- Select Chapter --');
+                    }).fail(function () {
+                        console.error('Failed to load chapters');
+                        resetSelect(targetSelector, '-- Select Chapter --');
+                        showAlert('Failed to load chapters. Please try again.', 'danger');
                     });
                 }
 
@@ -1169,13 +1244,11 @@
                         action: 'getLessonsByChapter',
                         chapterId: chapterId
                     }, function (data) {
-                        $(targetSelector).empty().append('<option value="">-- Select Lesson --</option>');
-                        $.each(data, function (i, lesson) {
-                            $(targetSelector).append('<option value="' + lesson.id + '">' + lesson.name + '</option>');
-                        });
-                        $(targetSelector).prop('disabled', false);
-                        $('select').niceSelect('destroy');
-                        $('select').niceSelect();
+                        populateSelect(targetSelector, data, '-- Select Lesson --');
+                    }).fail(function () {
+                        console.error('Failed to load lessons');
+                        resetSelect(targetSelector, '-- Select Lesson --');
+                        showAlert('Failed to load lessons. Please try again.', 'danger');
                     });
                 }
 
@@ -1204,6 +1277,8 @@
                                 );
                         $('#contentText').html('<pre style="white-space: pre-wrap; font-family: inherit;">' + data.content + '</pre>');
                         $('#generateBtn').prop('disabled', false);
+                    }).fail(function () {
+                        showAlert('Failed to load chapter content. Please try again.', 'danger');
                     });
                 }
 
@@ -1225,6 +1300,8 @@
                                 );
                         $('#contentText').html('<pre style="white-space: pre-wrap; font-family: inherit;">' + data.content + '</pre>');
                         $('#generateBtn').prop('disabled', false);
+                    }).fail(function () {
+                        showAlert('Failed to load subject content. Please try again.', 'danger');
                     });
                 }
 
@@ -1240,6 +1317,9 @@
                 }
 
                 function showAlert(message, type) {
+                    // Remove existing alerts
+                    $('.alert').remove();
+
                     const alertHtml = `
                         <div class="alert alert-${type} alert-dismissible fade show" role="alert">
                             <i class="fas fa-exclamation-triangle me-2"></i>
@@ -1249,6 +1329,7 @@
                     `;
                     $('.ai-form-container').prepend(alertHtml);
 
+                    // Auto-hide after 5 seconds
                     setTimeout(() => {
                         $('.alert').fadeOut();
                     }, 5000);
@@ -1332,20 +1413,6 @@
                     }, 60000); // 60 second timeout for larger content
                 });
 
-                // Enhanced dropdown click handling
-                $(document).on('click', '.nice-select', function (e) {
-                    e.stopPropagation();
-                    $('.nice-select').not(this).removeClass('open');
-                    $(this).toggleClass('open');
-                });
-
-                // Close dropdown when clicking outside
-                $(document).on('click', function (e) {
-                    if (!$(e.target).closest('.nice-select').length) {
-                        $('.nice-select').removeClass('open');
-                    }
-                });
-
                 // Smooth animations on scroll
                 const observer = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
@@ -1363,40 +1430,24 @@
                     observer.observe(this);
                 });
 
-                // Fix for nice-select dropdown positioning
-                $('.nice-select').each(function () {
-                    const $this = $(this);
-                    const $list = $this.find('.list');
-
-                    $this.on('click', function () {
-                        setTimeout(() => {
-                            if ($this.hasClass('open')) {
-                                const dropdownBottom = $this.offset().top + $this.outerHeight() + $list.outerHeight();
-                                const viewportBottom = $(window).scrollTop() + $(window).height();
-
-                                if (dropdownBottom > viewportBottom) {
-                                    $list.css({
-                                        'top': 'auto',
-                                        'bottom': '100%',
-                                        'margin-top': '0',
-                                        'margin-bottom': '5px'
-                                    });
-                                } else {
-                                    $list.css({
-                                        'top': '100%',
-                                        'bottom': 'auto',
-                                        'margin-top': '5px',
-                                        'margin-bottom': '0'
-                                    });
-                                }
-                            }
-                        }, 10);
-                    });
+                // Ensure proper z-index stacking for Select2 dropdowns
+                $('.form-section').each(function (index) {
+                    $(this).css('z-index', 100 - index);
                 });
 
-                // Ensure proper z-index stacking
-                $('.form-section.has-dropdown').each(function (index) {
-                    $(this).css('z-index', 100 - index);
+                // Handle Select2 dropdown positioning and prevent duplicates
+                $(document).on('select2:open', function (e) {
+                    const selectId = e.target.id;
+                    const $dropdown = $('#select2-' + selectId + '-results').parent();
+                    $dropdown.css('z-index', 9999);
+                });
+
+                // Cleanup on page unload
+                $(window).on('beforeunload', function () {
+                    $('.select2-dropdown').each(function () {
+                        const selector = '#' + $(this).attr('id');
+                        destroySelect2(selector);
+                    });
                 });
             });
         </script>

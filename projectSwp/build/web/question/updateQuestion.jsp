@@ -9,7 +9,11 @@
         <!-- Bootstrap 5 CSS -->
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
         <link rel="stylesheet" href="/assets/css/fontawesome-all.min.css">
-        <link rel="stylesheet" href="/assets/css/nice-select.css">
+
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
         <link rel="stylesheet" href="/assets/css/style.css">
 
         <style>
@@ -70,6 +74,42 @@
                 font-weight: 600;
                 color: #374151;
                 margin-bottom: 8px;
+            }
+
+            /* Select2 Custom Styling */
+            .select2-container--bootstrap-5 .select2-selection {
+                border: 2px solid #e2e8f0 !important;
+                border-radius: 8px !important;
+                min-height: 45px !important;
+                padding: 5px 10px !important;
+            }
+
+            .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+                line-height: 33px !important;
+                padding-left: 0 !important;
+            }
+
+            .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+                border-color: #0ea5e9 !important;
+                box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1) !important;
+            }
+
+            .select2-dropdown {
+                border: 2px solid #0ea5e9 !important;
+                border-radius: 8px !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+            }
+
+            .select2-container {
+                width: 100% !important;
+            }
+
+            .select2-container--open {
+                z-index: 9999 !important;
+            }
+
+            .select2-dropdown {
+                z-index: 9999 !important;
             }
         </style>
     </head>
@@ -193,9 +233,19 @@
         <!-- JS Libraries -->
         <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
         <script>
                         $(document).ready(function () {
+                            // Initialize Select2 for any select elements
+                            $('.select2-dropdown').select2({
+                                theme: 'bootstrap-5',
+                                width: '100%',
+                                allowClear: false,
+                                dropdownParent: $('body')
+                            });
+
                             // Option dynamic logic
                             function updateOptionInputs() {
                                 const type = $('input[name="question_type"]:checked').val();
@@ -222,18 +272,18 @@
                                 const idx = options.length;
                                 if (type === 'SINGLE') {
                                     var newOption = `<div class="option-row d-flex align-items-center mb-2">
-                        <input type="text" name="optionContent" class="form-control me-2 option-content" placeholder="Option content" required style="max-width: 350px;">
-                        <input type="radio" name="correctOption" class="form-check-input me-1 option-correct" value="${idx}">
-                        <span class="me-2 correct-label">Correct</span>
-                        <button type="button" class="btn btn-danger btn-sm btn-remove-option">&times;</button>
-                    </div>`;
+                            <input type="text" name="optionContent" class="form-control me-2 option-content" placeholder="Option content" required style="max-width: 350px;">
+                            <input type="radio" name="correctOption" class="form-check-input me-1 option-correct" value="${idx}">
+                            <span class="me-2 correct-label">Correct</span>
+                            <button type="button" class="btn btn-danger btn-sm btn-remove-option">&times;</button>
+                        </div>`;
                                 } else {
                                     var newOption = `<div class="option-row d-flex align-items-center mb-2">
-                        <input type="text" name="optionContent" class="form-control me-2 option-content" placeholder="Option content" required style="max-width: 350px;">
-                        <input type="checkbox" name="correctOption${idx}" class="form-check-input me-1 option-correct" value="true">
-                        <span class="me-2 correct-label">Correct</span>
-                        <button type="button" class="btn btn-danger btn-sm btn-remove-option">&times;</button>
-                    </div>`;
+                            <input type="text" name="optionContent" class="form-control me-2 option-content" placeholder="Option content" required style="max-width: 350px;">
+                            <input type="checkbox" name="correctOption${idx}" class="form-check-input me-1 option-correct" value="true">
+                            <span class="me-2 correct-label">Correct</span>
+                            <button type="button" class="btn btn-danger btn-sm btn-remove-option">&times;</button>
+                        </div>`;
                                 }
                                 $('#options-container').append(newOption);
                                 updateRemoveButtons();

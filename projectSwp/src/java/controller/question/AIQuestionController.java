@@ -59,11 +59,11 @@ public class AIQuestionController extends HttpServlet {
             switch (action) {
                 case "form":
                     showAIGenerationForm(request, response);
-                    break;
+                    return;
                 case "preview":
                     showPreviewPage(request, response);
-                    break;
-                // Add new AJAX endpoints for hierarchy loading
+                    return;
+                // AJAX endpoints for hierarchy loading
                 case "getSubjectsByGrade":
                     handleGetSubjectsByGrade(request, response);
                     return;
@@ -81,12 +81,16 @@ public class AIQuestionController extends HttpServlet {
                     return;
                 default:
                     response.sendRedirect("/Question");
-                    break;
+                    return;
             }
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Error in AI Question Controller", e);
-            request.setAttribute("error", "System error: " + e.getMessage());
-            request.getRequestDispatcher("/question/questionList.jsp").forward(request, response);
+            if (!response.isCommitted()) {
+                request.setAttribute("error", "System error: " + e.getMessage());
+                request.getRequestDispatcher("/question/questionList.jsp").forward(request, response);
+            } else {
+                logger.log(Level.WARNING, "Response already committed, cannot forward to error page");
+            }
         }
     }
 
@@ -108,21 +112,24 @@ public class AIQuestionController extends HttpServlet {
             switch (action) {
                 case "generate":
                     generateQuestions(request, response);
-                    break;
+                    return; // Important: return after handling
                 case "chat":
                     handleChatWithAI(request, response);
-                    break;
+                    return;
                 case "approve":
                     approveAndSaveQuestions(request, response);
-                    break;
+                    return; // Important: return after handling
                 default:
                     response.sendRedirect("/Question");
-                    break;
+                    return;
             }
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "Error in AI Question Controller POST", e);
-            request.setAttribute("error", "System error: " + e.getMessage());
-            request.getRequestDispatcher("/question/questionList.jsp").forward(request, response);
+            if (!response.isCommitted()) {
+                request.setAttribute("error", "System error: " + e.getMessage());
+                request.getRequestDispatcher("/question/questionList.jsp").forward(request, response);
+            } else {
+                logger.log(Level.WARNING, "Response already committed, cannot forward to error page");
+            }
         }
     }
 
@@ -404,8 +411,8 @@ public class AIQuestionController extends HttpServlet {
             session.removeAttribute("generationMode");
             session.removeAttribute("aiGenerationContext");
 
-            // Set success message
-            request.setAttribute("message", "Successfully saved " + savedCount + " AI-generated questions to your question bank!");
+            // Set success message and redirect
+            session.setAttribute("message", "Successfully saved " + savedCount + " AI-generated questions to your question bank!");
             response.sendRedirect("/Question");
 
         } catch (Exception e) {

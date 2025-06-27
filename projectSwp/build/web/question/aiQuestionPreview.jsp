@@ -645,7 +645,7 @@
                             <div class="question-number">
                                 Question ${status.index + 1}
                             </div>
-                            <div class="question-type-badge type-${question.questionType.toLowerCase().replace('_', '-')}">
+                            <div class="question-type-badge type-${fn:toLowerCase(fn:replace(question.questionType, '_', '-'))}">
                                 <c:choose>
                                     <c:when test="${question.questionType == 'single_choice'}">Single Choice</c:when>
                                     <c:when test="${question.questionType == 'multiple_choice'}">Multiple Choice</c:when>
@@ -664,7 +664,7 @@
                                 <c:forEach var="option" items="${question.options}" varStatus="optStatus">
                                     <li class="option-item ${question.correctAnswers.contains(optStatus.index) || question.correctAnswerIndex == optStatus.index ? 'correct' : ''}">
                                         <div class="option-letter">
-                                            <%=String.valueOf((char)(65 + ${optStatus.index}))%>
+                                            <c:out value="${fn:substring('ABCDEFGHIJKLMNOPQRSTUVWXYZ', optStatus.index, optStatus.index + 1)}" />
                                         </div>
                                         <span class="option-text">${option}</span>
                                         <c:if test="${question.correctAnswers.contains(optStatus.index) || question.correctAnswerIndex == optStatus.index}">
@@ -808,14 +808,12 @@
                                             }
 
                                             // Show loading state
-                                            chatResponse.innerHTML = `
-                    <div class="d-flex align-items-center">
-                        <div class="spinner-border spinner-border-sm text-primary me-3" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <span>AI is thinking...</span>
-                    </div>
-                `;
+                                            chatResponse.innerHTML = '<div class="d-flex align-items-center">' +
+                                                    '<div class="spinner-border spinner-border-sm text-primary me-3" role="status">' +
+                                                    '<span class="visually-hidden">Loading...</span>' +
+                                                    '</div>' +
+                                                    '<span>AI is thinking...</span>' +
+                                                    '</div>';
                                             chatResponse.classList.add('active');
 
                                             // Send request to AI
@@ -832,31 +830,26 @@
                                                     .then(response => response.json())
                                                     .then(data => {
                                                         if (data.error) {
-                                                            chatResponse.innerHTML = `
-                            <div class="text-danger">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                Error: ${data.error}
-                            </div>
-                        `;
+                                                            chatResponse.innerHTML = '<div class="text-danger">' +
+                                                                    '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                                                                    'Error: ' + data.error +
+                                                                    '</div>';
                                                         } else {
-                                                            chatResponse.innerHTML = `
-                            <div class="d-flex align-items-start">
-                                <i class="fas fa-robot text-primary me-3 mt-1"></i>
-                                <div>
-                                    <strong class="text-primary">AI Assistant:</strong>
-                                    <div class="mt-2">' + data.response.replace(/\\n/g, '<br>') + '</div>
-                                </div>
-                            </div>
-                        `;
+                                                            var formattedResponse = data.response.replace(/\n/g, '<br>');
+                                                            chatResponse.innerHTML = '<div class="d-flex align-items-start">' +
+                                                                    '<i class="fas fa-robot text-primary me-3 mt-1"></i>' +
+                                                                    '<div>' +
+                                                                    '<strong class="text-primary">AI Assistant:</strong>' +
+                                                                    '<div class="mt-2">' + formattedResponse + '</div>' +
+                                                                    '</div>' +
+                                                                    '</div>';
                                                         }
                                                     })
                                                     .catch(error => {
-                                                        chatResponse.innerHTML = `
-                        <div class="text-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Failed to get AI response. Please try again.
-                        </div>
-                    `;
+                                                        chatResponse.innerHTML = '<div class="text-danger">' +
+                                                                '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                                                                'Failed to get AI response. Please try again.' +
+                                                                '</div>';
                                                     })
                                                     .finally(() => {
                                                         chatInput.value = '';
@@ -888,35 +881,35 @@
                                             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving Questions...';
 
                                             // Add loading overlay
-                                            document.body.insertAdjacentHTML('beforeend', `
-                    <div id="savingOverlay" style="
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        background: rgba(0, 0, 0, 0.5);
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        z-index: 9999;
-                    ">
-                        <div style="
-                            background: white;
-                            padding: 30px;
-                            border-radius: 15px;
-                            text-align: center;
-                            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-                        ">
-                            <i class="fas fa-save fa-3x text-success mb-3"></i>
-                            <h4>Saving Questions to Database...</h4>
-                            <p class="text-muted">Processing ${approvedCount} approved questions</p>
-                            <div class="spinner-border text-success" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </div>
-                    </div>
-                `);
+                                            document.body.insertAdjacentHTML('beforeend',
+                                                    '<div id="savingOverlay" style="' +
+                                                    'position: fixed;' +
+                                                    'top: 0;' +
+                                                    'left: 0;' +
+                                                    'width: 100%;' +
+                                                    'height: 100%;' +
+                                                    'background: rgba(0, 0, 0, 0.5);' +
+                                                    'display: flex;' +
+                                                    'justify-content: center;' +
+                                                    'align-items: center;' +
+                                                    'z-index: 9999;' +
+                                                    '">' +
+                                                    '<div style="' +
+                                                    'background: white;' +
+                                                    'padding: 30px;' +
+                                                    'border-radius: 15px;' +
+                                                    'text-align: center;' +
+                                                    'box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);' +
+                                                    '">' +
+                                                    '<i class="fas fa-save fa-3x text-success mb-3"></i>' +
+                                                    '<h4>Saving Questions to Database...</h4>' +
+                                                    '<p class="text-muted">Processing ' + approvedCount + ' approved questions</p>' +
+                                                    '<div class="spinner-border text-success" role="status">' +
+                                                    '<span class="visually-hidden">Loading...</span>' +
+                                                    '</div>' +
+                                                    '</div>' +
+                                                    '</div>'
+                                                    );
 
                                             // If saving fails, restore button (timeout fallback)
                                             setTimeout(() => {

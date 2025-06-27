@@ -33,7 +33,7 @@ public class GeminiAIService {
     private static final Logger logger = Logger.getLogger(GeminiAIService.class.getName());
 
     // Replace with your actual Gemini API key from Google AI Studio
-    private static final String API_KEY = "YOUR_API_KEY_HERE"; // Enter ur actual API KEY
+    private static final String API_KEY = "AIzaSyB8LPs9N0FcItmotUwp9x5cREowJI5kDMU"; // Enter ur actual API KEY
     private static final String MODEL = "gemini-2.5-flash";
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent";
 
@@ -104,7 +104,8 @@ public class GeminiAIService {
         prompt.append("    \"question\": \"Clear, well-written question text\",\n");
         prompt.append("    \"options\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"],\n");
         prompt.append("    \"correctAnswers\": [0, 2],\n");
-        prompt.append("    \"explanation\": \"Clear explanation of why the answer is correct\"\n");
+        prompt.append("    \"explanation\": \"Clear explanation of why the answer is correct\",\n");
+        prompt.append("    \"difficulty\": \"").append(request.getDifficulty()).append("\"\n");
         prompt.append("  }\n");
         prompt.append("]\n\n");
         prompt.append("IMPORTANT RULES:\n");
@@ -112,6 +113,7 @@ public class GeminiAIService {
         prompt.append("- For single choice: correctAnswers should have exactly 1 index\n");
         prompt.append("- For multiple choice: correctAnswers should have 2-3 indices\n");
         prompt.append("- For true/false: correctAnswers should have exactly 1 index (0 or 1)\n");
+        prompt.append("- difficulty should be one of: easy, medium, hard\n");
         prompt.append("- Respond with ONLY the JSON array, no markdown formatting, no extra text\n");
 
         return prompt.toString();
@@ -384,6 +386,11 @@ public class GeminiAIService {
 
             question.setQuestionType(questionType);
 
+            // Set difficulty - default to "medium" if not provided
+            String difficulty = questionObj.has("difficulty")
+                    ? questionObj.get("difficulty").getAsString() : "medium";
+            question.setDifficulty(difficulty);
+
             // Parse options
             if (!questionObj.has("options")) {
                 logger.warning("Question object missing 'options' field");
@@ -482,6 +489,7 @@ public class GeminiAIService {
             question.setQuestion("Sample question " + (i + 1) + " (AI generation fallback) - Please edit this question to match your lesson content.");
             question.setExplanation("This is a fallback question created when AI response parsing failed. Please edit both the question and explanation to match your lesson content.");
             question.setQuestionType(questionType);
+            question.setDifficulty("medium");
 
             // Create options based on question type
             List<String> options = new ArrayList<>();
@@ -621,6 +629,7 @@ public class GeminiAIService {
         private int correctAnswerIndex;
         private String explanation;
         private String questionType;
+        private String difficulty;
 
         // Getters and setters
         public String getQuestion() {
@@ -669,6 +678,14 @@ public class GeminiAIService {
 
         public void setQuestionType(String questionType) {
             this.questionType = questionType;
+        }
+
+        public String getDifficulty() {
+            return difficulty;
+        }
+
+        public void setDifficulty(String difficulty) {
+            this.difficulty = difficulty;
         }
     }
 }
