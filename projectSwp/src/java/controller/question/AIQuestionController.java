@@ -199,7 +199,7 @@ public class AIQuestionController extends HttpServlet {
             List<GeminiAIService.AIQuestion> generatedQuestions = aiService.generateQuestions(aiRequest);
 
             // Enhanced: Add lesson mapping information to each question
-            enhanceQuestionsWithLessonMapping(generatedQuestions, contentMapping);
+            enhanceQuestionsWithLessonInfo(generatedQuestions, contentMapping);
 
             // Store in session for preview
             HttpSession session = request.getSession();
@@ -347,6 +347,52 @@ public class AIQuestionController extends HttpServlet {
             // Try to intelligently assign lesson based on question content
             int assignedLessonId = intelligentLessonAssignment(question, mapping);
             question.setAssignedLessonId(assignedLessonId);
+        }
+    }
+
+    /**
+     * Get lesson information for display in preview
+     */
+    private String getLessonDisplayInfo(int lessonId) {
+        try {
+            Lesson lesson = lessonDAO.getLessonById(lessonId);
+            if (lesson != null) {
+                Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
+                if (chapter != null) {
+                    Subject subject = subjectDAO.findById(chapter.getSubject_id());
+                    if (subject != null) {
+                        Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
+                        if (grade != null) {
+                            return String.format("%s → %s → %s → %s",
+                                    grade.getName(),
+                                    subject.getName(),
+                                    chapter.getName(),
+                                    lesson.getName());
+                        }
+                    }
+                }
+                return "Lesson: " + lesson.getName();
+            }
+        } catch (Exception e) {
+            logger.warning("Error getting lesson display info for lesson ID: " + lessonId + " - " + e.getMessage());
+        }
+        return "Unknown Lesson";
+    }
+
+    /**
+     * Enhanced question generation with lesson info
+     */
+    private void enhanceQuestionsWithLessonInfo(List<GeminiAIService.AIQuestion> questions,
+            ContentAndLessonMapping mapping) {
+
+        for (GeminiAIService.AIQuestion question : questions) {
+            // Try to intelligently assign lesson based on question content
+            int assignedLessonId = intelligentLessonAssignment(question, mapping);
+            question.setAssignedLessonId(assignedLessonId);
+
+            // Get lesson display information
+            String lessonDisplayInfo = getLessonDisplayInfo(assignedLessonId);
+            question.setLessonDisplayInfo(lessonDisplayInfo);
         }
     }
 
@@ -513,6 +559,7 @@ public class AIQuestionController extends HttpServlet {
                 question.setLesson_id(lessonId);
                 question.setQuestion_type(dbQuestionType);
                 question.setImage_id(0); // No image for AI generated questions
+                question.setAIGenerated(true); // Mark as AI generated
 
                 questionDAO.insert(question);
 

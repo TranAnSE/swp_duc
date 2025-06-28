@@ -689,6 +689,7 @@ public class GeminiAIService {
         private String questionType;
         private String difficulty;
         private int assignedLessonId;
+        private String lessonDisplayInfo;
 
         // Getters and setters
         public String getQuestion() {
@@ -753,6 +754,14 @@ public class GeminiAIService {
 
         public void setAssignedLessonId(int assignedLessonId) {
             this.assignedLessonId = assignedLessonId;
+        }
+
+        public String getLessonDisplayInfo() {
+            return lessonDisplayInfo;
+        }
+
+        public void setLessonDisplayInfo(String lessonDisplayInfo) {
+            this.lessonDisplayInfo = lessonDisplayInfo;
         }
     }
 }

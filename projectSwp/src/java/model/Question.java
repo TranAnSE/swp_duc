@@ -7,6 +7,7 @@ public class Question {
     private int image_id;
     private int lesson_id;
     private String question_type; // 'SINGLE' hoặc 'MULTIPLE'
+    private boolean isAIGenerated;
 
     public Question() {
     }
@@ -17,6 +18,7 @@ public class Question {
         this.image_id = image_id;
         this.lesson_id = lesson_id;
         this.question_type = question_type;
+        this.isAIGenerated = false; // Default is manual
     }
 
     public Question(String question, int image_id, int lesson_id, String question_type) {
@@ -24,6 +26,15 @@ public class Question {
         this.image_id = image_id;
         this.lesson_id = lesson_id;
         this.question_type = question_type;
+        this.isAIGenerated = false; // Default is manual
+    }
+
+    public Question(String question, int image_id, int lesson_id, String question_type, boolean isAIGenerated) {
+        this.question = question;
+        this.image_id = image_id;
+        this.lesson_id = lesson_id;
+        this.question_type = question_type;
+        this.isAIGenerated = isAIGenerated;
     }
 
     public int getId() {
@@ -64,5 +75,13 @@ public class Question {
 
     public void setQuestion_type(String question_type) {
         this.question_type = question_type;
+    }
+
+    public boolean isAIGenerated() {
+        return isAIGenerated;
+    }
+
+    public void setAIGenerated(boolean isAIGenerated) {
+        this.isAIGenerated = isAIGenerated;
     }
 }

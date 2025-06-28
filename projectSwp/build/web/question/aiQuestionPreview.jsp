@@ -755,23 +755,41 @@
                         </div>
 
                         <!-- Lesson Assignment Info -->
-                        <c:if test="${not empty generationMode && generationMode != 'lesson'}">
-                            <div class="lesson-assignment-info mt-3 p-3" style="background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%); border-radius: 8px; border-left: 4px solid #0ea5e9;">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-map-marker-alt text-primary me-2"></i>
-                                    <strong class="text-primary">Intelligent Assignment:</strong>
-                                    <span class="ms-2 text-secondary">
-                                        This question will be assigned to the most relevant lesson based on content analysis
-                                    </span>
-                                </div>
-                                <div class="mt-2">
-                                    <small class="text-muted">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        The system analyzes question content and matches it with appropriate lessons automatically
-                                    </small>
-                                </div>
+                        <div class="lesson-assignment-info mt-3 p-3" style="background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%); border-radius: 8px; border-left: 4px solid #0ea5e9;">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                                <strong class="text-primary">Assigned to:</strong>
+                                <span class="ms-2 text-dark fw-bold">
+                                    <c:choose>
+                                        <c:when test="${not empty question.lessonDisplayInfo}">
+                                            ${question.lessonDisplayInfo}
+                                        </c:when>
+                                        <c:otherwise>
+                                            <c:choose>
+                                                <c:when test="${generationMode == 'lesson'}">
+                                                    Selected Lesson
+                                                </c:when>
+                                                <c:when test="${generationMode == 'chapter'}">
+                                                    Best matching lesson in selected chapter
+                                                </c:when>
+                                                <c:when test="${generationMode == 'subject'}">
+                                                    Best matching lesson in selected subject
+                                                </c:when>
+                                                <c:otherwise>
+                                                    Automatically assigned lesson
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </span>
                             </div>
-                        </c:if>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    This question will be saved to the lesson shown above based on content analysis
+                                </small>
+                            </div>
+                        </div>
 
                         <div class="question-actions">
                             <div class="approve-checkbox">

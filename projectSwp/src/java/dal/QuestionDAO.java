@@ -31,6 +31,11 @@ public class QuestionDAO extends DBContext {
                         rs.getInt("lesson_id"),
                         rs.getString("question_type")
                 );
+                try {
+                    q.setAIGenerated(rs.getBoolean("is_ai_generated"));
+                } catch (SQLException e) {
+                    q.setAIGenerated(false);
+                }
                 list.add(q);
             }
         }
@@ -43,13 +48,19 @@ public class QuestionDAO extends DBContext {
             stmt.setInt(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return new Question(
+                    Question q = new Question(
                             rs.getInt("id"),
                             rs.getString("question"),
                             rs.getInt("image_id"),
                             rs.getInt("lesson_id"),
                             rs.getString("question_type")
                     );
+                    try {
+                        q.setAIGenerated(rs.getBoolean("is_ai_generated"));
+                    } catch (SQLException e) {
+                        q.setAIGenerated(false);
+                    }
+                    return q;
                 }
             }
         }
@@ -57,7 +68,7 @@ public class QuestionDAO extends DBContext {
     }
 
     public void insert(Question question) throws SQLException {
-        String sql = "INSERT INTO question (question, image_id, lesson_id, question_type) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO question (question, image_id, lesson_id, question_type, is_ai_generated) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = new DBContext().getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, question.getQuestion());
             if (question.getImage_id() == 0) {
@@ -67,12 +78,13 @@ public class QuestionDAO extends DBContext {
             }
             stmt.setInt(3, question.getLesson_id());
             stmt.setString(4, question.getQuestion_type());
+            stmt.setBoolean(5, question.isAIGenerated());
             stmt.executeUpdate();
         }
     }
 
     public void update(Question question) throws SQLException {
-        String sql = "UPDATE Question SET question = ?, image_id = ?, lesson_id = ?, question_type = ? WHERE id = ?";
+        String sql = "UPDATE Question SET question = ?, image_id = ?, lesson_id = ?, question_type = ?, is_ai_generated = ? WHERE id = ?";
         try (Connection conn = new DBContext().getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, question.getQuestion());
             if (question.getImage_id() == 0) {
@@ -82,7 +94,8 @@ public class QuestionDAO extends DBContext {
             }
             stmt.setInt(3, question.getLesson_id());
             stmt.setString(4, question.getQuestion_type());
-            stmt.setInt(5, question.getId());
+            stmt.setBoolean(5, question.isAIGenerated());
+            stmt.setInt(6, question.getId());
             stmt.executeUpdate();
         }
     }
