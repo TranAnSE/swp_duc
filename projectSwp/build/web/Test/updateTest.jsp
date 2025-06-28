@@ -1141,7 +1141,7 @@
                                                 $('#regenerateBtn').hide();
                                                 $('#previewTitle').text('Manual Selected Questions Preview');
 
-                                                // Auto-load lesson hierarchy if available - FIXED for Problem 2
+                                                // Auto-load lesson hierarchy if available
                                                 if (contextLessonId && !lessonHierarchy) {
                                                     loadLessonHierarchy();
                                                 }
@@ -1153,7 +1153,7 @@
                                             updateAddingStats();
                                         }
 
-// Load lesson hierarchy - NEW for Problem 2
+                                        // Load lesson hierarchy
                                         function loadLessonHierarchy() {
                                             console.log('Loading lesson hierarchy for lesson:', contextLessonId);
 
@@ -1309,7 +1309,7 @@
                                             }
                                         }
 
-// Display adding questions (both smart and manual)
+                                        // Display adding questions (both smart and manual)
                                         function displayAddingQuestions(questions) {
                                             const container = $('#addingQuestionsList');
                                             container.empty();
@@ -1376,16 +1376,26 @@
 
                                             updateAddingStats();
 
-                                            // Scroll to show generated questions
-                                            if ($('#addingQuestionsPreview')[0]) {
-                                                $('#addingQuestionsPreview')[0].scrollIntoView({
-                                                    behavior: 'smooth',
-                                                    block: 'start'
-                                                });
+                                            // Safe scroll to show generated questions - FIX for addEventListener error
+                                            try {
+                                                const previewElement = document.getElementById('addingQuestionsPreview');
+                                                if (previewElement) {
+                                                    previewElement.scrollIntoView({
+                                                        behavior: 'smooth',
+                                                        block: 'start'
+                                                    });
+                                                }
+                                            } catch (error) {
+                                                console.warn('Scroll to preview failed:', error);
+                                                // Fallback scroll method
+                                                $('html, body').animate({
+                                                    scrollTop: $('#addingQuestionsPreview').offset().top - 100
+                                                }, 500);
                                             }
                                         }
 
-// Load manual questions for selected lesson - ENHANCED for Problem 2
+
+                                        // Load manual questions for selected lesson
                                         function loadManualQuestions(lessonId) {
                                             console.log('Loading manual questions for lesson:', lessonId);
 
@@ -1409,7 +1419,7 @@
                                             });
                                         }
 
-// Display manual questions for selection - ENHANCED for Problem 2
+// Display manual questions for selection
                                         function displayManualQuestions(questions) {
                                             const container = $('#manualQuestionsList');
                                             container.empty();
@@ -1477,7 +1487,7 @@
                                             updateManualStats();
                                         }
 
-// Filter manual questions - NEW for Problem 2
+                                        // Filter manual questions
                                         function filterManualQuestions() {
                                             const searchTerm = $('#questionSearch').val().toLowerCase();
                                             const difficultyFilter = $('#manualDifficultyFilter').val();
@@ -1525,7 +1535,7 @@
                                             updateManualStats();
                                         }
 
-// Clear manual filters - NEW for Problem 2
+// Clear manual filters
                                         function clearManualFilters() {
                                             $('#questionSearch').val('');
                                             $('#manualDifficultyFilter').val('all');
@@ -1635,7 +1645,7 @@
                                             $('#generateSmartBtn').on('click', generateSmartQuestions);
                                             $('#regenerateBtn').on('click', regenerateQuestions);
 
-                                            // Event handlers for manual question filters - NEW for Problem 2
+                                            // Event handlers for manual question filters
                                             $('#questionSearch').on('input', filterManualQuestions);
                                             $('#manualDifficultyFilter, #manualCategoryFilter, #manualTypeFilter').on('change', filterManualQuestions);
                                             $('#clearFiltersBtn').on('click', clearManualFilters);

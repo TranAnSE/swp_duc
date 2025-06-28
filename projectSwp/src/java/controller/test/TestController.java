@@ -805,9 +805,24 @@ public class TestController extends HttpServlet {
             }
 
             Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
-            Subject subject = subjectDAO.findById(chapter.getSubject_id());
-            Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
+            if (chapter == null) {
+                response.getWriter().write("{}");
+                return;
+            }
 
+            Subject subject = subjectDAO.findById(chapter.getSubject_id());
+            if (subject == null) {
+                response.getWriter().write("{}");
+                return;
+            }
+
+            Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
+            if (grade == null) {
+                response.getWriter().write("{}");
+                return;
+            }
+
+            // Build JSON response with proper escaping
             StringBuilder json = new StringBuilder("{");
             json.append("\"lessonId\":").append(lesson.getId())
                     .append(",\"lessonName\":\"").append(escapeJsonString(lesson.getName()))
@@ -817,24 +832,17 @@ public class TestController extends HttpServlet {
                     .append(",\"subjectName\":\"").append(escapeJsonString(subject.getName()))
                     .append("\",\"gradeId\":").append(grade.getId())
                     .append(",\"gradeName\":\"").append(escapeJsonString(grade.getName()))
-                    .append("}");
+                    .append("\"}");
 
             response.getWriter().write(json.toString());
+
+            // Log để debug
+            System.out.println("Lesson hierarchy response: " + json.toString());
+
         } catch (Exception e) {
             e.printStackTrace();
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write("{}");
+            response.getWriter().write("{\"error\":\"Failed to load lesson hierarchy\"}");
         }
-    }
-
-    private String escapeJson(String str) {
-        if (str == null) {
-            return "";
-        }
-        return str.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\r", "\\r")
-                .replace("\n", "\\n")
-                .replace("\t", "\\t");
     }
 }
