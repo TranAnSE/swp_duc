@@ -7,6 +7,7 @@ package dal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import model.Question;
 
 /**
@@ -343,5 +344,99 @@ public class QuestionDAO extends DBContext {
             }
         }
         return list;
+    }
+
+    public List<Question> getSmartQuestionsForLesson(int lessonId, int count,
+            String difficulty, String category, Set<Integer> excludeIds) {
+        List<Question> questions = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(
+                "SELECT * FROM questions WHERE lesson_id = ? AND status = 'active'"
+        );
+
+        List<Object> params = new ArrayList<>();
+        params.add(lessonId);
+
+        // Add difficulty filter
+        if (difficulty != null && !difficulty.equals("all")) {
+            sql.append(" AND difficulty = ?");
+            params.add(difficulty);
+        }
+
+        // Add category filter
+        if (category != null && !category.equals("all")) {
+            sql.append(" AND category = ?");
+            params.add(category);
+        }
+
+        // Exclude already selected questions
+        if (!excludeIds.isEmpty()) {
+            sql.append(" AND id NOT IN (");
+            for (int i = 0; i < excludeIds.size(); i++) {
+                if (i > 0) {
+                    sql.append(",");
+                }
+                sql.append("?");
+                params.add(excludeIds.toArray()[i]);
+            }
+            sql.append(")");
+        }
+
+        // Add randomization and limit
+        sql.append(" ORDER BY RAND() LIMIT ?");
+        params.add(count);
+
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Question question = new Question();
+                question.setId(rs.getInt("id"));
+                question.setQuestion(rs.getString("question"));
+                question.setDifficulty(rs.getString("difficulty"));
+                question.setCategory(rs.getString("category"));
+                question.setQuestion_type(rs.getString("question_type"));
+                question.setLesson_id(rs.getInt("lesson_id"));
+                question.setAIGenerated(rs.getBoolean("is_ai_generated"));
+                questions.add(question);
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error getting smart questions: " + e.getMessage());
+        }
+
+        return questions;
+    }
+
+    public List<Question> getQuestionsByLessonId(int lessonId) {
+        List<Question> questions = new ArrayList<>();
+        String sql = "SELECT * FROM questions WHERE lesson_id = ? AND status = 'active'";
+
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, lessonId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Question question = new Question();
+                question.setId(rs.getInt("id"));
+                question.setQuestion(rs.getString("question"));
+                question.setDifficulty(rs.getString("difficulty"));
+                question.setCategory(rs.getString("category"));
+                question.setQuestion_type(rs.getString("question_type"));
+                question.setLesson_id(rs.getInt("lesson_id"));
+                question.setAIGenerated(rs.getBoolean("is_ai_generated"));
+                questions.add(question);
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error getting questions by lesson ID: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return questions;
     }
 }

@@ -31,8 +31,10 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import util.AuthUtil;
 import util.RoleConstants;
 
@@ -176,6 +178,7 @@ public class TestController extends HttpServlet {
         TestDAO testDAO = new TestDAO();
         QuestionDAO questionDAO = new QuestionDAO();
         TestQuestionDAO testQuestionDAO = new TestQuestionDAO();
+
         try {
             int id = Integer.parseInt(request.getParameter("id"));
             Test test = testDAO.getTestById(id);
@@ -189,45 +192,74 @@ public class TestController extends HttpServlet {
             Map<Integer, String> categoryMap = getCategoryMap();
             request.setAttribute("categoryMap", categoryMap);
 
-            // Load hierarchy data for enhanced test editing
-            try {
-                GradeDAO gradeDAO = new GradeDAO();
-                List<Grade> gradeList = gradeDAO.findAllFromGrade();
-                request.setAttribute("gradeList", gradeList);
-            } catch (Exception e) {
-                System.out.println("Error loading grades: " + e.getMessage());
-                request.setAttribute("gradeList", new ArrayList<Grade>());
+            // Get selected question IDs for this test
+            List<Integer> selectedQuestionIds = testQuestionDAO.getQuestionIdsByTest(id);
+            request.setAttribute("selectedQuestionIds", selectedQuestionIds);
+
+            // Get selected questions with full details
+            List<Question> selectedQuestions = new ArrayList<>();
+            LessonDAO lessonDAO = new LessonDAO();
+            ChapterDAO chapterDAO = new ChapterDAO();
+            DAOSubject subjectDAO = new DAOSubject();
+            GradeDAO gradeDAO = new GradeDAO();
+
+            Map<Integer, String> lessonNameMap = new HashMap<>();
+
+            // Load all lessons for lesson name mapping
+            List<Lesson> allLessons = lessonDAO.getAllLessons();
+            for (Lesson lesson : allLessons) {
+                lessonNameMap.put(lesson.getId(), lesson.getName());
             }
+            request.setAttribute("lessonNameMap", lessonNameMap);
 
-            // Get all questions with lesson names
-            try {
-                List<Question> questionList = questionDAO.findAllQuestion();
-                LessonDAO lessonDAO = new LessonDAO();
-                List<Lesson> lessonList = lessonDAO.getAllLessons();
+            // Get detailed information for selected questions and determine the lesson context
+            Integer contextLessonId = null;
+            String contextInfo = "";
 
-                // Create lesson name map
-                Map<Integer, String> lessonNameMap = new HashMap<>();
-                for (Lesson lesson : lessonList) {
-                    lessonNameMap.put(lesson.getId(), lesson.getName());
+            for (Integer questionId : selectedQuestionIds) {
+                Question question = questionDAO.getQuestionById(questionId);
+                if (question != null) {
+                    selectedQuestions.add(question);
+
+                    // Determine context lesson (use the first question's lesson as context)
+                    if (contextLessonId == null && question.getLesson_id() > 0) {
+                        contextLessonId = question.getLesson_id();
+
+                        // Build context information
+                        try {
+                            Lesson lesson = lessonDAO.getLessonById(contextLessonId);
+                            if (lesson != null) {
+                                Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
+                                if (chapter != null) {
+                                    Subject subject = subjectDAO.findById(chapter.getSubject_id());
+                                    if (subject != null) {
+                                        Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
+                                        if (grade != null) {
+                                            contextInfo = String.format("%s → %s → %s → %s",
+                                                    grade.getName(), subject.getName(),
+                                                    chapter.getName(), lesson.getName());
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Error building context info: " + e.getMessage());
+                        }
+                    }
                 }
-
-                request.setAttribute("questionList", questionList);
-                request.setAttribute("lessonNameMap", lessonNameMap);
-
-                // Get selected question IDs for this test
-                List<Integer> selectedQuestionIds = testQuestionDAO.getQuestionIdsByTest(id);
-                request.setAttribute("selectedQuestionIds", selectedQuestionIds);
-            } catch (Exception e) {
-                e.printStackTrace();
-                request.setAttribute("questionList", new ArrayList<Question>());
-                request.setAttribute("lessonNameMap", new HashMap<Integer, String>());
-                request.setAttribute("selectedQuestionIds", new ArrayList<Integer>());
             }
+
+            request.setAttribute("selectedQuestions", selectedQuestions);
+            request.setAttribute("contextLessonId", contextLessonId);
+            request.setAttribute("contextInfo", contextInfo);
 
             RequestDispatcher dispatcher = request.getRequestDispatcher("/Test/updateTest.jsp");
             dispatcher.forward(request, response);
         } catch (NumberFormatException e) {
             request.setAttribute("error", "Invalid ID");
+            listTests(request, response);
+        } catch (Exception e) {
+            request.setAttribute("error", "Error loading test: " + e.getMessage());
             listTests(request, response);
         }
     }
@@ -655,5 +687,71 @@ public class TestController extends HttpServlet {
             categoryMap.put(c.getId(), c.getName());
         }
         return categoryMap;
+    }
+
+    private void getSmartQuestions(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int lessonId = Integer.parseInt(request.getParameter("lessonId"));
+            int count = Integer.parseInt(request.getParameter("count"));
+            String difficulty = request.getParameter("difficulty");
+            String category = request.getParameter("category");
+            String excludeIdsStr = request.getParameter("excludeIds");
+
+            // Parse excluded IDs
+            Set<Integer> excludeIds = new HashSet<>();
+            if (excludeIdsStr != null && !excludeIdsStr.trim().isEmpty()) {
+                String[] ids = excludeIdsStr.split(",");
+                for (String id : ids) {
+                    try {
+                        excludeIds.add(Integer.parseInt(id.trim()));
+                    } catch (NumberFormatException e) {
+                        // Skip invalid IDs
+                    }
+                }
+            }
+
+            QuestionDAO questionDAO = new QuestionDAO();
+            List<Question> smartQuestions = questionDAO.getSmartQuestionsForLesson(
+                    lessonId, count, difficulty, category, excludeIds);
+
+            // Convert to JSON
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < smartQuestions.size(); i++) {
+                Question q = smartQuestions.get(i);
+                if (i > 0) {
+                    json.append(",");
+                }
+                json.append("{")
+                        .append("\"id\":").append(q.getId()).append(",")
+                        .append("\"question\":\"").append(escapeJson(q.getQuestion())).append("\",")
+                        .append("\"difficulty\":\"").append(q.getDifficulty() != null ? q.getDifficulty() : "medium").append("\",")
+                        .append("\"category\":\"").append(q.getCategory() != null ? q.getCategory() : "conceptual").append("\",")
+                        .append("\"question_type\":\"").append(q.getQuestion_type()).append("\",")
+                        .append("\"AIGenerated\":").append(q.isAIGenerated())
+                        .append("}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"error\":\"" + escapeJson(e.getMessage()) + "\"}");
+        }
+    }
+
+    private String escapeJson(String str) {
+        if (str == null) {
+            return "";
+        }
+        return str.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n")
+                .replace("\t", "\\t");
     }
 }
