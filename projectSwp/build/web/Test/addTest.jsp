@@ -211,9 +211,21 @@
                 gap: 10px;
             }
 
+            /* Question item selection visual feedback */
             .question-item.selected {
-                border-color: #10b981;
-                background: #ecfdf5;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border-color: #667eea;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            }
+
+            .question-item.selected .meta-badge {
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+            }
+
+            .question-item.selected .question-checkbox {
+                accent-color: #fff;
             }
 
             .question-checkbox {
@@ -276,36 +288,93 @@
                 margin-top: 20px;
             }
 
+            /* Selection Stats Styling */
             .selection-stats {
-                background: #f0f9ff;
-                border: 1px solid #0ea5e9;
-                border-radius: 6px;
-                padding: 10px 15px;
-                margin-bottom: 15px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                margin: 15px 0;
                 font-weight: 500;
-                color: #0c4a6e;
+                box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+                display: flex;
+                align-items: center;
+                gap: 8px;
             }
 
+            .selection-stats i {
+                font-size: 1.1em;
+            }
+
+            /* Bulk Actions Styling */
             .bulk-actions {
-                margin-bottom: 15px;
                 display: flex;
                 gap: 10px;
+                margin: 15px 0;
                 flex-wrap: wrap;
             }
 
             .btn-bulk {
-                padding: 6px 12px;
-                border: 1px solid #d1d5db;
-                background: white;
-                border-radius: 4px;
+                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 0.9em;
+                font-weight: 500;
                 cursor: pointer;
-                font-size: 0.875rem;
-                transition: all 0.2s ease;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                box-shadow: 0 2px 8px rgba(245, 87, 108, 0.3);
             }
 
             .btn-bulk:hover {
-                background: #f3f4f6;
-                border-color: #9ca3af;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+                background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+            }
+
+            .btn-bulk:active {
+                transform: translateY(0);
+                box-shadow: 0 2px 6px rgba(245, 87, 108, 0.3);
+            }
+
+            .btn-bulk i {
+                font-size: 0.9em;
+            }
+
+            /* Specific button colors */
+            .btn-bulk.select-all {
+                background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+                box-shadow: 0 2px 8px rgba(79, 172, 254, 0.3);
+            }
+
+            .btn-bulk.select-all:hover {
+                background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+                box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
+            }
+
+            .btn-bulk.deselect-all {
+                background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+                box-shadow: 0 2px 8px rgba(250, 112, 154, 0.3);
+            }
+
+            .btn-bulk.deselect-all:hover {
+                background: linear-gradient(135deg, #fee140 0%, #fa709a 100%);
+                box-shadow: 0 4px 12px rgba(250, 112, 154, 0.4);
+            }
+
+            .btn-bulk.filter {
+                background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+                color: #333;
+                box-shadow: 0 2px 8px rgba(168, 237, 234, 0.3);
+            }
+
+            .btn-bulk.filter:hover {
+                background: linear-gradient(135deg, #fed6e3 0%, #a8edea 100%);
+                box-shadow: 0 4px 12px rgba(168, 237, 234, 0.4);
             }
 
             /* Select2 Custom Styling */
@@ -370,6 +439,44 @@
                 background: #fef3c7;
                 border: 1px solid #f59e0b;
                 color: #92400e;
+            }
+
+            /* Responsive design for bulk actions */
+            @media (max-width: 768px) {
+                .bulk-actions {
+                    flex-direction: column;
+                }
+
+                .btn-bulk {
+                    justify-content: center;
+                    padding: 10px 16px;
+                }
+            }
+
+            /* Enhanced selection stats for different states */
+            .selection-stats.has-selection {
+                background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            }
+
+            .selection-stats.no-selection {
+                background: linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%);
+            }
+
+            .selection-stats.full-selection {
+                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                animation: pulse 2s infinite;
+            }
+
+            @keyframes pulse {
+                0% {
+                    box-shadow: 0 2px 10px rgba(240, 147, 251, 0.3);
+                }
+                50% {
+                    box-shadow: 0 4px 20px rgba(240, 147, 251, 0.6);
+                }
+                100% {
+                    box-shadow: 0 2px 10px rgba(240, 147, 251, 0.3);
+                }
             }
         </style>
     </head>
@@ -542,14 +649,14 @@
                             </div>
 
                             <div class="selection-stats" id="manualStats" style="display: none;"></div>
-                            <div class="bulk-actions" id="manualBulkActions" style="display: none;">
-                                <button type="button" class="btn-bulk" onclick="selectAllManual()">
+                            <div class="bulk-actions" id="manualBulkActions" style="">
+                                <button type="button" class="btn-bulk select-all" onclick="selectAllManual()">
                                     <i class="fas fa-check-square"></i> Select All
                                 </button>
-                                <button type="button" class="btn-bulk" onclick="deselectAllManual()">
+                                <button type="button" class="btn-bulk deselect-all" onclick="deselectAllManual()">
                                     <i class="fas fa-square"></i> Deselect All
                                 </button>
-                                <button type="button" class="btn-bulk" onclick="filterByDifficulty()">
+                                <button type="button" class="btn-bulk filter" onclick="filterByDifficulty()">
                                     <i class="fas fa-filter"></i> Filter
                                 </button>
                             </div>
@@ -602,7 +709,7 @@
                                         let allQuestions = [];
                                         let selectedQuestions = new Set();
 
-                                        console.log('Page loaded, initializing...');
+//                                        console.log('Page loaded, initializing...');
 
                                         // Initialize Select2
                                         function initializeSelect2(selector) {
@@ -621,33 +728,88 @@
 
                                         // Define global functions that are called from HTML onchange events
                                         window.updateManualStats = function () {
-                                            console.log('updateManualStats called');
+//                                            console.log('updateManualStats called');
                                             const total = $('#manualQuestionsList .question-checkbox').length;
                                             const selected = $('#manualQuestionsList .question-checkbox:checked').length;
-                                            console.log('Stats:', {total, selected});
-                                            $('#manualStats').html(`<i class="fas fa-chart-bar"></i> Selected: ${selected} / ${total} questions`);
+//                                            console.log('Stats:', {total, selected});
 
-                                            // Update visual selection
+                                            // Debug: Log the values explicitly
+//                                            console.log('Total value:', total);
+//                                            console.log('Selected value:', selected);
+
+                                            // Create stats HTML using string concatenation instead of template literals
+                                            const statsHtml = '<i class="fas fa-chart-bar"></i> Selected: ' + selected + ' / ' + total + ' questions';
+
+//                                            console.log('Generated statsHtml:', statsHtml);
+
+                                            // Update stats with jQuery
+                                            const $statsElement = $('#manualStats');
+                                            $statsElement.html(statsHtml);
+
+                                            // Verify the update
+//                                            console.log('Element after update:', $statsElement.html());
+
+                                            // Add visual classes based on selection state
+                                            $statsElement.removeClass('no-selection has-selection full-selection');
+                                            if (selected === 0) {
+                                                $statsElement.addClass('no-selection');
+                                            } else if (selected === total && total > 0) {
+                                                $statsElement.addClass('full-selection');
+                                            } else {
+                                                $statsElement.addClass('has-selection');
+                                            }
+
+                                            // Update visual selection for question items
                                             $('#manualQuestionsList .question-item').each(function () {
-                                                if ($(this).find('.question-checkbox').is(':checked')) {
-                                                    $(this).addClass('selected');
+                                                const $item = $(this);
+                                                if ($item.find('.question-checkbox').is(':checked')) {
+                                                    $item.addClass('selected');
                                                 } else {
-                                                    $(this).removeClass('selected');
+                                                    $item.removeClass('selected');
                                                 }
                                             });
+
+                                            // Update button states
+                                            const $selectAllBtn = $('.btn-bulk.select-all');
+                                            const $deselectAllBtn = $('.btn-bulk.deselect-all');
+
+                                            if (selected === total && total > 0) {
+                                                $selectAllBtn.prop('disabled', true).css('opacity', '0.6');
+                                                $deselectAllBtn.prop('disabled', false).css('opacity', '1');
+                                            } else if (selected === 0) {
+                                                $selectAllBtn.prop('disabled', false).css('opacity', '1');
+                                                $deselectAllBtn.prop('disabled', true).css('opacity', '0.6');
+                                            } else {
+                                                $selectAllBtn.prop('disabled', false).css('opacity', '1');
+                                                $deselectAllBtn.prop('disabled', false).css('opacity', '1');
+                                            }
                                         };
 
                                         window.updateGeneratedStats = function () {
                                             const total = $('#generatedQuestionsList .question-checkbox').length;
                                             const selected = $('#generatedQuestionsList .question-checkbox:checked').length;
-                                            $('#generatedStats').html(`<i class="fas fa-chart-bar"></i> Selected: ${selected} / ${total} generated questions`);
+
+                                            const statsHtml = `<i class="fas fa-chart-bar"></i> Selected: ${selected} / ${total} generated questions`;
+                                            const $statsElement = $('#generatedStats');
+                                            $statsElement.html(statsHtml);
+
+                                            // Add visual classes
+                                            $statsElement.removeClass('no-selection has-selection full-selection');
+                                            if (selected === 0) {
+                                                $statsElement.addClass('no-selection');
+                                            } else if (selected === total && total > 0) {
+                                                $statsElement.addClass('full-selection');
+                                            } else {
+                                                $statsElement.addClass('has-selection');
+                                            }
 
                                             // Update visual selection
                                             $('#generatedQuestionsList .question-item').each(function () {
-                                                if ($(this).find('.question-checkbox').is(':checked')) {
-                                                    $(this).addClass('selected');
+                                                const $item = $(this);
+                                                if ($item.find('.question-checkbox').is(':checked')) {
+                                                    $item.addClass('selected');
                                                 } else {
-                                                    $(this).removeClass('selected');
+                                                    $item.removeClass('selected');
                                                 }
                                             });
                                         };
@@ -655,7 +817,7 @@
                                         // Toggle selection method
                                         window.toggleSelectionMethod = function () {
                                             const method = $('input[name="selectionMethod"]:checked').val();
-                                            console.log('Selection method changed to:', method);
+//                                            console.log('Selection method changed to:', method);
                                             if (method === 'smart') {
                                                 $('#smartGenerationSection').addClass('active');
                                                 $('#manualSelectionAlert').show();
@@ -671,7 +833,7 @@
                                         // Hierarchy selection handlers
                                         $('#gradeSelect').on('change', function () {
                                             const gradeId = $(this).val();
-                                            console.log('Grade selected:', gradeId);
+//                                            console.log('Grade selected:', gradeId);
                                             if (gradeId) {
                                                 loadSubjects(gradeId);
                                                 resetSubsequentSelects(['#subjectSelect', '#chapterSelect', '#lessonSelect']);
@@ -681,7 +843,7 @@
 
                                         $('#subjectSelect').on('change', function () {
                                             const subjectId = $(this).val();
-                                            console.log('Subject selected:', subjectId);
+//                                            console.log('Subject selected:', subjectId);
                                             if (subjectId) {
                                                 loadChapters(subjectId);
                                                 resetSubsequentSelects(['#chapterSelect', '#lessonSelect']);
@@ -691,7 +853,7 @@
 
                                         $('#chapterSelect').on('change', function () {
                                             const chapterId = $(this).val();
-                                            console.log('Chapter selected:', chapterId);
+//                                            console.log('Chapter selected:', chapterId);
                                             if (chapterId) {
                                                 loadLessons(chapterId);
                                                 resetSubsequentSelects(['#lessonSelect']);
@@ -701,7 +863,7 @@
 
                                         $('#lessonSelect').on('change', function () {
                                             const lessonId = $(this).val();
-                                            console.log('Lesson selected:', lessonId);
+//                                            console.log('Lesson selected:', lessonId);
                                             if (lessonId) {
                                                 currentLessonId = lessonId;
                                                 loadQuestions(lessonId);
@@ -718,7 +880,7 @@
                                         }
 
                                         function clearQuestionDisplay() {
-                                            console.log('Clearing question display');
+//                                            console.log('Clearing question display');
                                             $('#manualQuestionsList').empty();
                                             $('#manualStats, #manualBulkActions').hide();
                                             $('#manualSelectionAlert').show();
@@ -728,12 +890,12 @@
 
                                         // AJAX functions
                                         function loadSubjects(gradeId) {
-                                            console.log('Loading subjects for grade:', gradeId);
+//                                            console.log('Loading subjects for grade:', gradeId);
                                             $.get('test', {
                                                 action: 'getSubjectsByGrade',
                                                 gradeId: gradeId
                                             }, function (data) {
-                                                console.log('Subjects loaded:', data);
+//                                                console.log('Subjects loaded:', data);
                                                 populateSelect('#subjectSelect', data, '-- Select Subject --');
                                             }).fail(function (xhr, status, error) {
                                                 console.error('Failed to load subjects:', error);
@@ -741,12 +903,12 @@
                                         }
 
                                         function loadChapters(subjectId) {
-                                            console.log('Loading chapters for subject:', subjectId);
+//                                            console.log('Loading chapters for subject:', subjectId);
                                             $.get('test', {
                                                 action: 'getChaptersBySubject',
                                                 subjectId: subjectId
                                             }, function (data) {
-                                                console.log('Chapters loaded:', data);
+//                                                console.log('Chapters loaded:', data);
                                                 populateSelect('#chapterSelect', data, '-- Select Chapter --');
                                             }).fail(function (xhr, status, error) {
                                                 console.error('Failed to load chapters:', error);
@@ -754,12 +916,12 @@
                                         }
 
                                         function loadLessons(chapterId) {
-                                            console.log('Loading lessons for chapter:', chapterId);
+//                                            console.log('Loading lessons for chapter:', chapterId);
                                             $.get('test', {
                                                 action: 'getLessonsByChapter',
                                                 chapterId: chapterId
                                             }, function (data) {
-                                                console.log('Lessons loaded:', data);
+//                                                console.log('Lessons loaded:', data);
                                                 populateSelect('#lessonSelect', data, '-- Select Lesson --');
                                             }).fail(function (xhr, status, error) {
                                                 console.error('Failed to load lessons:', error);
@@ -767,7 +929,7 @@
                                         }
 
                                         function loadQuestions(lessonId) {
-                                            console.log('Loading questions for lesson:', lessonId);
+//                                            console.log('Loading questions for lesson:', lessonId);
 
                                             // Show loading state
                                             $('#manualQuestionsList').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Loading questions...</div>');
@@ -776,7 +938,7 @@
                                                 action: 'getQuestionsByLesson',
                                                 lessonId: lessonId
                                             }, function (data) {
-                                                console.log('Questions loaded:', data);
+//                                                console.log('Questions loaded:', data);
                                                 allQuestions = data;
                                                 displayManualQuestions(data);
                                                 $('#manualSelectionAlert').hide();
@@ -802,23 +964,23 @@
 
                                         // Fixed question display function
                                         function displayManualQuestions(questions) {
-                                            console.log('displayManualQuestions called with:', questions);
+//                                            console.log('displayManualQuestions called with:', questions);
                                             const container = $('#manualQuestionsList');
-                                            console.log('Container found:', container.length);
+//                                            console.log('Container found:', container.length);
 
                                             // Clear existing content first
                                             container.empty();
-                                            console.log('Container cleared');
+//                                            console.log('Container cleared');
 
                                             if (!questions || questions.length === 0) {
                                                 container.html('<div class="alert alert-warning"><i class="fas fa-info-circle"></i> No questions found for this lesson</div>');
                                                 return;
                                             }
 
-                                            console.log('Processing', questions.length, 'questions');
+//                                            console.log('Processing', questions.length, 'questions');
 
                                             questions.forEach(function (question, index) {
-                                                console.log('Processing question', index + 1, ':', question);
+//                                                console.log('Processing question', index + 1, ':', question);
 
                                                 // Ensure all properties have default values
                                                 const difficulty = question.difficulty || 'medium';
@@ -828,7 +990,7 @@
                                                 const questionText = (question.question || 'No question text').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                                                 const questionId = question.id || 0;
 
-                                                console.log('Question processed data:', {questionId, questionText: questionText.substring(0, 50), difficulty, category, type, isAI});
+//                                                console.log('Question processed data:', {questionId, questionText: questionText.substring(0, 50), difficulty, category, type, isAI});
 
                                                 // Create question HTML
                                                 const questionDiv = $('<div></div>')
@@ -858,10 +1020,10 @@
                                                 questionDiv.append(checkbox).append(contentDiv);
 
                                                 container.append(questionDiv);
-                                                console.log('Question', index + 1, 'added to container');
+//                                                console.log('Question', index + 1, 'added to container');
                                             });
 
-                                            console.log('All questions processed. Final container children count:', container.children().length);
+//                                            console.log('All questions processed. Final container children count:', container.children().length);
                                         }
 
                                         function displayGeneratedQuestions(questions) {
@@ -922,7 +1084,7 @@
                                             const difficulty = $('#difficultyFilter').val();
                                             const category = $('#categoryFilter').val();
 
-                                            console.log('Generating random questions:', {lessonId: currentLessonId, count, difficulty, category});
+//                                            console.log('Generating random questions:', {lessonId: currentLessonId, count, difficulty, category});
 
                                             $.get('test', {
                                                 action: 'getRandomQuestions',
@@ -931,7 +1093,7 @@
                                                 difficulty: difficulty,
                                                 category: category
                                             }, function (data) {
-                                                console.log('Random questions generated:', data);
+//                                                console.log('Random questions generated:', data);
                                                 if (data.length > 0) {
                                                     displayGeneratedQuestions(data);
                                                 } else {
@@ -1026,7 +1188,7 @@
                                         // Initialize page state
                                         toggleSelectionMethod();
 
-                                        console.log('Initialization complete');
+//                                        console.log('Initialization complete');
                                     });
         </script>
     </body>
