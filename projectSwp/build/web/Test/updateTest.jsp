@@ -747,6 +747,44 @@
                 transform: translateY(-1px);
                 box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
             }
+            .context-display {
+                background: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 8px;
+                padding: 15px;
+                margin: 10px 0;
+            }
+
+            .context-path {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin: 10px 0;
+            }
+
+            .context-item {
+                background: #e9ecef;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.9em;
+            }
+
+            .context-item.active {
+                background: #007bff;
+                color: white;
+                font-weight: 500;
+            }
+
+            .context-path i {
+                color: #6c757d;
+                font-size: 0.8em;
+            }
+
+            /* Hide hierarchy steps by default when context is available */
+            .hierarchy-steps.auto-hidden {
+                display: none;
+            }
         </style>
     </head>
     <body>
@@ -1141,9 +1179,16 @@
                                                 $('#regenerateBtn').hide();
                                                 $('#previewTitle').text('Manual Selected Questions Preview');
 
-                                                // Auto-load lesson hierarchy if available
+                                                // Auto-load lesson hierarchy and questions if available
                                                 if (contextLessonId && !lessonHierarchy) {
                                                     loadLessonHierarchy();
+                                                } else if (contextLessonId && lessonHierarchy) {
+                                                    // Questions might already be loaded, just show the container
+                                                    if ($('#manualQuestionsList').children().length === 0) {
+                                                        loadManualQuestions(contextLessonId);
+                                                    } else {
+                                                        $('#manualQuestionsContainer').show();
+                                                    }
                                                 }
                                             }
 
@@ -1165,29 +1210,86 @@
                                                 lessonHierarchy = data;
 
                                                 if (data.gradeId) {
-                                                    // Auto-populate hierarchy
-                                                    $('#gradeSelect').val(data.gradeId).trigger('change');
-
-                                                    // Chain load subjects, then chapters, then lessons
-                                                    setTimeout(function () {
-                                                        $('#subjectSelect').val(data.subjectId).trigger('change');
-                                                        setTimeout(function () {
-                                                            $('#chapterSelect').val(data.chapterId).trigger('change');
-                                                            setTimeout(function () {
-                                                                $('#lessonSelect').val(data.lessonId).trigger('change');
-                                                            }, 500);
-                                                        }, 500);
-                                                    }, 500);
-
                                                     // Show context info
                                                     $('#hierarchySection .alert').html('<i class="fas fa-route"></i><strong>Auto-navigated to test context:</strong> ' + data.gradeName + ' → ' + data.subjectName + ' → ' + data.chapterName + ' → ' + data.lessonName).removeClass('alert-info').addClass('alert-success');
+
+                                                    // DIRECTLY load questions for the context lesson instead of populating dropdowns
+                                                    loadManualQuestions(contextLessonId);
+
+                                                    // Hide the hierarchy selection since we already know the context
+                                                    $('.hierarchy-steps').hide();
+
+                                                    // Show a simplified context display
+                                                    const contextHtml = `
+                <div class="context-display">
+                    <h6><i class="fas fa-book-open"></i> Current Test Context</h6>
+                    <div class="context-path">
+                        <span class="context-item">${data.gradeName}</span>
+                        <i class="fas fa-chevron-right"></i>
+                        <span class="context-item">${data.subjectName}</span>
+                        <i class="fas fa-chevron-right"></i>
+                        <span class="context-item">${data.chapterName}</span>
+                        <i class="fas fa-chevron-right"></i>
+                        <span class="context-item active">${data.lessonName}</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="showHierarchySelection()">
+                        <i class="fas fa-exchange-alt"></i> Change Lesson
+                    </button>
+                </div>
+            `;
+                                                    $('.hierarchy-steps').after(contextHtml);
                                                 }
                                             }).fail(function (xhr, status, error) {
                                                 console.error('Failed to load lesson hierarchy:', error);
+                                                console.error('Response text:', xhr.responseText);
+
+                                                // Fallback: show hierarchy selection
+                                                $('.hierarchy-steps').show();
+
+                                                // Load initial data for hierarchy
+                                                loadInitialHierarchyData();
+                                            });
+                                        }
+                                        // Show hierarchy selection
+                                        function showHierarchySelection() {
+                                            $('.hierarchy-steps').show();
+                                            $('.context-display').hide();
+
+                                            // Load initial data if not loaded
+                                            if ($('#gradeSelect option').length <= 1) {
+                                                loadInitialHierarchyData();
+                                            }
+                                        }
+
+// Hide hierarchy selection
+                                        function hideHierarchySelection() {
+                                            $('.hierarchy-steps').hide();
+                                            $('.context-display').show();
+                                        }
+
+// Load initial hierarchy data
+                                        function loadInitialHierarchyData() {
+                                            console.log('Loading initial hierarchy data...');
+
+                                            // Load grades first
+                                            $.get('test', {
+                                                action: 'getAllGrades'
+                                            }, function (data) {
+                                                console.log('Grades loaded:', data);
+                                                populateSelect('#gradeSelect', data, '-- Select Grade --');
+
+                                                // If we have lesson hierarchy, auto-select
+                                                if (lessonHierarchy && lessonHierarchy.gradeId) {
+                                                    setTimeout(function () {
+                                                        $('#gradeSelect').val(lessonHierarchy.gradeId).trigger('change');
+                                                    }, 100);
+                                                }
+                                            }).fail(function (xhr, status, error) {
+                                                console.error('Failed to load grades:', error);
                                             });
                                         }
 
-// Bulk selection functions for current questions
+                                        // Bulk selection functions for current questions
                                         function selectAllCurrent() {
                                             $('.current-question-checkbox').prop('checked', true);
                                             updateCurrentSelectionStats();
@@ -1776,6 +1878,8 @@
                                         window.regenerateQuestions = regenerateQuestions;
                                         window.filterManualQuestions = filterManualQuestions;
                                         window.clearManualFilters = clearManualFilters;
+                                        window.showHierarchySelection = showHierarchySelection;
+                                        window.hideHierarchySelection = hideHierarchySelection;
         </script>
     </body>
 </html>

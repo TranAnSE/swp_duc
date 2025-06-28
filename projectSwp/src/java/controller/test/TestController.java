@@ -128,6 +128,9 @@ public class TestController extends HttpServlet {
                     case "getLessonHierarchy":
                         handleGetLessonHierarchy(request, response);
                         return;
+                    case "getAllGrades":
+                        handleGetAllGrades(request, response);
+                        return;
                     default:
                         listTests(request, response);
                         break;
@@ -843,6 +846,36 @@ public class TestController extends HttpServlet {
             e.printStackTrace();
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.getWriter().write("{\"error\":\"Failed to load lesson hierarchy\"}");
+        }
+    }
+
+    private void handleGetAllGrades(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            GradeDAO gradeDAO = new GradeDAO();
+            List<Grade> grades = gradeDAO.findAllFromGrade();
+
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < grades.size(); i++) {
+                Grade grade = grades.get(i);
+                if (i > 0) {
+                    json.append(",");
+                }
+                json.append("{")
+                        .append("\"id\":").append(grade.getId())
+                        .append(",\"name\":\"").append(escapeJsonString(grade.getName()))
+                        .append("\"}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("[]");
         }
     }
 }
