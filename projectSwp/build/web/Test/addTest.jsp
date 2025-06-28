@@ -617,6 +617,37 @@
                                             initializeSelect2('#' + $(this).attr('id'));
                                         });
 
+                                        // Define global functions that are called from HTML onchange events
+                                        window.updateManualStats = function () {
+                                            const total = $('#manualQuestionsList .question-checkbox').length;
+                                            const selected = $('#manualQuestionsList .question-checkbox:checked').length;
+                                            $('#manualStats').html(`<i class="fas fa-chart-bar"></i> Selected: ${selected} / ${total} questions`);
+
+                                            // Update visual selection
+                                            $('#manualQuestionsList .question-item').each(function () {
+                                                if ($(this).find('.question-checkbox').is(':checked')) {
+                                                    $(this).addClass('selected');
+                                                } else {
+                                                    $(this).removeClass('selected');
+                                                }
+                                            });
+                                        };
+
+                                        window.updateGeneratedStats = function () {
+                                            const total = $('#generatedQuestionsList .question-checkbox').length;
+                                            const selected = $('#generatedQuestionsList .question-checkbox:checked').length;
+                                            $('#generatedStats').html(`<i class="fas fa-chart-bar"></i> Selected: ${selected} / ${total} generated questions`);
+
+                                            // Update visual selection
+                                            $('#generatedQuestionsList .question-item').each(function () {
+                                                if ($(this).find('.question-checkbox').is(':checked')) {
+                                                    $(this).addClass('selected');
+                                                } else {
+                                                    $(this).removeClass('selected');
+                                                }
+                                            });
+                                        };
+
                                         // Toggle selection method
                                         window.toggleSelectionMethod = function () {
                                             const method = $('input[name="selectionMethod"]:checked').val();
@@ -720,18 +751,21 @@
                                         }
 
                                         function loadQuestions(lessonId) {
+                                            console.log('Loading questions for lesson:', lessonId);
                                             $.get('test', {
                                                 action: 'getQuestionsByLesson',
                                                 lessonId: lessonId
                                             }, function (data) {
+                                                console.log('Questions loaded:', data);
                                                 allQuestions = data;
                                                 displayManualQuestions(data);
                                                 $('#manualSelectionAlert').hide();
                                                 $('#manualStats, #manualBulkActions').show();
                                                 updateManualStats();
-                                            }).fail(function () {
-                                                console.error('Failed to load questions');
-                                                $('#manualSelectionAlert').show().html('<i class="fas fa-exclamation-triangle"></i> Failed to load questions for this lesson');
+                                            }).fail(function (xhr, status, error) {
+                                                console.error('Failed to load questions:', error);
+                                                console.error('Response:', xhr.responseText);
+                                                $('#manualSelectionAlert').show().html('<i class="fas fa-exclamation-triangle"></i> Failed to load questions for this lesson: ' + error);
                                             });
                                         }
 
@@ -757,21 +791,27 @@
                                             }
 
                                             questions.forEach(function (question, index) {
+                                                // Ensure all properties have default values
+                                                const difficulty = question.difficulty || 'medium';
+                                                const category = question.category || 'conceptual';
+                                                const type = question.type || 'SINGLE';
+                                                const isAI = question.isAI || false;
+
                                                 const questionHtml = `
-                            <div class="question-item" data-question-id="${question.id}">
-                                <input type="checkbox" name="questionIds" value="${question.id}" 
-                                       class="question-checkbox" onchange="updateManualStats()">
-                                <div class="question-content">
-                                    <div class="question-text">${question.question}</div>
-                                    <div class="question-meta">
-                                        <span class="meta-badge difficulty-${question.difficulty}">${question.difficulty}</span>
-                                        <span class="meta-badge category-badge">${question.category}</span>
-                                        <span class="meta-badge">${question.type}</span>
-            ${question.isAI ? '<span class="meta-badge ai-badge">AI Generated</span>' : '<span class="meta-badge">Manual</span>'}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                <div class="question-item" data-question-id="${question.id}" data-difficulty="${difficulty}" data-category="${category}" data-source="${isAI ? 'ai' : 'manual'}">
+                    <input type="checkbox" name="questionIds" value="${question.id}" 
+                           class="question-checkbox" onchange="updateManualStats()">
+                    <div class="question-content">
+                        <div class="question-text">${question.question}</div>
+                        <div class="question-meta">
+                            <span class="meta-badge difficulty-${difficulty}">${difficulty}</span>
+                            <span class="meta-badge category-badge">${category}</span>
+                            <span class="meta-badge">${type}</span>
+            ${isAI ? '<span class="meta-badge ai-badge">AI Generated</span>' : '<span class="meta-badge">Manual</span>'}
+                        </div>
+                    </div>
+                </div>
+            `;
                                                 container.append(questionHtml);
                                             });
                                         }
@@ -781,57 +821,32 @@
                                             container.empty();
 
                                             questions.forEach(function (question, index) {
+                                                // Ensure all properties have default values
+                                                const difficulty = question.difficulty || 'medium';
+                                                const category = question.category || 'conceptual';
+                                                const type = question.type || 'SINGLE';
+                                                const isAI = question.isAI || false;
+
                                                 const questionHtml = `
-                            <div class="question-item selected" data-question-id="${question.id}">
-                                <input type="checkbox" name="questionIds" value="${question.id}" 
-                                       class="question-checkbox" checked onchange="updateGeneratedStats()">
-                                <div class="question-content">
-                                    <div class="question-text">${question.question}</div>
-                                    <div class="question-meta">
-                                        <span class="meta-badge difficulty-${question.difficulty}">${question.difficulty}</span>
-                                        <span class="meta-badge category-badge">${question.category}</span>
-                                        <span class="meta-badge">${question.type}</span>
-            ${question.isAI ? '<span class="meta-badge ai-badge">AI Generated</span>' : '<span class="meta-badge">Manual</span>'}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                <div class="question-item selected" data-question-id="${question.id}" data-difficulty="${difficulty}" data-category="${category}" data-source="${isAI ? 'ai' : 'manual'}">
+                    <input type="checkbox" name="questionIds" value="${question.id}" 
+                           class="question-checkbox" checked onchange="updateGeneratedStats()">
+                    <div class="question-content">
+                        <div class="question-text">${question.question}</div>
+                        <div class="question-meta">
+                            <span class="meta-badge difficulty-${difficulty}">${difficulty}</span>
+                            <span class="meta-badge category-badge">${category}</span>
+                            <span class="meta-badge">${type}</span>
+            ${isAI ? '<span class="meta-badge ai-badge">AI Generated</span>' : '<span class="meta-badge">Manual</span>'}
+                        </div>
+                    </div>
+                </div>
+            `;
                                                 container.append(questionHtml);
                                             });
 
                                             $('#generatedQuestionsPreview').addClass('active');
                                             updateGeneratedStats();
-                                        }
-
-                                        // Stats update functions
-                                        function updateManualStats() {
-                                            const total = $('#manualQuestionsList .question-checkbox').length;
-                                            const selected = $('#manualQuestionsList .question-checkbox:checked').length;
-                                            $('#manualStats').html(`<i class="fas fa-chart-bar"></i> Selected: ${selected} / ${total} questions`);
-
-                                            // Update visual selection
-                                            $('#manualQuestionsList .question-item').each(function () {
-                                                if ($(this).find('.question-checkbox').is(':checked')) {
-                                                    $(this).addClass('selected');
-                                                } else {
-                                                    $(this).removeClass('selected');
-                                                }
-                                            });
-                                        }
-
-                                        function updateGeneratedStats() {
-                                            const total = $('#generatedQuestionsList .question-checkbox').length;
-                                            const selected = $('#generatedQuestionsList .question-checkbox:checked').length;
-                                            $('#generatedStats').html(`<i class="fas fa-chart-bar"></i> Selected: ${selected} / ${total} generated questions`);
-
-                                            // Update visual selection
-                                            $('#generatedQuestionsList .question-item').each(function () {
-                                                if ($(this).find('.question-checkbox').is(':checked')) {
-                                                    $(this).addClass('selected');
-                                                } else {
-                                                    $(this).removeClass('selected');
-                                                }
-                                            });
                                         }
 
                                         // Smart generation functions
@@ -845,6 +860,8 @@
                                             const difficulty = $('#difficultyFilter').val();
                                             const category = $('#categoryFilter').val();
 
+                                            console.log('Generating random questions:', {lessonId: currentLessonId, count, difficulty, category});
+
                                             $.get('test', {
                                                 action: 'getRandomQuestions',
                                                 lessonId: currentLessonId,
@@ -852,13 +869,16 @@
                                                 difficulty: difficulty,
                                                 category: category
                                             }, function (data) {
+                                                console.log('Random questions generated:', data);
                                                 if (data.length > 0) {
                                                     displayGeneratedQuestions(data);
                                                 } else {
                                                     alert('No questions found matching your criteria');
                                                 }
-                                            }).fail(function () {
-                                                alert('Failed to generate questions');
+                                            }).fail(function (xhr, status, error) {
+                                                console.error('Failed to generate questions:', error);
+                                                console.error('Response:', xhr.responseText);
+                                                alert('Failed to generate questions: ' + error);
                                             });
                                         };
 
@@ -896,6 +916,40 @@
                                                 });
                                                 updateManualStats();
                                             }
+                                        };
+
+                                        // Apply filters function
+                                        window.applyFilters = function () {
+                                            const difficultyFilter = $('#difficultyFilter').val();
+                                            const categoryFilter = $('#categoryFilter').val();
+                                            const sourceFilter = $('#sourceFilter').val();
+
+                                            $('#manualQuestionsList .question-item').each(function () {
+                                                const $item = $(this);
+                                                const difficulty = $item.data('difficulty');
+                                                const category = $item.data('category');
+                                                const source = $item.data('source');
+
+                                                let show = true;
+
+                                                if (difficultyFilter !== 'all' && difficulty !== difficultyFilter) {
+                                                    show = false;
+                                                }
+                                                if (categoryFilter !== 'all' && category !== categoryFilter) {
+                                                    show = false;
+                                                }
+                                                if (sourceFilter !== 'all' && source !== sourceFilter) {
+                                                    show = false;
+                                                }
+
+                                                if (show) {
+                                                    $item.show();
+                                                } else {
+                                                    $item.hide();
+                                                }
+                                            });
+
+                                            updateManualStats();
                                         };
 
                                         // Form submission validation

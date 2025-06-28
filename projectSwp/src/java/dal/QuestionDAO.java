@@ -308,4 +308,40 @@ public class QuestionDAO extends DBContext {
         }
         return list;
     }
+
+    public List<Question> getQuestionsByLessonWithDetails(int lessonId) throws SQLException {
+        List<Question> list = new ArrayList<>();
+        String sql = "SELECT * FROM question WHERE lesson_id = ?";
+        try (Connection conn = new DBContext().getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, lessonId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Question q = new Question(
+                            rs.getInt("id"),
+                            rs.getString("question"),
+                            rs.getInt("image_id"),
+                            rs.getInt("lesson_id"),
+                            rs.getString("question_type")
+                    );
+                    // Set additional fields with defaults if null
+                    try {
+                        q.setAIGenerated(rs.getBoolean("is_ai_generated"));
+                    } catch (SQLException e) {
+                        q.setAIGenerated(false);
+                    }
+                    try {
+                        String difficulty = rs.getString("difficulty");
+                        String category = rs.getString("category");
+                        q.setDifficulty(difficulty != null ? difficulty : "medium");
+                        q.setCategory(category != null ? category : "conceptual");
+                    } catch (SQLException e) {
+                        q.setDifficulty("medium");
+                        q.setCategory("conceptual");
+                    }
+                    list.add(q);
+                }
+            }
+        }
+        return list;
+    }
 }

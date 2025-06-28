@@ -204,13 +204,13 @@ public class TestController extends HttpServlet {
                 List<Question> questionList = questionDAO.findAllQuestion();
                 LessonDAO lessonDAO = new LessonDAO();
                 List<Lesson> lessonList = lessonDAO.getAllLessons();
-                
+
                 // Create lesson name map
                 Map<Integer, String> lessonNameMap = new HashMap<>();
                 for (Lesson lesson : lessonList) {
                     lessonNameMap.put(lesson.getId(), lesson.getName());
                 }
-                
+
                 request.setAttribute("questionList", questionList);
                 request.setAttribute("lessonNameMap", lessonNameMap);
 
@@ -467,11 +467,16 @@ public class TestController extends HttpServlet {
                     if (!first) {
                         json.append(",");
                     }
+                    // Ensure all fields have default values if null
+                    String difficulty = question.getDifficulty() != null ? question.getDifficulty() : "medium";
+                    String category = question.getCategory() != null ? question.getCategory() : "conceptual";
+                    String questionType = question.getQuestion_type() != null ? question.getQuestion_type() : "SINGLE";
+
                     json.append("{\"id\":").append(question.getId())
-                            .append(",\"question\":\"").append(question.getQuestion().replace("\"", "\\\"").replace("\n", "\\n"))
-                            .append("\",\"type\":\"").append(question.getQuestion_type())
-                            .append("\",\"difficulty\":\"").append(question.getDifficulty() != null ? question.getDifficulty() : "medium")
-                            .append("\",\"category\":\"").append(question.getCategory() != null ? question.getCategory() : "conceptual")
+                            .append(",\"question\":\"").append(escapeJsonString(question.getQuestion()))
+                            .append("\",\"type\":\"").append(questionType)
+                            .append("\",\"difficulty\":\"").append(difficulty)
+                            .append("\",\"category\":\"").append(category)
                             .append("\",\"isAI\":").append(question.isAIGenerated())
                             .append("}");
                     first = false;
@@ -481,6 +486,8 @@ public class TestController extends HttpServlet {
 
             response.getWriter().write(json.toString());
         } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.getWriter().write("[]");
         }
     }
@@ -504,21 +511,21 @@ public class TestController extends HttpServlet {
             for (Question question : allQuestions) {
                 if (question.getLesson_id() == lessonId) {
                     boolean matchesCriteria = true;
-                    
+
                     if (difficulty != null && !difficulty.isEmpty() && !difficulty.equals("all")) {
                         String qDifficulty = question.getDifficulty() != null ? question.getDifficulty() : "medium";
                         if (!qDifficulty.equals(difficulty)) {
                             matchesCriteria = false;
                         }
                     }
-                    
+
                     if (category != null && !category.isEmpty() && !category.equals("all")) {
                         String qCategory = question.getCategory() != null ? question.getCategory() : "conceptual";
                         if (!qCategory.equals(category)) {
                             matchesCriteria = false;
                         }
                     }
-                    
+
                     if (matchesCriteria) {
                         filteredQuestions.add(question);
                     }
@@ -535,11 +542,15 @@ public class TestController extends HttpServlet {
                     json.append(",");
                 }
                 Question question = selectedQuestions.get(i);
+                String difficulty_val = question.getDifficulty() != null ? question.getDifficulty() : "medium";
+                String category_val = question.getCategory() != null ? question.getCategory() : "conceptual";
+                String questionType = question.getQuestion_type() != null ? question.getQuestion_type() : "SINGLE";
+
                 json.append("{\"id\":").append(question.getId())
-                        .append(",\"question\":\"").append(question.getQuestion().replace("\"", "\\\"").replace("\n", "\\n"))
-                        .append("\",\"type\":\"").append(question.getQuestion_type())
-                        .append("\",\"difficulty\":\"").append(question.getDifficulty() != null ? question.getDifficulty() : "medium")
-                        .append("\",\"category\":\"").append(question.getCategory() != null ? question.getCategory() : "conceptual")
+                        .append(",\"question\":\"").append(escapeJsonString(question.getQuestion()))
+                        .append("\",\"type\":\"").append(questionType)
+                        .append("\",\"difficulty\":\"").append(difficulty_val)
+                        .append("\",\"category\":\"").append(category_val)
                         .append("\",\"isAI\":").append(question.isAIGenerated())
                         .append("}");
             }
@@ -547,8 +558,24 @@ public class TestController extends HttpServlet {
 
             response.getWriter().write(json.toString());
         } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.getWriter().write("[]");
         }
+    }
+
+    // Helper method to escape JSON strings
+    private String escapeJsonString(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\b", "\\b")
+                .replace("\f", "\\f")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
     private void generateQuestionsForTest(HttpServletRequest request, HttpServletResponse response)
@@ -571,21 +598,21 @@ public class TestController extends HttpServlet {
             for (Question question : allQuestions) {
                 if (question.getLesson_id() == lessonId) {
                     boolean matchesCriteria = true;
-                    
+
                     if (difficulty != null && !difficulty.isEmpty() && !difficulty.equals("all")) {
                         String qDifficulty = question.getDifficulty() != null ? question.getDifficulty() : "medium";
                         if (!qDifficulty.equals(difficulty)) {
                             matchesCriteria = false;
                         }
                     }
-                    
+
                     if (category != null && !category.isEmpty() && !category.equals("all")) {
                         String qCategory = question.getCategory() != null ? question.getCategory() : "conceptual";
                         if (!qCategory.equals(category)) {
                             matchesCriteria = false;
                         }
                     }
-                    
+
                     if (matchesCriteria) {
                         filteredQuestions.add(question);
                     }
