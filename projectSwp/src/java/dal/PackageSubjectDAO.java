@@ -10,12 +10,11 @@ public class PackageSubjectDAO extends DBContext {
     public List<PackageSubject> getAll() {
         List<PackageSubject> list = new ArrayList<>();
         String sql = "SELECT * FROM package_subject";
-        try (PreparedStatement ps = connection.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+        try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 list.add(new PackageSubject(
-                    rs.getInt("package_id"),
-                    rs.getInt("subject_id")
+                        rs.getInt("package_id"),
+                        rs.getInt("subject_id")
                 ));
             }
         } catch (SQLException e) {
@@ -32,8 +31,8 @@ public class PackageSubjectDAO extends DBContext {
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return new PackageSubject(
-                        rs.getInt("package_id"),
-                        rs.getInt("subject_id")
+                            rs.getInt("package_id"),
+                            rs.getInt("subject_id")
                     );
                 }
             }
@@ -75,6 +74,64 @@ public class PackageSubjectDAO extends DBContext {
             stmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+    }
+
+    // Check if package includes a specific subject
+    public boolean packageIncludesSubject(int packageId, int subjectId) {
+        String sql = "SELECT COUNT(*) FROM package_subject WHERE package_id = ? AND subject_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, packageId);
+            ps.setInt(2, subjectId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    // Get subjects included in a package
+    public List<Integer> getPackageSubjects(int packageId) {
+        List<Integer> subjectIds = new ArrayList<>();
+        String sql = "SELECT subject_id FROM package_subject WHERE package_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, packageId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                subjectIds.add(rs.getInt("subject_id"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return subjectIds;
+    }
+
+    // Add subject to package
+    public boolean addSubjectToPackage(int packageId, int subjectId) {
+        String sql = "INSERT INTO package_subject (package_id, subject_id) VALUES (?, ?)";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, packageId);
+            ps.setInt(2, subjectId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // Remove subject from package
+    public boolean removeSubjectFromPackage(int packageId, int subjectId) {
+        String sql = "DELETE FROM package_subject WHERE package_id = ? AND subject_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, packageId);
+            ps.setInt(2, subjectId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 }

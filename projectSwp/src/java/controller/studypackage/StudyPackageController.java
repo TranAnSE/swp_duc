@@ -6,12 +6,19 @@ package controller.StudyPackage;
 
 import dal.InvoiceDAO;
 import dal.StudyPackageDAO;
+import dal.StudentPackageDAO;
+import dal.GradeDAO;
+import dal.StudentDAO;
 import model.StudyPackage;
+import model.StudentPackage;
+import model.Grade;
+import model.Student;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
@@ -28,10 +35,16 @@ import util.RoleConstants;
 public class StudyPackageController extends HttpServlet {
 
     private StudyPackageDAO dao;
+    private StudentPackageDAO studentPackageDAO;
+    private GradeDAO gradeDAO;
+    private StudentDAO studentDAO;
 
     @Override
     public void init() throws ServletException {
         dao = new StudyPackageDAO();
+        studentPackageDAO = new StudentPackageDAO();
+        gradeDAO = new GradeDAO();
+        studentDAO = new StudentDAO();
     }
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
@@ -73,20 +86,24 @@ public class StudyPackageController extends HttpServlet {
                 case "search":
                     searchStudyPackage(request, response);
                     break;
-                 case "checkout":
+                case "checkout":
                     checkoutStudyPackage(request, response);
                     break;
                 case "detail":
                     showDetail(request, response);
                     break;
-
-                 
+                case "myPackages":
+                    showMyPackages(request, response);
+                    break;
+                case "assignStudent":
+                    assignStudentToPackage(request, response);
+                    break;
                 default:
                     listStudyPackage(request, response);
                     break;
             }
         } catch (Exception e) {
-            request.setAttribute("errorMessage", "Lỗi xử lý: " + e.getMessage());
+            request.setAttribute("errorMessage", "Processing error: " + e.getMessage());
             request.setAttribute("listStudyPackage", List.of());
             request.getRequestDispatcher("/studypackage/listStudyPackage.jsp").forward(request, response);
         }
@@ -94,35 +111,56 @@ public class StudyPackageController extends HttpServlet {
 
     private void listStudyPackage(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        List<StudyPackage> list = dao.getStudyPackage("SELECT * FROM study_package");
+        HttpSession session = request.getSession();
+        Account account = (Account) session.getAttribute("account");
+
+        List<StudyPackage> list;
+        if (account != null && RoleConstants.PARENT.equals(account.getRole())) {
+            // For parents, show active packages only
+            list = dao.getActivePackages();
+        } else {
+            // For admin/teacher, show all packages
+            list = dao.getStudyPackage("SELECT * FROM study_package ORDER BY created_at DESC");
+        }
+
+        // Load grades for display
+        try {
+            List<Grade> grades = gradeDAO.findAllFromGrade();
+            request.setAttribute("grades", grades);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         request.setAttribute("listStudyPackage", list != null ? list : List.of());
         request.getRequestDispatcher("/studypackage/listStudyPackage.jsp").forward(request, response);
     }
 
     private void showAddForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        try {
+            List<Grade> grades = gradeDAO.findAllFromGrade();
+            request.setAttribute("grades", grades);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         request.getRequestDispatcher("/studypackage/form.jsp").forward(request, response);
     }
 
     private void addStudyPackage(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            int id = Integer.parseInt(request.getParameter("id"));
-            String name = request.getParameter("name");
-            String price = request.getParameter("price");
-
-            StudyPackage stuPackage = new StudyPackage(id, name, price);
+            StudyPackage stuPackage = getStudyPackageFromRequest(request);
             int result = dao.addStudyPackage(stuPackage);
 
             if (result > 0) {
-                request.setAttribute("message", "Thêm gói học thành công!");
+                request.setAttribute("message", "Study package added successfully!");
                 response.sendRedirect("study_package");
             } else {
-                request.setAttribute("errorMessage", "Không thể thêm gói học!");
+                request.setAttribute("errorMessage", "Cannot add study package. Please check the information.");
                 showAddForm(request, response);
             }
         } catch (NumberFormatException e) {
-            request.setAttribute("errorMessage", "Định dạng ID không hợp lệ!");
+            request.setAttribute("errorMessage", "Invalid ID format!");
             showAddForm(request, response);
         }
     }
@@ -132,14 +170,21 @@ public class StudyPackageController extends HttpServlet {
         try {
             int editId = Integer.parseInt(request.getParameter("editId"));
             StudyPackage studyPackage = dao.findStudyPackageById(editId);
+            List<Grade> grades = gradeDAO.findAllFromGrade();
+
             if (studyPackage != null) {
                 request.setAttribute("studyPackageToEdit", studyPackage);
+                request.setAttribute("grades", grades);
             } else {
-                request.setAttribute("errorMessage", "Không tìm thấy gói học với ID: " + editId);
+                request.setAttribute("errorMessage", "Study package not found with ID: " + editId);
             }
             request.getRequestDispatcher("/studypackage/form.jsp").forward(request, response);
         } catch (NumberFormatException e) {
-            request.setAttribute("errorMessage", "Định dạng ID không hợp lệ!");
+            request.setAttribute("errorMessage", "Invalid ID format!");
+            listStudyPackage(request, response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Error loading study package: " + e.getMessage());
             listStudyPackage(request, response);
         }
     }
@@ -147,23 +192,19 @@ public class StudyPackageController extends HttpServlet {
     private void updateStudyPackage(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            int id = Integer.parseInt(request.getParameter("id"));
-            String name = request.getParameter("name");
-            String price = request.getParameter("price");
-
-            StudyPackage stuPackage = new StudyPackage(id, name, price);
+            StudyPackage stuPackage = getStudyPackageFromRequest(request);
             int result = dao.updateStudyPackage(stuPackage);
 
             if (result > 0) {
-                request.setAttribute("message", "Cập nhật gói học thành công!");
+                request.setAttribute("message", "Study package updated successfully!");
                 response.sendRedirect("study_package");
             } else {
-                request.setAttribute("errorMessage", "Không thể cập nhật gói học!");
+                request.setAttribute("errorMessage", "Cannot update study package. Please check the information.");
                 request.setAttribute("studyPackageToEdit", stuPackage);
-                request.getRequestDispatcher("/studypackage/form.jsp").forward(request, response);
+                showEditForm(request, response);
             }
         } catch (NumberFormatException e) {
-            request.setAttribute("errorMessage", "Định dạng ID không hợp lệ!");
+            request.setAttribute("errorMessage", "Invalid ID format!");
             listStudyPackage(request, response);
         }
     }
@@ -174,12 +215,12 @@ public class StudyPackageController extends HttpServlet {
             int id = Integer.parseInt(request.getParameter("id"));
             int result = dao.deleteStudyPackage(id);
             if (result > 0) {
-                request.setAttribute("message", "Xóa gói học thành công!");
+                request.setAttribute("message", "Study package deactivated successfully!");
             } else {
-                request.setAttribute("errorMessage", "Không thể xóa gói học!");
+                request.setAttribute("errorMessage", "Cannot deactivate study package!");
             }
         } catch (NumberFormatException e) {
-            request.setAttribute("errorMessage", "Định dạng ID không hợp lệ!");
+            request.setAttribute("errorMessage", "Invalid ID format!");
         }
         response.sendRedirect("study_package");
     }
@@ -198,123 +239,194 @@ public class StudyPackageController extends HttpServlet {
                     request.setAttribute("listStudyPackage", List.of(stuPackage));
                 } else {
                     request.setAttribute("listStudyPackage", List.of());
-                    request.setAttribute("message", "Không tìm thấy gói học với id = " + id);
+                    request.setAttribute("message", "No study package found with id = " + id);
                 }
             } catch (NumberFormatException e) {
                 request.setAttribute("listStudyPackage", List.of());
-                request.setAttribute("message", "Định dạng id không hợp lệ!");
+                request.setAttribute("message", "Invalid id format!");
             }
         } else if (nameParam != null && !nameParam.trim().isEmpty()) {
             List<StudyPackage> list = dao.findStudyPackageByName(nameParam);
             request.setAttribute("listStudyPackage", list);
             if (list.isEmpty()) {
-                request.setAttribute("message", "Không tìm thấy gói học với tên chứa: " + nameParam);
+                request.setAttribute("message", "No study package found with name containing: " + nameParam);
             }
         } else if (priceParam != null && !priceParam.trim().isEmpty()) {
             List<StudyPackage> list = dao.findStudyPackageByPrice(priceParam);
             request.setAttribute("listStudyPackage", list);
             if (list.isEmpty()) {
-                request.setAttribute("message", "Không tìm thấy gói học với giá: " + priceParam);
+                request.setAttribute("message", "No study package found with price: " + priceParam);
             }
         } else {
-            request.setAttribute("message", "Chưa nhập tiêu chí tìm kiếm");
+            request.setAttribute("message", "No search criteria entered");
             request.setAttribute("listStudyPackage", List.of());
         }
 
         request.getRequestDispatcher("/studypackage/listStudyPackage.jsp").forward(request, response);
     }
-   private void checkoutStudyPackage(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
-    try {
-        int id = Integer.parseInt(request.getParameter("id"));
-        StudyPackage sp = dao.findStudyPackageById(id);
 
-        if (sp != null) {
-            // Lấy thông tin người dùng từ session hoặc sử dụng userId mặc định nếu phát triển thử nghiệm
-            int userId = 1; 
-            // Kiểm tra nếu người dùng đã đăng nhập và là parent
-            Object accountObj = request.getSession().getAttribute("account");
-            if (accountObj instanceof Account) {
-                Account account = (Account) accountObj;
-                if (account.getRole() != null && account.getRole().equalsIgnoreCase(RoleConstants.PARENT)) {
-                    userId = account.getId();
+    private void checkoutStudyPackage(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            StudyPackage sp = dao.findStudyPackageById(id);
+
+            if (sp != null) {
+                HttpSession session = request.getSession();
+                Account account = (Account) session.getAttribute("account");
+
+                if (account != null && RoleConstants.PARENT.equals(account.getRole())) {
+                    // Check if package has available slots
+                    if (!studentPackageDAO.hasAvailableSlots(id)) {
+                        request.setAttribute("errorMessage", "This package has reached maximum student limit.");
+                        listStudyPackage(request, response);
+                        return;
+                    }
+
+                    request.setAttribute("packageId", id);
+                    request.setAttribute("packageName", sp.getName());
+                    request.setAttribute("amount", Double.parseDouble(sp.getPrice()));
+                    request.setAttribute("userId", account.getId());
+                    request.setAttribute("studyPackage", sp);
+
+                    // Get parent's children for assignment
+                    try {
+                        List<Student> children = studentDAO.getStudentsByParentId(account.getId());
+                        request.setAttribute("children", children);
+
+                        // Also get grades for display
+                        List<Grade> grades = gradeDAO.findAllFromGrade();
+                        request.setAttribute("gradeList", grades);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    request.getRequestDispatcher("/studypackage/purchase.jsp").forward(request, response);
+                } else {
+                    request.setAttribute("errorMessage", "Only parents can purchase study packages.");
+                    listStudyPackage(request, response);
                 }
+            } else {
+                request.setAttribute("errorMessage", "Study package not found for payment.");
+                listStudyPackage(request, response);
             }
-            
-            // Tạo form để gọi PaymentServlet thay vì tạo invoice trực tiếp
-            request.setAttribute("packageId", id);
-            request.setAttribute("packageName", sp.getName());
-            request.setAttribute("amount", Double.parseDouble(sp.getPrice()));
-            request.setAttribute("userId", userId);
-            
-            // Chuyển hướng đến trang chọn phương thức thanh toán
-            request.getRequestDispatcher("/studypackage/payment.jsp").forward(request, response);
-        } else {
-            request.setAttribute("errorMessage", "Không tìm thấy gói học để thanh toán.");
+        } catch (Exception e) {
+            request.setAttribute("errorMessage", "Processing error: " + e.getMessage());
             listStudyPackage(request, response);
         }
-    } catch (Exception e) {
-        request.setAttribute("errorMessage", "Lỗi xử lý: " + e.getMessage());
-        listStudyPackage(request, response);
     }
-}
 
     private void showDetail(HttpServletRequest request, HttpServletResponse response)
-        throws ServletException, IOException {
-    try {
-        int id = Integer.parseInt(request.getParameter("id"));
-        StudyPackage studyPackage = dao.findStudyPackageById(id);
-        if (studyPackage != null) {
-            request.setAttribute("studyPackageDetail", studyPackage);
-            request.getRequestDispatcher("/studypackage/studyPackageDetail.jsp").forward(request, response);
-        } else {
-            request.setAttribute("errorMessage", "Không tìm thấy gói học với ID: " + id);
+            throws ServletException, IOException {
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            StudyPackage studyPackage = dao.findStudyPackageById(id);
+            if (studyPackage != null) {
+                // Get assigned students count
+                int assignedCount = studentPackageDAO.countAssignedStudents(id);
+                request.setAttribute("studyPackageDetail", studyPackage);
+                request.setAttribute("assignedCount", assignedCount);
+
+                // Also load grades for display
+                try {
+                    List<Grade> grades = gradeDAO.findAllFromGrade();
+                    request.setAttribute("grades", grades);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                request.getRequestDispatcher("/studypackage/studyPackageDetail.jsp").forward(request, response);
+            } else {
+                request.setAttribute("errorMessage", "Study package not found with ID: " + id);
+                listStudyPackage(request, response);
+            }
+        } catch (NumberFormatException e) {
+            request.setAttribute("errorMessage", "Invalid ID format!");
             listStudyPackage(request, response);
         }
-    } catch (NumberFormatException e) {
-        request.setAttribute("errorMessage", "Định dạng ID không hợp lệ!");
-        listStudyPackage(request, response);
     }
-}
 
+    private void showMyPackages(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        Account account = (Account) session.getAttribute("account");
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
+        if (account != null && RoleConstants.PARENT.equals(account.getRole())) {
+            List<StudentPackage> studentPackages = studentPackageDAO.getStudentPackagesByParent(account.getId());
+            request.setAttribute("studentPackages", studentPackages);
+            request.getRequestDispatcher("/studypackage/myPackages.jsp").forward(request, response);
+        } else {
+            response.sendRedirect("/error.jsp");
+        }
+    }
+
+    private void assignStudentToPackage(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        Account account = (Account) session.getAttribute("account");
+
+        if (account != null && RoleConstants.PARENT.equals(account.getRole())) {
+            try {
+                int packageId = Integer.parseInt(request.getParameter("packageId"));
+                int studentId = Integer.parseInt(request.getParameter("studentId"));
+
+                StudyPackage studyPackage = dao.findStudyPackageById(packageId);
+                if (studyPackage != null) {
+                    // Check if package has available slots
+                    if (studentPackageDAO.hasAvailableSlots(packageId)) {
+                        boolean success = studentPackageDAO.assignPackageToStudent(
+                                studentId, packageId, account.getId(), studyPackage.getDuration_days()
+                        );
+
+                        if (success) {
+                            request.setAttribute("message", "Package assigned to student successfully!");
+                        } else {
+                            request.setAttribute("errorMessage", "Failed to assign package to student.");
+                        }
+                    } else {
+                        request.setAttribute("errorMessage", "This package has reached maximum student limit.");
+                    }
+                } else {
+                    request.setAttribute("errorMessage", "Study package not found.");
+                }
+            } catch (Exception e) {
+                request.setAttribute("errorMessage", "Error assigning package: " + e.getMessage());
+            }
+        }
+
+        showMyPackages(request, response);
+    }
+
+    private StudyPackage getStudyPackageFromRequest(HttpServletRequest request) {
+        int id = Integer.parseInt(request.getParameter("id"));
+        String name = request.getParameter("name");
+        String price = request.getParameter("price");
+        String type = request.getParameter("type");
+        String gradeIdStr = request.getParameter("grade_id");
+        Integer gradeId = (gradeIdStr != null && !gradeIdStr.isEmpty()) ? Integer.parseInt(gradeIdStr) : null;
+        String maxStudentsStr = request.getParameter("max_students");
+        int maxStudents = (maxStudentsStr != null && !maxStudentsStr.isEmpty()) ? Integer.parseInt(maxStudentsStr) : 1;
+        String durationDaysStr = request.getParameter("duration_days");
+        int durationDays = (durationDaysStr != null && !durationDaysStr.isEmpty()) ? Integer.parseInt(durationDaysStr) : 365;
+        String description = request.getParameter("description");
+
+        return new StudyPackage(id, name, price, type, gradeId, maxStudents, durationDays, description);
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
     }
 
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         processRequest(request, response);
     }
 
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
     @Override
     public String getServletInfo() {
-        return "Short description";
-    }// </editor-fold>
-
+        return "Study Package Controller with enhanced package management";
+    }
 }

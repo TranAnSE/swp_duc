@@ -11,9 +11,8 @@ public class InvoiceDAO extends DBContext {
     public int insertInvoice(Invoice invoice) {
         String sql = "INSERT INTO invoice (total_amount, parent_id, created_at, status, update_at) VALUES (?, ?, ?, ?, ?)";
         int generatedId = -1;
-        
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setString(1, invoice.getTotal_amount());
             stmt.setInt(2, invoice.getParent_id());
@@ -26,7 +25,7 @@ public class InvoiceDAO extends DBContext {
             }
 
             int affectedRows = stmt.executeUpdate();
-            
+
             if (affectedRows > 0) {
                 // Lấy ID được tạo tự động
                 try (ResultSet rs = stmt.getGeneratedKeys()) {
@@ -39,14 +38,13 @@ public class InvoiceDAO extends DBContext {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        
+
         return generatedId;
     }
 
     public void updateInvoice(Invoice invoice) {
         String sql = "UPDATE invoice SET total_amount = ?, parent_id = ?, created_at = ?, status = ?, update_at = ? WHERE id = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, invoice.getTotal_amount());
             stmt.setInt(2, invoice.getParent_id());
@@ -64,7 +62,7 @@ public class InvoiceDAO extends DBContext {
             e.printStackTrace();
         }
     }
-    
+
     // Phương thức mới để cập nhật trạng thái hóa đơn sau khi thanh toán
     public void updateInvoiceStatus(Invoice invoice) {
         // Lấy thông tin invoice hiện tại
@@ -73,13 +71,12 @@ public class InvoiceDAO extends DBContext {
             System.out.println("Error: Invoice not found with ID " + invoice.getId());
             return;
         }
-        
+
         String sql = "UPDATE invoice SET status = ?, update_at = ? WHERE id = ?";
         System.out.println("Updating invoice status - SQL: " + sql);
         System.out.println("Invoice ID: " + invoice.getId() + ", Status: " + invoice.getStatus() + ", Pay Date: " + invoice.getPay_at());
-        
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, invoice.getStatus());
             stmt.setDate(2, invoice.getPay_at() != null ? Date.valueOf(invoice.getPay_at()) : Date.valueOf(LocalDate.now()));
@@ -87,7 +84,7 @@ public class InvoiceDAO extends DBContext {
 
             int rowsAffected = stmt.executeUpdate();
             System.out.println("Update invoice status result: " + rowsAffected + " rows affected");
-            
+
             // Đảm bảo cập nhật thành công
             if (rowsAffected <= 0) {
                 System.out.println("Warning: No rows affected when updating invoice status");
@@ -97,16 +94,15 @@ public class InvoiceDAO extends DBContext {
             e.printStackTrace();
         }
     }
-    
+
     // Phương thức mới để thêm dòng chi tiết hóa đơn
     public void insertInvoiceLine(int invoiceId, int packageId) {
         String sql = "INSERT INTO invoice_line (invoice_id, package_id) VALUES (?, ?)";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, invoiceId);
             stmt.setInt(2, packageId);
-            
+
             stmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -115,8 +111,7 @@ public class InvoiceDAO extends DBContext {
 
     public void deleteInvoice(int id) {
         String sql = "DELETE FROM invoice WHERE id = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, id);
             stmt.executeUpdate();
@@ -128,9 +123,7 @@ public class InvoiceDAO extends DBContext {
     public List<Invoice> getAllInvoices() {
         List<Invoice> list = new ArrayList<>();
         String sql = "SELECT * FROM invoice";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql); ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
                 Invoice invoice = new Invoice(
@@ -141,7 +134,7 @@ public class InvoiceDAO extends DBContext {
                         rs.getString("status"),
                         rs.getDate("update_at") != null ? rs.getDate("update_at").toLocalDate() : null
                 );
-                  list.add(invoice);
+                list.add(invoice);
             }
 
         } catch (SQLException e) {
@@ -151,30 +144,54 @@ public class InvoiceDAO extends DBContext {
         return list;
     }
 
-  public Invoice getInvoiceById(int id) {
-    Invoice invoice = null;
-    String sql = "SELECT * FROM invoice WHERE id = ?";
-    
-    try (Connection conn = getConnection();
-         PreparedStatement stmt = conn.prepareStatement(sql)) {
-        
-        stmt.setInt(1, id);
-        ResultSet rs = stmt.executeQuery();
-        
-        if (rs.next()) {
-            invoice = new Invoice();
-            invoice.setId(rs.getInt("id"));
-            invoice.setTotal_amount(rs.getString("total_amount"));
-            invoice.setParent_id(rs.getInt("parent_id"));
-            invoice.setCreated_at(rs.getDate("created_at").toLocalDate());
-            invoice.setStatus(rs.getString("status"));
-            invoice.setPay_at(rs.getDate("update_at") != null ? rs.getDate("update_at").toLocalDate() : null);
-        }
-    } catch (SQLException e) {
-        e.printStackTrace();
-    }
-    
-    return invoice;
-}
+    public Invoice getInvoiceById(int id) {
+        Invoice invoice = null;
+        String sql = "SELECT * FROM invoice WHERE id = ?";
 
+        try (Connection conn = getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                invoice = new Invoice();
+                invoice.setId(rs.getInt("id"));
+                invoice.setTotal_amount(rs.getString("total_amount"));
+                invoice.setParent_id(rs.getInt("parent_id"));
+                invoice.setCreated_at(rs.getDate("created_at").toLocalDate());
+                invoice.setStatus(rs.getString("status"));
+                invoice.setPay_at(rs.getDate("update_at") != null ? rs.getDate("update_at").toLocalDate() : null);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return invoice;
+    }
+
+    public int getPackageIdByInvoiceId(int invoiceId) {
+        String sql = "SELECT il.package_id FROM invoice_line il WHERE il.invoice_id = ? LIMIT 1";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, invoiceId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("package_id");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    public boolean updateInvoiceLineWithStudent(int invoiceId, int studentId) {
+        String sql = "UPDATE invoice_line SET student_id = ? WHERE invoice_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, invoiceId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

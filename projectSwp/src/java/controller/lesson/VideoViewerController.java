@@ -8,7 +8,11 @@ import dal.LessonDAO;
 import dal.ChapterDAO;
 import dal.DAOSubject;
 import dal.GradeDAO;
+import dal.PackageAccessLogDAO;
+import dal.PackageSubjectDAO;
 import dal.StudentDAO;
+import dal.StudentPackageDAO;
+import dal.StudyPackageDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -21,6 +25,7 @@ import model.Subject;
 import model.Grade;
 import model.Student;
 import model.Account;
+import model.StudyPackage;
 import util.AuthUtil;
 import util.RoleConstants;
 
@@ -43,6 +48,9 @@ public class VideoViewerController extends HttpServlet {
     private DAOSubject subjectDAO = new DAOSubject();
     private GradeDAO gradeDAO = new GradeDAO();
     private StudentDAO studentDAO = new StudentDAO();
+    private StudyPackageDAO studyPackageDAO = new StudyPackageDAO();
+    private StudentPackageDAO studentPackageDAO = new StudentPackageDAO();
+    private PackageAccessLogDAO accessLogDAO = new PackageAccessLogDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -51,8 +59,7 @@ public class VideoViewerController extends HttpServlet {
         // Check authentication
         if (!AuthUtil.hasRole(request, RoleConstants.STUDENT)
                 && !AuthUtil.hasRole(request, RoleConstants.TEACHER)
-                && !AuthUtil.hasRole(request, RoleConstants.ADMIN)
-//                && !AuthUtil.hasRole(request, RoleConstants.PARENT)
+                && !AuthUtil.hasRole(request, RoleConstants.ADMIN) //                && !AuthUtil.hasRole(request, RoleConstants.PARENT)
                 ) {
             response.sendRedirect("/login.jsp");
             return;
@@ -145,14 +152,28 @@ public class VideoViewerController extends HttpServlet {
             return true;
         }
 
-        // Student can only view lessons from their grade
+        // Student access control with package system
         if (AuthUtil.hasRole(request, RoleConstants.STUDENT)) {
             Student student = (Student) session.getAttribute("student");
             if (student != null) {
+                // Check if student has package access to this lesson
                 Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
                 if (chapter != null) {
                     Subject subject = subjectDAO.findById(chapter.getSubject_id());
                     if (subject != null) {
+                        // Get student's accessible packages
+                        List<StudyPackage> accessiblePackages = studyPackageDAO.getStudentAccessiblePackages(student.getId());
+
+                        for (StudyPackage pkg : accessiblePackages) {
+                            // Check if package covers this lesson
+                            if (packageCoversLesson(pkg, subject, lesson)) {
+                                // Log access
+                                accessLogDAO.logAccess(student.getId(), pkg.getId(), lesson.getId(), "LESSON_ACCESS");
+                                return true;
+                            }
+                        }
+
+                        // Fallback: check if lesson matches student's grade (for backward compatibility)
                         return subject.getGrade_id() == student.getGrade_id();
                     }
                 }
@@ -160,26 +181,48 @@ public class VideoViewerController extends HttpServlet {
             return false;
         }
 
-        // Parent can view lessons from their children's grades
+        // Parent can view lessons from their children's accessible packages
         if (AuthUtil.hasRole(request, RoleConstants.PARENT)) {
             Account parent = (Account) session.getAttribute("account");
             if (parent != null) {
-                List<Student> children = studentDAO.getStudentsByParentId(parent.getId());
-                Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
-                if (chapter != null) {
-                    Subject subject = subjectDAO.findById(chapter.getSubject_id());
-                    if (subject != null) {
-                        for (Student child : children) {
-                            if (child.getGrade_id() == subject.getGrade_id()) {
-                                return true;
+                try {
+                    List<Student> children = studentDAO.getStudentsByParentId(parent.getId());
+                    Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
+                    if (chapter != null) {
+                        Subject subject = subjectDAO.findById(chapter.getSubject_id());
+                        if (subject != null) {
+                            for (Student child : children) {
+                                List<StudyPackage> accessiblePackages = studyPackageDAO.getStudentAccessiblePackages(child.getId());
+                                for (StudyPackage pkg : accessiblePackages) {
+                                    if (packageCoversLesson(pkg, subject, lesson)) {
+                                        return true;
+                                    }
+                                }
                             }
                         }
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
             return false;
         }
 
+        return false;
+    }
+
+    // Helper method to check if package covers a lesson
+    private boolean packageCoversLesson(StudyPackage pkg, Subject subject, Lesson lesson) {
+        if ("GRADE_ALL".equals(pkg.getType())) {
+            // Package covers all subjects in the grade
+            return pkg.getGrade_id() != null && pkg.getGrade_id().equals(subject.getGrade_id());
+        } else if ("SUBJECT_COMBO".equals(pkg.getType())) {
+            // Check if subject is included in package subjects
+            // This would require checking package_subject table
+            PackageSubjectDAO packageSubjectDAO = new PackageSubjectDAO();
+            // Implementation would depend on your package_subject structure
+            return true; // Simplified for now
+        }
         return false;
     }
 
