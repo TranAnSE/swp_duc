@@ -167,11 +167,14 @@ public class AIQuestionController extends HttpServlet {
             throws ServletException, IOException {
         try {
             // Get form parameters
-            String generationMode = request.getParameter("generation_mode"); // "lesson", "chapter", "subject"
+            String generationMode = request.getParameter("generation_mode");
             int numberOfQuestions = Integer.parseInt(request.getParameter("number_of_questions"));
             String difficulty = request.getParameter("difficulty");
             String questionType = request.getParameter("question_type");
             String additionalInstructions = request.getParameter("additional_instructions");
+
+            // Store context for later use
+            storeGenerationContext(request, generationMode);
 
             // Build content based on generation mode
             StringBuilder contentBuilder = new StringBuilder();
@@ -191,7 +194,6 @@ public class AIQuestionController extends HttpServlet {
                 Subject subject = subjectDAO.findById(chapter.getSubject_id());
                 Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
 
-                // Store context for AI request
                 request.setAttribute("contextGrade", grade);
                 request.setAttribute("contextSubject", subject);
                 request.setAttribute("contextChapter", chapter);
@@ -206,12 +208,21 @@ public class AIQuestionController extends HttpServlet {
 
                 // Get all lessons in this chapter
                 List<Lesson> lessons = lessonDAO.getAllLessons();
+                boolean hasLessons = false;
                 for (Lesson lesson : lessons) {
                     if (lesson.getChapter_id() == chapterId) {
                         contentBuilder.append("Lesson: ").append(lesson.getName()).append("\n");
                         contentBuilder.append(lesson.getContent()).append("\n\n");
+                        hasLessons = true;
                     }
                 }
+
+                // If no lessons found, use chapter description
+                if (!hasLessons) {
+                    contentBuilder.append("Chapter: ").append(chapter.getName()).append("\n");
+                    contentBuilder.append(chapter.getDescription()).append("\n\n");
+                }
+
                 contextName = chapter.getName();
 
                 // Get chapter context
@@ -256,7 +267,6 @@ public class AIQuestionController extends HttpServlet {
             // Build AI request
             GeminiAIService.AIGenerationRequest aiRequest = new GeminiAIService.AIGenerationRequest();
 
-            // Set context based on what we have
             Grade grade = (Grade) request.getAttribute("contextGrade");
             Subject subject = (Subject) request.getAttribute("contextSubject");
 
@@ -426,20 +436,24 @@ public class AIQuestionController extends HttpServlet {
     private int getRepresentativeLessonId(HttpSession session, String generationMode) {
         try {
             if ("lesson".equals(generationMode)) {
-                // Already have lesson ID from generation
-                return (Integer) session.getAttribute("selectedLessonId");
+                // Get lesson ID from the form submission
+                return Integer.parseInt(session.getAttribute("selectedLessonId").toString());
             } else if ("chapter".equals(generationMode)) {
-                // Get first lesson in the chapter
-                int chapterId = (Integer) session.getAttribute("selectedChapterId");
+                // Get first lesson in the selected chapter
+                int chapterId = Integer.parseInt(session.getAttribute("selectedChapterId").toString());
                 List<Lesson> lessons = lessonDAO.getAllLessons();
                 for (Lesson lesson : lessons) {
                     if (lesson.getChapter_id() == chapterId) {
                         return lesson.getId();
                     }
                 }
+
+                // If no lessons found in chapter, create a placeholder lesson
+                return createPlaceholderLesson(chapterId, "Chapter Content");
+
             } else if ("subject".equals(generationMode)) {
                 // Get first lesson in the first chapter of the subject
-                int subjectId = (Integer) session.getAttribute("selectedSubjectId");
+                int subjectId = Integer.parseInt(session.getAttribute("selectedSubjectId").toString());
                 List<Chapter> chapters = chapterDAO.findChapterBySubjectId(subjectId);
                 if (!chapters.isEmpty()) {
                     List<Lesson> lessons = lessonDAO.getAllLessons();
@@ -448,15 +462,65 @@ public class AIQuestionController extends HttpServlet {
                             return lesson.getId();
                         }
                     }
+
+                    // If no lessons found, create a placeholder lesson in first chapter
+                    return createPlaceholderLesson(chapters.get(0).getId(), "Subject Content");
                 }
             }
         } catch (Exception e) {
             logger.log(Level.WARNING, "Error getting representative lesson ID", e);
         }
 
-        // Fallback: return first available lesson
+        // Last resort: get any available lesson or create one
         List<Lesson> allLessons = lessonDAO.getAllLessons();
-        return allLessons.isEmpty() ? 1 : allLessons.get(0).getId();
+        if (!allLessons.isEmpty()) {
+            return allLessons.get(0).getId();
+        }
+
+        // If no lessons exist at all, create a default one
+        return createDefaultLesson();
+    }
+
+    private int createPlaceholderLesson(int chapterId, String contentType) {
+        try {
+            Chapter chapter = chapterDAO.findChapterById(chapterId);
+            String lessonName = contentType + " - " + (chapter != null ? chapter.getName() : "Generated Content");
+
+            Lesson placeholderLesson = new Lesson();
+            placeholderLesson.setName(lessonName);
+            placeholderLesson.setContent("This lesson was automatically created to organize AI-generated questions for " + contentType.toLowerCase() + ".");
+            placeholderLesson.setChapter_id(chapterId);
+            placeholderLesson.setVideo_link("");
+
+            lessonDAO.addLesson(placeholderLesson);
+
+            // Get the newly created lesson ID
+            List<Lesson> lessons = lessonDAO.getAllLessons();
+            for (Lesson lesson : lessons) {
+                if (lesson.getName().equals(lessonName) && lesson.getChapter_id() == chapterId) {
+                    logger.info("Created placeholder lesson with ID: " + lesson.getId());
+                    return lesson.getId();
+                }
+            }
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "Failed to create placeholder lesson", e);
+        }
+
+        return 1; // Fallback to lesson ID 1 if creation fails
+    }
+
+    private int createDefaultLesson() {
+        try {
+            // Get first available chapter
+            List<Chapter> chapters = chapterDAO.getChapter("SELECT * FROM chapter LIMIT 1");
+            if (!chapters.isEmpty()) {
+                return createPlaceholderLesson(chapters.get(0).getId(), "Default Content");
+            }
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "Failed to create default lesson", e);
+        }
+
+        return 1; // fallback
     }
 
     // AJAX handlers for hierarchical data loading (same as in QuestionController)
@@ -641,5 +705,39 @@ public class AIQuestionController extends HttpServlet {
                 grade != null ? grade.getName() : "Unknown",
                 subject != null ? subject.getName() : "Unknown",
                 contextName);
+    }
+
+    private void storeGenerationContext(HttpServletRequest request, String generationMode) {
+        HttpSession session = request.getSession();
+
+        try {
+            switch (generationMode) {
+                case "lesson":
+                    String lessonIdParam = request.getParameter("lesson_id");
+                    if (lessonIdParam != null) {
+                        session.setAttribute("selectedLessonId", Integer.parseInt(lessonIdParam));
+                    }
+                    break;
+
+                case "chapter":
+                    String chapterIdParam = request.getParameter("chapter_id");
+                    if (chapterIdParam != null) {
+                        session.setAttribute("selectedChapterId", Integer.parseInt(chapterIdParam));
+                    }
+                    break;
+
+                case "subject":
+                    String subjectIdParam = request.getParameter("subject_id");
+                    if (subjectIdParam != null) {
+                        session.setAttribute("selectedSubjectId", Integer.parseInt(subjectIdParam));
+                    }
+                    break;
+            }
+
+            session.setAttribute("currentGenerationMode", generationMode);
+
+        } catch (NumberFormatException e) {
+            logger.warning("Invalid ID parameter in generation context: " + e.getMessage());
+        }
     }
 }

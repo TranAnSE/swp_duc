@@ -67,12 +67,32 @@ public class GeminiAIService {
         StringBuilder prompt = new StringBuilder();
 
         prompt.append("You are an expert educator. Generate ").append(request.getNumberOfQuestions())
-                .append(" ").append(request.getDifficulty()).append(" level educational questions ")
-                .append("for Grade: ").append(request.getGradeName())
+                .append(" educational questions for Grade: ").append(request.getGradeName())
                 .append(", Subject: ").append(request.getSubjectName())
                 .append(", Lesson: ").append(request.getLessonName()).append("\n\n");
 
         prompt.append("Lesson Content:\n").append(request.getLessonContent()).append("\n\n");
+
+        // Enhanced difficulty handling
+        String difficultyInstruction = "";
+        switch (request.getDifficulty().toLowerCase()) {
+            case "easy":
+                difficultyInstruction = "Create EASY level questions that test basic understanding and recall of key concepts.";
+                break;
+            case "medium":
+                difficultyInstruction = "Create MEDIUM level questions that test comprehension and application of concepts.";
+                break;
+            case "hard":
+                difficultyInstruction = "Create CHALLENGING level questions that test analysis, synthesis, and critical thinking. Focus on deeper understanding rather than complex vocabulary.";
+                break;
+            case "mixed":
+                difficultyInstruction = "Create a mix of EASY, MEDIUM, and CHALLENGING level questions.";
+                break;
+            default:
+                difficultyInstruction = "Create educational questions appropriate for the content level.";
+                break;
+        }
+        prompt.append(difficultyInstruction).append("\n\n");
 
         // Question type specific instructions
         switch (request.getQuestionType().toLowerCase()) {
@@ -97,7 +117,7 @@ public class GeminiAIService {
             prompt.append("\nAdditional Instructions: ").append(request.getAdditionalInstructions()).append("\n");
         }
 
-        prompt.append("\nCRITICAL: You MUST respond with ONLY a valid JSON array. No additional text before or after.\n");
+        prompt.append("\nIMPORTANT: You MUST respond with ONLY a valid JSON array. No additional text before or after.\n");
         prompt.append("Use this EXACT format:\n");
         prompt.append("[\n");
         prompt.append("  {\n");
@@ -105,15 +125,15 @@ public class GeminiAIService {
         prompt.append("    \"options\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"],\n");
         prompt.append("    \"correctAnswers\": [0, 2],\n");
         prompt.append("    \"explanation\": \"Clear explanation of why the answer is correct\",\n");
-        prompt.append("    \"difficulty\": \"").append(request.getDifficulty()).append("\"\n");
+        prompt.append("    \"difficulty\": \"").append(request.getDifficulty().toLowerCase()).append("\"\n");
         prompt.append("  }\n");
         prompt.append("]\n\n");
-        prompt.append("IMPORTANT RULES:\n");
+        prompt.append("CRITICAL RULES:\n");
         prompt.append("- correctAnswers contains array indices (0-based) of correct options\n");
         prompt.append("- For single choice: correctAnswers should have exactly 1 index\n");
         prompt.append("- For multiple choice: correctAnswers should have 2-3 indices\n");
         prompt.append("- For true/false: correctAnswers should have exactly 1 index (0 or 1)\n");
-        prompt.append("- difficulty should be one of: easy, medium, hard\n");
+        prompt.append("- Keep questions clear and educational, avoid overly complex language\n");
         prompt.append("- Respond with ONLY the JSON array, no markdown formatting, no extra text\n");
 
         return prompt.toString();
@@ -125,7 +145,7 @@ public class GeminiAIService {
     private String callGeminiAPI(String prompt) throws Exception {
         logger.info("Calling Gemini API...");
 
-        // Create request body with safety settings
+        // Create request body with enhanced safety settings for hard difficulty
         JsonObject requestBody = new JsonObject();
         JsonArray contents = new JsonArray();
         JsonObject requestContent = new JsonObject();
@@ -138,15 +158,15 @@ public class GeminiAIService {
         contents.add(requestContent);
         requestBody.add("contents", contents);
 
-        // Add generation config for better responses
+        // Enhanced generation config
         JsonObject generationConfig = new JsonObject();
-        generationConfig.addProperty("temperature", 0.3); // Lower temperature for more consistent JSON
-        generationConfig.addProperty("topK", 20);
-        generationConfig.addProperty("topP", 0.8);
-        generationConfig.addProperty("maxOutputTokens", 4096);
+        generationConfig.addProperty("temperature", 0.4); // Slightly higher for hard questions
+        generationConfig.addProperty("topK", 30);
+        generationConfig.addProperty("topP", 0.9);
+        generationConfig.addProperty("maxOutputTokens", 8192); // Increased for complex questions
         requestBody.add("generationConfig", generationConfig);
 
-        // Add safety settings to prevent blocking
+        // More permissive safety settings
         JsonArray safetySettings = new JsonArray();
         String[] categories = {
             "HARM_CATEGORY_HARASSMENT",
@@ -158,39 +178,63 @@ public class GeminiAIService {
         for (String category : categories) {
             JsonObject safetySetting = new JsonObject();
             safetySetting.addProperty("category", category);
-            safetySetting.addProperty("threshold", "BLOCK_NONE");
+            safetySetting.addProperty("threshold", "BLOCK_ONLY_HIGH"); // More permissive
             safetySettings.add(safetySetting);
         }
         requestBody.add("safetySettings", safetySettings);
 
         logger.info("Request body: " + requestBody.toString());
 
-        // Create HTTP request
-        HttpRequest httpRequest = HttpRequest.newBuilder()
-                .uri(URI.create(API_URL + "?key=" + API_KEY))
-                .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(60))
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
-                .build();
+        // Create HTTP request with retry logic
+        int maxRetries = 3;
+        Exception lastException = null;
 
-        // Send request and get response
-        HttpResponse<String> httpResponse = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                HttpRequest httpRequest = HttpRequest.newBuilder()
+                        .uri(URI.create(API_URL + "?key=" + API_KEY))
+                        .header("Content-Type", "application/json")
+                        .timeout(Duration.ofSeconds(90)) // Increased timeout
+                        .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+                        .build();
 
-        logger.info("API Response Status: " + httpResponse.statusCode());
-        logger.info("API Response Body: " + httpResponse.body());
+                HttpResponse<String> httpResponse = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
 
-        if (httpResponse.statusCode() != 200) {
-            String errorMsg = "API call failed with status: " + httpResponse.statusCode()
-                    + ", body: " + httpResponse.body();
-            logger.severe(errorMsg);
-            throw new Exception(errorMsg);
+                logger.info("API Response Status (attempt " + attempt + "): " + httpResponse.statusCode());
+                logger.info("API Response Body: " + httpResponse.body());
+
+                if (httpResponse.statusCode() == 200) {
+                    String generatedText = extractGeneratedText(httpResponse.body());
+                    logger.info("Generated text: " + generatedText);
+                    return generatedText;
+                } else {
+                    String errorMsg = "API call failed with status: " + httpResponse.statusCode()
+                            + ", body: " + httpResponse.body();
+                    logger.warning("Attempt " + attempt + " failed: " + errorMsg);
+                    lastException = new Exception(errorMsg);
+
+                    // Wait before retry (exponential backoff)
+                    if (attempt < maxRetries) {
+                        Thread.sleep(1000 * attempt);
+                    }
+                }
+            } catch (Exception e) {
+                logger.warning("Attempt " + attempt + " failed with exception: " + e.getMessage());
+                lastException = e;
+                if (attempt < maxRetries) {
+                    try {
+                        Thread.sleep(1000 * attempt);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new Exception("Request interrupted", ie);
+                    }
+                }
+            }
         }
 
-        // Parse response to extract generated text
-        String generatedText = extractGeneratedText(httpResponse.body());
-        logger.info("Generated text: " + generatedText);
-
-        return generatedText;
+        // If all retries failed, throw the last exception
+        throw new Exception("All API attempts failed. Last error: "
+                + (lastException != null ? lastException.getMessage() : "Unknown error"));
     }
 
     /**
@@ -210,26 +254,40 @@ public class GeminiAIService {
             // Check if response was blocked by safety filters
             if (!responseJson.has("candidates") || responseJson.getAsJsonArray("candidates").size() == 0) {
                 logger.warning("No candidates in response - possibly blocked by safety filters");
-                throw new Exception("Response was blocked by safety filters or no content generated");
+                throw new Exception("Response was blocked by safety filters. Try rephrasing your content or using a different difficulty level.");
             }
 
             JsonArray candidates = responseJson.getAsJsonArray("candidates");
             JsonObject candidate = candidates.get(0).getAsJsonObject();
 
-            // Check finish reason
+            // Enhanced finish reason handling
             if (candidate.has("finishReason")) {
                 String finishReason = candidate.get("finishReason").getAsString();
-                if (!"STOP".equals(finishReason)) {
-                    logger.warning("Generation finished with reason: " + finishReason);
-                    if ("SAFETY".equals(finishReason)) {
-                        throw new Exception("Content was blocked by safety filters");
-                    }
+                logger.info("Generation finished with reason: " + finishReason);
+
+                if ("SAFETY".equals(finishReason)) {
+                    throw new Exception("Content was blocked by safety filters. Please try with different content or easier difficulty.");
+                } else if ("MAX_TOKENS".equals(finishReason)) {
+                    logger.warning("Response was truncated due to token limit, but continuing...");
+                } else if (!"STOP".equals(finishReason)) {
+                    logger.warning("Unexpected finish reason: " + finishReason);
                 }
             }
 
-            // Extract content
+            // Extract content with better error handling
             if (!candidate.has("content")) {
-                throw new Exception("No content in candidate response");
+                // Check if there's a safety rating that blocked the content
+                if (candidate.has("safetyRatings")) {
+                    JsonArray safetyRatings = candidate.getAsJsonArray("safetyRatings");
+                    StringBuilder safetyInfo = new StringBuilder("Safety ratings: ");
+                    for (int i = 0; i < safetyRatings.size(); i++) {
+                        JsonObject rating = safetyRatings.get(i).getAsJsonObject();
+                        safetyInfo.append(rating.get("category").getAsString())
+                                .append("=").append(rating.get("probability").getAsString()).append(" ");
+                    }
+                    logger.warning(safetyInfo.toString());
+                }
+                throw new Exception("No content in candidate response. This may be due to safety filters or content policy restrictions.");
             }
 
             JsonObject responseContent = candidate.getAsJsonObject("content");

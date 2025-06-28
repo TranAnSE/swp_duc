@@ -70,29 +70,34 @@ public class QuestionController extends HttpServlet {
 
                         // If question has lesson, load the full hierarchy
                         if (question.getLesson_id() > 0) {
-                            Lesson lesson = lessonDAO.getLessonById(question.getLesson_id());
-                            if (lesson != null) {
-                                Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
-                                if (chapter != null) {
-                                    Subject subject = subjectDAO.findById(chapter.getSubject_id());
-                                    if (subject != null) {
-                                        Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
+                            try {
+                                Lesson lesson = lessonDAO.getLessonById(question.getLesson_id());
+                                if (lesson != null) {
+                                    Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
+                                    if (chapter != null) {
+                                        Subject subject = subjectDAO.findById(chapter.getSubject_id());
+                                        if (subject != null) {
+                                            Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
 
-                                        request.setAttribute("selectedGrade", grade);
-                                        request.setAttribute("selectedSubject", subject);
-                                        request.setAttribute("selectedChapter", chapter);
-                                        request.setAttribute("selectedLesson", lesson);
+                                            request.setAttribute("selectedGrade", grade);
+                                            request.setAttribute("selectedSubject", subject);
+                                            request.setAttribute("selectedChapter", chapter);
+                                            request.setAttribute("selectedLesson", lesson);
 
-                                        // Load related data for dropdowns
-                                        List<Subject> subjectList = subjectDAO.findAll();
-                                        List<Chapter> chapterList = chapterDAO.getChapter("SELECT * FROM chapter WHERE subject_id = " + subject.getId());
-                                        List<Lesson> lessonList = lessonDAO.getAllLessons();
+                                            // Load related data for dropdowns
+                                            List<Subject> subjectList = subjectDAO.findAll();
+                                            List<Chapter> chapterList = chapterDAO.getChapter("SELECT * FROM chapter WHERE subject_id = " + subject.getId());
+                                            List<Lesson> lessonList = lessonDAO.getAllLessons();
 
-                                        request.setAttribute("subjectList", subjectList);
-                                        request.setAttribute("chapterList", chapterList);
-                                        request.setAttribute("lessonList", lessonList);
+                                            request.setAttribute("subjectList", subjectList);
+                                            request.setAttribute("chapterList", chapterList);
+                                            request.setAttribute("lessonList", lessonList);
+                                        }
                                     }
                                 }
+                            } catch (Exception e) {
+                                System.out.println("Warning: Could not load complete hierarchy for question " + id + ": " + e.getMessage());
+                                // Continue with partial data
                             }
                         }
 
@@ -308,6 +313,13 @@ public class QuestionController extends HttpServlet {
                 }
             } else if ("update".equals(action)) {
                 int id = Integer.parseInt(request.getParameter("id"));
+
+                // Handle image update - keep existing image if no new image uploaded
+                Question existingQuestion = questionDAO.getQuestionById(id);
+                if (image_id == 0 && existingQuestion != null) {
+                    image_id = existingQuestion.getImage_id(); // Keep existing image
+                }
+
                 Question q = new Question(id, questionText, image_id, lesson_id, questionType);
                 questionDAO.update(q);
                 questionOptionDAO.deleteOptionsByQuestion(id);
@@ -336,6 +348,12 @@ public class QuestionController extends HttpServlet {
                     opt.setContent(optionContents[i]);
                     opt.setIs_correct(correctArr[i]);
                     questionOptionDAO.insertOption(opt);
+                }
+
+                // Log the learning path change for audit purposes
+                if (existingQuestion != null && existingQuestion.getLesson_id() != lesson_id) {
+                    System.out.println("Question " + id + " learning path changed from lesson "
+                            + existingQuestion.getLesson_id() + " to lesson " + lesson_id);
                 }
             }
         } catch (Exception e) {

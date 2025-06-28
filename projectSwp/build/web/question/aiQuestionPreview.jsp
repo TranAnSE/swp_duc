@@ -585,6 +585,62 @@
                     padding: 20px;
                 }
             }
+            .bulk-actions-section {
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(10px);
+                border-radius: 16px;
+                padding: 20px;
+                margin-bottom: 30px;
+                box-shadow: var(--shadow-md);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .bulk-actions-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+
+            .bulk-actions-header h4 {
+                color: var(--text-primary);
+                font-weight: 600;
+                margin: 0;
+            }
+
+            .bulk-buttons {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+            .bulk-buttons .btn {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+                border-radius: 8px;
+                transition: all 0.3s ease;
+            }
+
+            .bulk-buttons .btn:hover {
+                transform: translateY(-1px);
+            }
+
+            @media (max-width: 768px) {
+                .bulk-actions-header {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+
+                .bulk-buttons {
+                    justify-content: center;
+                }
+
+                .bulk-buttons .btn {
+                    flex: 1;
+                    min-width: 120px;
+                }
+            }
         </style>
     </head>
     <body>
@@ -607,6 +663,20 @@
                     <div class="stat-card">
                         <span class="stat-number" id="editedCount">0</span>
                         <div class="stat-label">Edited</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bulk-actions-section">
+                <div class="bulk-actions-header">
+                    <h4><i class="fas fa-tasks me-2"></i>Bulk Actions</h4>
+                    <div class="bulk-buttons">
+                        <button type="button" class="btn btn-outline-primary" id="selectAllBtn">
+                            <i class="fas fa-check-square me-2"></i>Select All
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="deselectAllBtn">
+                            <i class="fas fa-square me-2"></i>Deselect All
+                        </button>
                     </div>
                 </div>
             </div>
@@ -771,239 +841,313 @@
         <script src="/assets/js/vendor/jquery-1.12.4.min.js"></script>
         <script src="/assets/js/bootstrap.min.js"></script>
         <script>
-                                        let editedQuestions = new Set();
+                                        $(document).ready(function () {
+                                            let editedQuestions = new Set();
 
-                                        function updateApprovedCount() {
-                                            const approvedCheckboxes = document.querySelectorAll('input[name="approved"]:checked');
-                                            const count = approvedCheckboxes.length;
-                                            document.getElementById('approvedCount').textContent = count;
-                                            document.getElementById('approveBtn').disabled = count === 0;
-                                        }
-
-                                        function updateEditedCount() {
-                                            document.getElementById('editedCount').textContent = editedQuestions.size;
-                                        }
-
-                                        function toggleEdit(index) {
-                                            const editSection = document.getElementById('editSection' + index);
-                                            const isActive = editSection.classList.contains('active');
-
-                                            if (isActive) {
-                                                editSection.classList.remove('active');
-                                            } else {
-                                                editSection.classList.add('active');
-                                                editedQuestions.add(index);
-                                                updateEditedCount();
-                                            }
-                                        }
-
-                                        function chatWithAI() {
-                                            const chatInput = document.getElementById('chatInput');
-                                            const chatResponse = document.getElementById('chatResponse');
-                                            const message = chatInput.value.trim();
-
-                                            if (!message) {
-                                                alert('Please enter a message to chat with AI');
-                                                return;
-                                            }
-
-                                            // Show loading state
-                                            chatResponse.innerHTML = '<div class="d-flex align-items-center">' +
-                                                    '<div class="spinner-border spinner-border-sm text-primary me-3" role="status">' +
-                                                    '<span class="visually-hidden">Loading...</span>' +
-                                                    '</div>' +
-                                                    '<span>AI is thinking...</span>' +
-                                                    '</div>';
-                                            chatResponse.classList.add('active');
-
-                                            // Send request to AI
-                                            fetch('/ai-question', {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/x-www-form-urlencoded',
-                                                },
-                                                body: new URLSearchParams({
-                                                    'action': 'chat',
-                                                    'message': message
-                                                })
-                                            })
-                                                    .then(response => response.json())
-                                                    .then(data => {
-                                                        if (data.error) {
-                                                            chatResponse.innerHTML = '<div class="text-danger">' +
-                                                                    '<i class="fas fa-exclamation-triangle me-2"></i>' +
-                                                                    'Error: ' + data.error +
-                                                                    '</div>';
-                                                        } else {
-                                                            var formattedResponse = data.response.replace(/\n/g, '<br>');
-                                                            chatResponse.innerHTML = '<div class="d-flex align-items-start">' +
-                                                                    '<i class="fas fa-robot text-primary me-3 mt-1"></i>' +
-                                                                    '<div>' +
-                                                                    '<strong class="text-primary">AI Assistant:</strong>' +
-                                                                    '<div class="mt-2">' + formattedResponse + '</div>' +
-                                                                    '</div>' +
-                                                                    '</div>';
-                                                        }
-                                                    })
-                                                    .catch(error => {
-                                                        chatResponse.innerHTML = '<div class="text-danger">' +
-                                                                '<i class="fas fa-exclamation-triangle me-2"></i>' +
-                                                                'Failed to get AI response. Please try again.' +
-                                                                '</div>';
-                                                    })
-                                                    .finally(() => {
-                                                        chatInput.value = '';
-                                                    });
-                                        }
-
-                                        // Allow Enter key to send chat message
-                                        document.getElementById('chatInput').addEventListener('keydown', function (e) {
-                                            if (e.key === 'Enter' && !e.shiftKey) {
-                                                e.preventDefault();
-                                                chatWithAI();
-                                            }
-                                        });
-
-                                        // Form submission with loading state
-                                        document.getElementById('approveForm').addEventListener('submit', function (e) {
-                                            const approvedCount = document.querySelectorAll('input[name="approved"]:checked').length;
-
-                                            if (approvedCount === 0) {
-                                                e.preventDefault();
-                                                alert('Please select at least one question to approve');
-                                                return;
-                                            }
-
-                                            // Show loading overlay
-                                            const submitBtn = document.getElementById('approveBtn');
-                                            const originalText = submitBtn.innerHTML;
-                                            submitBtn.disabled = true;
-                                            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving Questions...';
-
-                                            // Add loading overlay
-                                            document.body.insertAdjacentHTML('beforeend',
-                                                    '<div id="savingOverlay" style="' +
-                                                    'position: fixed;' +
-                                                    'top: 0;' +
-                                                    'left: 0;' +
-                                                    'width: 100%;' +
-                                                    'height: 100%;' +
-                                                    'background: rgba(0, 0, 0, 0.5);' +
-                                                    'display: flex;' +
-                                                    'justify-content: center;' +
-                                                    'align-items: center;' +
-                                                    'z-index: 9999;' +
-                                                    '">' +
-                                                    '<div style="' +
-                                                    'background: white;' +
-                                                    'padding: 30px;' +
-                                                    'border-radius: 15px;' +
-                                                    'text-align: center;' +
-                                                    'box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);' +
-                                                    '">' +
-                                                    '<i class="fas fa-save fa-3x text-success mb-3"></i>' +
-                                                    '<h4>Saving Questions to Database...</h4>' +
-                                                    '<p class="text-muted">Processing ' + approvedCount + ' approved questions</p>' +
-                                                    '<div class="spinner-border text-success" role="status">' +
-                                                    '<span class="visually-hidden">Loading...</span>' +
-                                                    '</div>' +
-                                                    '</div>' +
-                                                    '</div>'
-                                                    );
-
-                                            // If saving fails, restore button (timeout fallback)
-                                            setTimeout(() => {
-                                                const overlay = document.getElementById('savingOverlay');
-                                                if (overlay) {
-                                                    overlay.remove();
-                                                    submitBtn.disabled = false;
-                                                    submitBtn.innerHTML = originalText;
-                                                }
-                                            }, 30000); // 30 second timeout
-                                        });
-
-                                        // Smooth scroll animations
-                                        const observer = new IntersectionObserver((entries) => {
-                                            entries.forEach(entry => {
-                                                if (entry.isIntersecting) {
-                                                    entry.target.style.opacity = '1';
-                                                    entry.target.style.transform = 'translateY(0)';
-                                                }
-                                            });
-                                        });
-
-                                        document.querySelectorAll('.question-card').forEach(card => {
-                                            card.style.opacity = '0';
-                                            card.style.transform = 'translateY(20px)';
-                                            card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-                                            observer.observe(card);
-                                        });
-
-                                        // Auto-scroll to first question on load
-                                        setTimeout(() => {
-                                            const firstQuestion = document.querySelector('.question-card');
-                                            if (firstQuestion) {
-                                                firstQuestion.scrollIntoView({
-                                                    behavior: 'smooth',
-                                                    block: 'start',
-                                                    inline: 'nearest'
-                                                });
-                                            }
-                                        }, 500);
-
-                                        // Keyboard shortcuts
-                                        document.addEventListener('keydown', function (e) {
-                                            // Ctrl/Cmd + A: Select all questions
-                                            if ((e.ctrlKey || e.metaKey) && e.key === 'a' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-                                                e.preventDefault();
+                                            // Auto-approve all questions on page load
+                                            function autoApproveAll() {
                                                 const checkboxes = document.querySelectorAll('input[name="approved"]');
-                                                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-
                                                 checkboxes.forEach(cb => {
-                                                    cb.checked = !allChecked;
+                                                    cb.checked = true;
                                                 });
                                                 updateApprovedCount();
                                             }
 
-                                            // Ctrl/Cmd + S: Save approved questions
-                                            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                                                e.preventDefault();
-                                                const approveBtn = document.getElementById('approveBtn');
-                                                if (!approveBtn.disabled) {
-                                                    document.getElementById('approveForm').submit();
+                                            // Select All functionality
+                                            function selectAll() {
+                                                const checkboxes = document.querySelectorAll('input[name="approved"]');
+                                                checkboxes.forEach(cb => {
+                                                    cb.checked = true;
+                                                });
+                                                updateApprovedCount();
+
+                                                // Add visual feedback
+                                                $('#selectAllBtn').addClass('btn-success').removeClass('btn-outline-primary');
+                                                $('#deselectAllBtn').removeClass('btn-danger').addClass('btn-outline-secondary');
+
+                                                setTimeout(() => {
+                                                    $('#selectAllBtn').removeClass('btn-success').addClass('btn-outline-primary');
+                                                }, 1000);
+                                            }
+
+                                            // Deselect All functionality  
+                                            function deselectAll() {
+                                                const checkboxes = document.querySelectorAll('input[name="approved"]');
+                                                checkboxes.forEach(cb => {
+                                                    cb.checked = false;
+                                                });
+                                                updateApprovedCount();
+
+                                                // Add visual feedback
+                                                $('#deselectAllBtn').addClass('btn-danger').removeClass('btn-outline-secondary');
+                                                $('#selectAllBtn').removeClass('btn-success').addClass('btn-outline-primary');
+
+                                                setTimeout(() => {
+                                                    $('#deselectAllBtn').removeClass('btn-danger').addClass('btn-outline-secondary');
+                                                }, 1000);
+                                            }
+
+                                            // Event listeners
+                                            $('#selectAllBtn').click(selectAll);
+                                            $('#deselectAllBtn').click(deselectAll);
+
+                                            function updateApprovedCount() {
+                                                const approvedCheckboxes = document.querySelectorAll('input[name="approved"]:checked');
+                                                const count = approvedCheckboxes.length;
+                                                document.getElementById('approvedCount').textContent = count;
+                                                document.getElementById('approveBtn').disabled = count === 0;
+
+                                                // Update bulk action button states
+                                                const totalCheckboxes = document.querySelectorAll('input[name="approved"]').length;
+                                                if (count === totalCheckboxes) {
+                                                    $('#selectAllBtn').text('All Selected').addClass('btn-success').removeClass('btn-outline-primary');
+                                                    $('#deselectAllBtn').removeClass('btn-danger').addClass('btn-outline-secondary');
+                                                } else if (count === 0) {
+                                                    $('#selectAllBtn').text('Select All').removeClass('btn-success').addClass('btn-outline-primary');
+                                                    $('#deselectAllBtn').text('All Deselected').addClass('btn-secondary').removeClass('btn-outline-secondary');
+                                                    setTimeout(() => {
+                                                        $('#deselectAllBtn').text('Deselect All').removeClass('btn-secondary').addClass('btn-outline-secondary');
+                                                    }, 2000);
+                                                } else {
+                                                    $('#selectAllBtn').text('Select All').removeClass('btn-success').addClass('btn-outline-primary');
+                                                    $('#deselectAllBtn').text('Deselect All').removeClass('btn-danger btn-secondary').addClass('btn-outline-secondary');
                                                 }
                                             }
 
-                                            // Escape: Close all edit sections
-                                            if (e.key === 'Escape') {
-                                                document.querySelectorAll('.edit-section.active').forEach(section => {
-                                                    section.classList.remove('active');
+                                            function updateEditedCount() {
+                                                document.getElementById('editedCount').textContent = editedQuestions.size;
+                                            }
+
+                                            function toggleEdit(index) {
+                                                const editSection = document.getElementById('editSection' + index);
+                                                const isActive = editSection.classList.contains('active');
+
+                                                if (isActive) {
+                                                    editSection.classList.remove('active');
+                                                } else {
+                                                    editSection.classList.add('active');
+                                                    editedQuestions.add(index);
+                                                    updateEditedCount();
+                                                }
+                                            }
+
+                                            function chatWithAI() {
+                                                const chatInput = document.getElementById('chatInput');
+                                                const chatResponse = document.getElementById('chatResponse');
+                                                const message = chatInput.value.trim();
+
+                                                if (!message) {
+                                                    alert('Please enter a message to chat with AI');
+                                                    return;
+                                                }
+
+                                                // Show loading state
+                                                chatResponse.innerHTML = '<div class="d-flex align-items-center">' +
+                                                        '<div class="spinner-border spinner-border-sm text-primary me-3" role="status">' +
+                                                        '<span class="visually-hidden">Loading...</span>' +
+                                                        '</div>' +
+                                                        '<span>AI is thinking...</span>' +
+                                                        '</div>';
+                                                chatResponse.classList.add('active');
+
+                                                // Send request to AI
+                                                fetch('/ai-question', {
+                                                    method: 'POST',
+                                                    headers: {
+                                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                                    },
+                                                    body: new URLSearchParams({
+                                                        'action': 'chat',
+                                                        'message': message
+                                                    })
+                                                })
+                                                        .then(response => response.json())
+                                                        .then(data => {
+                                                            if (data.error) {
+                                                                chatResponse.innerHTML = '<div class="text-danger">' +
+                                                                        '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                                                                        'Error: ' + data.error +
+                                                                        '</div>';
+                                                            } else {
+                                                                var formattedResponse = data.response.replace(/\n/g, '<br>');
+                                                                chatResponse.innerHTML = '<div class="d-flex align-items-start">' +
+                                                                        '<i class="fas fa-robot text-primary me-3 mt-1"></i>' +
+                                                                        '<div>' +
+                                                                        '<strong class="text-primary">AI Assistant:</strong>' +
+                                                                        '<div class="mt-2">' + formattedResponse + '</div>' +
+                                                                        '</div>' +
+                                                                        '</div>';
+                                                            }
+                                                        })
+                                                        .catch(error => {
+                                                            chatResponse.innerHTML = '<div class="text-danger">' +
+                                                                    '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                                                                    'Failed to get AI response. Please try again.' +
+                                                                    '</div>';
+                                                        })
+                                                        .finally(() => {
+                                                            chatInput.value = '';
+                                                        });
+                                            }
+
+                                            // Allow Enter key to send chat message
+                                            document.getElementById('chatInput').addEventListener('keydown', function (e) {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    chatWithAI();
+                                                }
+                                            });
+
+                                            // Form submission with loading state
+                                            document.getElementById('approveForm').addEventListener('submit', function (e) {
+                                                const approvedCount = document.querySelectorAll('input[name="approved"]:checked').length;
+
+                                                if (approvedCount === 0) {
+                                                    e.preventDefault();
+                                                    alert('Please select at least one question to approve');
+                                                    return;
+                                                }
+
+                                                // Show loading overlay
+                                                const submitBtn = document.getElementById('approveBtn');
+                                                const originalText = submitBtn.innerHTML;
+                                                submitBtn.disabled = true;
+                                                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving Questions...';
+
+                                                // Add loading overlay
+                                                document.body.insertAdjacentHTML('beforeend',
+                                                        '<div id="savingOverlay" style="' +
+                                                        'position: fixed;' +
+                                                        'top: 0;' +
+                                                        'left: 0;' +
+                                                        'width: 100%;' +
+                                                        'height: 100%;' +
+                                                        'background: rgba(0, 0, 0, 0.5);' +
+                                                        'display: flex;' +
+                                                        'justify-content: center;' +
+                                                        'align-items: center;' +
+                                                        'z-index: 9999;' +
+                                                        '">' +
+                                                        '<div style="' +
+                                                        'background: white;' +
+                                                        'padding: 30px;' +
+                                                        'border-radius: 15px;' +
+                                                        'text-align: center;' +
+                                                        'box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);' +
+                                                        '">' +
+                                                        '<i class="fas fa-save fa-3x text-success mb-3"></i>' +
+                                                        '<h4>Saving Questions to Database...</h4>' +
+                                                        '<p class="text-muted">Processing ' + approvedCount + ' approved questions</p>' +
+                                                        '<div class="spinner-border text-success" role="status">' +
+                                                        '<span class="visually-hidden">Loading...</span>' +
+                                                        '</div>' +
+                                                        '</div>' +
+                                                        '</div>'
+                                                        );
+
+                                                // If saving fails, restore button (timeout fallback)
+                                                setTimeout(() => {
+                                                    const overlay = document.getElementById('savingOverlay');
+                                                    if (overlay) {
+                                                        overlay.remove();
+                                                        submitBtn.disabled = false;
+                                                        submitBtn.innerHTML = originalText;
+                                                    }
+                                                }, 30000); // 30 second timeout
+                                            });
+
+                                            // Keyboard shortcuts
+                                            document.addEventListener('keydown', function (e) {
+                                                // Ctrl/Cmd + A: Select all questions
+                                                if ((e.ctrlKey || e.metaKey) && e.key === 'a' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                                                    e.preventDefault();
+                                                    selectAll();
+                                                }
+
+                                                // Ctrl/Cmd + D: Deselect all questions  
+                                                if ((e.ctrlKey || e.metaKey) && e.key === 'd' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                                                    e.preventDefault();
+                                                    deselectAll();
+                                                }
+
+                                                // Ctrl/Cmd + S: Save approved questions
+                                                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                                                    e.preventDefault();
+                                                    const approveBtn = document.getElementById('approveBtn');
+                                                    if (!approveBtn.disabled) {
+                                                        document.getElementById('approveForm').submit();
+                                                    }
+                                                }
+
+                                                // Escape: Close all edit sections
+                                                if (e.key === 'Escape') {
+                                                    document.querySelectorAll('.edit-section.active').forEach(section => {
+                                                        section.classList.remove('active');
+                                                    });
+                                                }
+                                            });
+
+                                            // Initialize page
+                                            autoApproveAll(); // Auto-approve all questions on load
+
+                                            // Smooth scroll animations
+                                            const observer = new IntersectionObserver((entries) => {
+                                                entries.forEach(entry => {
+                                                    if (entry.isIntersecting) {
+                                                        entry.target.style.opacity = '1';
+                                                        entry.target.style.transform = 'translateY(0)';
+                                                    }
+                                                });
+                                            });
+
+                                            document.querySelectorAll('.question-card').forEach(card => {
+                                                card.style.opacity = '0';
+                                                card.style.transform = 'translateY(20px)';
+                                                card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                                                observer.observe(card);
+                                            });
+
+                                            // Auto-scroll to first question on load
+                                            setTimeout(() => {
+                                                const firstQuestion = document.querySelector('.question-card');
+                                                if (firstQuestion) {
+                                                    firstQuestion.scrollIntoView({
+                                                        behavior: 'smooth',
+                                                        block: 'start',
+                                                        inline: 'nearest'
+                                                    });
+                                                }
+                                            }, 500);
+
+                                            // Initialize tooltips for better UX
+                                            const tooltips = [
+                                                {selector: '.question-type-badge', title: 'Question type generated by AI'},
+                                                {selector: '.correct-indicator', title: 'This is the correct answer'},
+                                                {selector: '.approve-checkbox', title: 'Check to include this question in your question bank'},
+                                                {selector: '.btn-edit', title: 'Click to modify this question before saving'}
+                                            ];
+
+                                            tooltips.forEach(tooltip => {
+                                                document.querySelectorAll(tooltip.selector).forEach(element => {
+                                                    element.setAttribute('title', tooltip.title);
+                                                    element.setAttribute('data-bs-toggle', 'tooltip');
+                                                });
+                                            });
+
+                                            // Initialize Bootstrap tooltips if available
+                                            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                                                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                                                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                                                    return new bootstrap.Tooltip(tooltipTriggerEl);
                                                 });
                                             }
+
+                                            // Make functions globally available
+                                            window.toggleEdit = toggleEdit;
+                                            window.chatWithAI = chatWithAI;
+                                            window.updateApprovedCount = updateApprovedCount;
+                                            window.updateEditedCount = updateEditedCount;
                                         });
-
-                                        // Initialize tooltips for better UX
-                                        const tooltips = [
-                                            {selector: '.question-type-badge', title: 'Question type generated by AI'},
-                                            {selector: '.correct-indicator', title: 'This is the correct answer'},
-                                            {selector: '.approve-checkbox', title: 'Check to include this question in your question bank'},
-                                            {selector: '.btn-edit', title: 'Click to modify this question before saving'}
-                                        ];
-
-                                        tooltips.forEach(tooltip => {
-                                            document.querySelectorAll(tooltip.selector).forEach(element => {
-                                                element.setAttribute('title', tooltip.title);
-                                                element.setAttribute('data-bs-toggle', 'tooltip');
-                                            });
-                                        });
-
-                                        // Initialize Bootstrap tooltips if available
-                                        if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-                                            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                                            tooltipTriggerList.map(function (tooltipTriggerEl) {
-                                                return new bootstrap.Tooltip(tooltipTriggerEl);
-                                            });
-                                        }
         </script>
     </body>
 </html>

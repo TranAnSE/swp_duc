@@ -70,10 +70,69 @@
                 background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
             }
 
+            .step-item.editable {
+                border-color: #f59e0b;
+                background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
+                cursor: pointer;
+            }
+
+            .step-item.editable:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+            }
+
             .step-label {
                 font-weight: 600;
                 color: #374151;
                 margin-bottom: 8px;
+            }
+
+            .step-content {
+                color: #6b7280;
+                font-size: 0.9rem;
+            }
+
+            .step-edit-icon {
+                float: right;
+                color: #f59e0b;
+                cursor: pointer;
+            }
+
+            /* Edit Learning Path Section */
+            .edit-path-section {
+                background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
+                border: 2px solid #f59e0b;
+                border-radius: 16px;
+                padding: 25px;
+                margin-bottom: 30px;
+                box-shadow: 0 4px 15px rgba(245, 158, 11, 0.1);
+                display: none;
+            }
+
+            .edit-path-section.active {
+                display: block;
+                animation: slideDown 0.3s ease;
+            }
+
+            @keyframes slideDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .edit-path-title {
+                color: #92400e;
+                font-weight: 700;
+                font-size: 1.3rem;
+                margin-bottom: 20px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
             }
 
             /* Select2 Custom Styling */
@@ -111,6 +170,53 @@
             .select2-dropdown {
                 z-index: 9999 !important;
             }
+
+            .btn-edit-path {
+                background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                border: 1px solid #f59e0b;
+                color: #92400e;
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-size: 0.9rem;
+                font-weight: 500;
+                transition: all 0.3s ease;
+            }
+
+            .btn-edit-path:hover {
+                background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+                color: #78350f;
+                transform: translateY(-1px);
+            }
+
+            .btn-save-path {
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                border: none;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 8px;
+                font-weight: 500;
+                transition: all 0.3s ease;
+            }
+
+            .btn-save-path:hover {
+                background: linear-gradient(135deg, #059669 0%, #047857 100%);
+                transform: translateY(-1px);
+            }
+
+            .btn-cancel-path {
+                background: #6b7280;
+                border: none;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 8px;
+                font-weight: 500;
+                transition: all 0.3s ease;
+            }
+
+            .btn-cancel-path:hover {
+                background: #4b5563;
+                transform: translateY(-1px);
+            }
         </style>
     </head>
 
@@ -126,39 +232,94 @@
                     <div class="hierarchy-title">
                         <i class="fas fa-sitemap"></i>
                         Current Learning Path
+                        <button type="button" class="btn btn-edit-path ms-auto" onclick="toggleEditPath()">
+                            <i class="fas fa-edit me-1"></i>Edit Path
+                        </button>
                     </div>
 
                     <div class="hierarchy-steps">
                         <div class="step-item completed">
                             <div class="step-label">Grade</div>
-                            <div>${selectedGrade.name}</div>
+                            <div class="step-content">${selectedGrade.name}</div>
                         </div>
                         <c:if test="${not empty selectedSubject}">
                             <div class="step-item completed">
                                 <div class="step-label">Subject</div>
-                                <div>${selectedSubject.name}</div>
+                                <div class="step-content">${selectedSubject.name}</div>
                             </div>
                         </c:if>
                         <c:if test="${not empty selectedChapter}">
                             <div class="step-item completed">
                                 <div class="step-label">Chapter</div>
-                                <div>${selectedChapter.name}</div>
+                                <div class="step-content">${selectedChapter.name}</div>
                             </div>
                         </c:if>
                         <c:if test="${not empty selectedLesson}">
                             <div class="step-item completed">
                                 <div class="step-label">Lesson</div>
-                                <div>${selectedLesson.name}</div>
+                                <div class="step-content">${selectedLesson.name}</div>
                             </div>
                         </c:if>
                     </div>
-
-                    <div class="alert alert-info mt-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        To change the learning path, please create a new question or contact administrator.
-                    </div>
                 </div>
             </c:if>
+
+            <!-- Edit Learning Path Section -->
+            <div class="edit-path-section" id="editPathSection">
+                <div class="edit-path-title">
+                    <i class="fas fa-edit"></i>
+                    Edit Learning Path
+                </div>
+
+                <div class="hierarchy-steps">
+                    <div class="step-item">
+                        <div class="step-label">Grade</div>
+                        <select id="gradeSelect" class="form-select select2-dropdown">
+                            <option value="">-- Select Grade --</option>
+                            <c:forEach var="grade" items="${gradeList}">
+                                <option value="${grade.id}" ${selectedGrade != null && selectedGrade.id == grade.id ? 'selected' : ''}>
+                                    ${grade.name}
+                                </option>
+                            </c:forEach>
+                        </select>
+                    </div>
+
+                    <div class="step-item">
+                        <div class="step-label">Subject</div>
+                        <select id="subjectSelect" class="form-select select2-dropdown" disabled>
+                            <option value="">-- Select Subject --</option>
+                        </select>
+                    </div>
+
+                    <div class="step-item">
+                        <div class="step-label">Chapter</div>
+                        <select id="chapterSelect" class="form-select select2-dropdown" disabled>
+                            <option value="">-- Select Chapter --</option>
+                        </select>
+                    </div>
+
+                    <div class="step-item">
+                        <div class="step-label">Lesson</div>
+                        <select id="lessonSelect" class="form-select select2-dropdown" disabled>
+                            <option value="">-- Select Lesson --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-3 d-flex gap-2">
+                    <button type="button" class="btn-save-path" onclick="savePathChanges()">
+                        <i class="fas fa-save me-1"></i>Save Changes
+                    </button>
+                    <button type="button" class="btn-cancel-path" onclick="cancelPathEdit()">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Changing the learning path will update where this question is categorized in the system.
+                </div>
+            </div>
 
             <!-- Update Form -->
             <div class="card">
@@ -166,7 +327,7 @@
                     <form name="questionForm" method="post" action="Question" enctype="multipart/form-data" onsubmit="return validateForm()">
                         <input type="hidden" name="action" value="update" />
                         <input type="hidden" name="id" value="${question.id}" />
-                        <input type="hidden" name="lesson_id" value="${question.lesson_id}" />
+                        <input type="hidden" name="lesson_id" value="${question.lesson_id}" id="hiddenLessonId" />
 
                         <div class="mb-3">
                             <label class="form-label">Question</label>
@@ -238,13 +399,184 @@
 
         <script>
                         $(document).ready(function () {
+                            let isEditingPath = false;
+                            let originalLessonId = ${question.lesson_id};
+
                             // Initialize Select2 for any select elements
-                            $('.select2-dropdown').select2({
-                                theme: 'bootstrap-5',
-                                width: '100%',
-                                allowClear: false,
-                                dropdownParent: $('body')
+                            function initializeSelect2(selector) {
+                                $(selector).select2({
+                                    theme: 'bootstrap-5',
+                                    width: '100%',
+                                    allowClear: false,
+                                    dropdownParent: $('body')
+                                });
+                            }
+
+                            // Initialize all select2 dropdowns
+                            $('.select2-dropdown').each(function () {
+                                initializeSelect2('#' + $(this).attr('id'));
                             });
+
+                            // Helper functions for AJAX calls
+                            function loadSubjects(gradeId, targetSelector) {
+                                $.get('Question', {
+                                    action: 'getSubjectsByGrade',
+                                    gradeId: gradeId
+                                }, function (data) {
+                                    const $select = $(targetSelector);
+                                    $select.empty().append('<option value="">-- Select Subject --</option>');
+                                    $.each(data, function (i, item) {
+                                        $select.append('<option value="' + item.id + '">' + item.name + '</option>');
+                                    });
+                                    $select.prop('disabled', false);
+
+                                    // Reinitialize Select2
+                                    $select.select2('destroy');
+                                    initializeSelect2(targetSelector);
+
+                                    // Auto-select if editing existing question
+            <c:if test="${not empty selectedSubject}">
+                                    if (gradeId == ${selectedGrade.id}) {
+                                        $select.val(${selectedSubject.id}).trigger('change');
+                                    }
+            </c:if>
+                                }).fail(function () {
+                                    console.error('Failed to load subjects');
+                                });
+                            }
+
+                            function loadChapters(subjectId, targetSelector) {
+                                $.get('Question', {
+                                    action: 'getChaptersBySubject',
+                                    subjectId: subjectId
+                                }, function (data) {
+                                    const $select = $(targetSelector);
+                                    $select.empty().append('<option value="">-- Select Chapter --</option>');
+                                    $.each(data, function (i, item) {
+                                        $select.append('<option value="' + item.id + '">' + item.name + '</option>');
+                                    });
+                                    $select.prop('disabled', false);
+
+                                    // Reinitialize Select2
+                                    $select.select2('destroy');
+                                    initializeSelect2(targetSelector);
+
+                                    // Auto-select if editing existing question
+            <c:if test="${not empty selectedChapter}">
+                                    if (subjectId == ${selectedSubject.id}) {
+                                        $select.val(${selectedChapter.id}).trigger('change');
+                                    }
+            </c:if>
+                                }).fail(function () {
+                                    console.error('Failed to load chapters');
+                                });
+                            }
+
+                            function loadLessons(chapterId, targetSelector) {
+                                $.get('Question', {
+                                    action: 'getLessonsByChapter',
+                                    chapterId: chapterId
+                                }, function (data) {
+                                    const $select = $(targetSelector);
+                                    $select.empty().append('<option value="">-- Select Lesson --</option>');
+                                    $.each(data, function (i, item) {
+                                        $select.append('<option value="' + item.id + '">' + item.name + '</option>');
+                                    });
+                                    $select.prop('disabled', false);
+
+                                    // Reinitialize Select2
+                                    $select.select2('destroy');
+                                    initializeSelect2(targetSelector);
+
+                                    // Auto-select if editing existing question
+            <c:if test="${not empty selectedLesson}">
+                                    if (chapterId == ${selectedChapter.id}) {
+                                        $select.val(${selectedLesson.id}).trigger('change');
+                                    }
+            </c:if>
+                                }).fail(function () {
+                                    console.error('Failed to load lessons');
+                                });
+                            }
+
+                            // Event handlers for hierarchy selection
+                            $('#gradeSelect').on('change', function () {
+                                const gradeId = $(this).val();
+                                if (gradeId) {
+                                    loadSubjects(gradeId, '#subjectSelect');
+                                    // Reset subsequent selects
+                                    $('#chapterSelect').empty().append('<option value="">-- Select Chapter --</option>').prop('disabled', true);
+                                    $('#lessonSelect').empty().append('<option value="">-- Select Lesson --</option>').prop('disabled', true);
+                                }
+                            });
+
+                            $('#subjectSelect').on('change', function () {
+                                const subjectId = $(this).val();
+                                if (subjectId) {
+                                    loadChapters(subjectId, '#chapterSelect');
+                                    // Reset lesson select
+                                    $('#lessonSelect').empty().append('<option value="">-- Select Lesson --</option>').prop('disabled', true);
+                                }
+                            });
+
+                            $('#chapterSelect').on('change', function () {
+                                const chapterId = $(this).val();
+                                if (chapterId) {
+                                    loadLessons(chapterId, '#lessonSelect');
+                                }
+                            });
+
+                            // Initialize with current values if editing
+            <c:if test="${not empty selectedGrade}">
+                            $('#gradeSelect').val(${selectedGrade.id}).trigger('change');
+            </c:if>
+
+                            // Global functions
+                            window.toggleEditPath = function () {
+                                isEditingPath = !isEditingPath;
+                                const section = $('#editPathSection');
+
+                                if (isEditingPath) {
+                                    section.addClass('active');
+                                    // Scroll to edit section
+                                    $('html, body').animate({
+                                        scrollTop: section.offset().top - 100
+                                    }, 500);
+                                } else {
+                                    section.removeClass('active');
+                                }
+                            };
+
+                            window.savePathChanges = function () {
+                                const lessonId = $('#lessonSelect').val();
+
+                                if (!lessonId) {
+                                    alert('Please select a complete learning path (Grade → Subject → Chapter → Lesson)');
+                                    return;
+                                }
+
+                                // Update the hidden lesson_id field
+                                $('#hiddenLessonId').val(lessonId);
+
+                                // Show confirmation
+                                if (confirm('Are you sure you want to change the learning path for this question?')) {
+                                    // Update the display and hide edit section
+                                    alert('Learning path updated! The changes will be saved when you update the question.');
+                                    cancelPathEdit();
+                                }
+                            };
+
+                            window.cancelPathEdit = function () {
+                                // Reset to original values
+                                $('#hiddenLessonId').val(originalLessonId);
+                                $('#editPathSection').removeClass('active');
+                                isEditingPath = false;
+
+                                // Reset selects to original values
+            <c:if test="${not empty selectedGrade}">
+                                $('#gradeSelect').val(${selectedGrade.id}).trigger('change');
+            </c:if>
+                            };
 
                             // Option dynamic logic
                             function updateOptionInputs() {
