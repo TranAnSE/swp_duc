@@ -45,8 +45,8 @@ public class StudentController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN) 
-                && !AuthUtil.hasRole(request, RoleConstants.TEACHER) 
+        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN)
+                && !AuthUtil.hasRole(request, RoleConstants.TEACHER)
                 && !AuthUtil.hasRole(request, RoleConstants.STUDENT)
                 && !AuthUtil.hasRole(request, RoleConstants.PARENT)) {
             response.sendRedirect("/error.jsp");
@@ -75,6 +75,9 @@ public class StudentController extends HttpServlet {
                 case "delete":
                     deleteStudent(request, response);
                     break;
+                case "getByParent":
+                    getStudentsByParentAjax(request, response);
+                    return;
                 default:
                     listStudents(request, response);
                     break;
@@ -87,8 +90,8 @@ public class StudentController extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN) 
-                && !AuthUtil.hasRole(request, RoleConstants.TEACHER) 
+        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN)
+                && !AuthUtil.hasRole(request, RoleConstants.TEACHER)
                 && !AuthUtil.hasRole(request, RoleConstants.STUDENT)
                 && !AuthUtil.hasRole(request, RoleConstants.PARENT)) {
             response.sendRedirect("/error.jsp");
@@ -240,7 +243,7 @@ public class StudentController extends HttpServlet {
 
     private Student getStudentFromRequest(HttpServletRequest request) {
         int id = 0;
-        if (request.getParameter("id") != null)  {
+        if (request.getParameter("id") != null) {
             id = Integer.parseInt(request.getParameter("id"));
         }
         int gradeId = Integer.parseInt(request.getParameter("grade_id"));
@@ -270,4 +273,59 @@ public class StudentController extends HttpServlet {
         request.getRequestDispatcher("student/viewProfile.jsp").forward(request, response);
     }
 
+    private void getStudentsByParentAjax(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int parentId = Integer.parseInt(request.getParameter("parentId"));
+            List<Student> students = studentDAO.getStudentsByParentId(parentId);
+            List<Grade> gradeList = gradeDAO.findAllFromGrade();
+
+            // Create JSON response manually
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < students.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Student student = students.get(i);
+
+                // Find grade name
+                String gradeName = "Unknown";
+                for (Grade grade : gradeList) {
+                    if (grade.getId() == student.getGrade_id()) {
+                        gradeName = grade.getName();
+                        break;
+                    }
+                }
+
+                json.append("{")
+                        .append("\"id\":").append(student.getId())
+                        .append(",\"full_name\":\"").append(escapeJson(student.getFull_name())).append("\"")
+                        .append(",\"username\":\"").append(escapeJson(student.getUsername())).append("\"")
+                        .append(",\"grade_name\":\"").append(escapeJson(gradeName)).append("\"")
+                        .append("}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("[]");
+        }
+    }
+
+    // Helper method để escape JSON strings
+    private String escapeJson(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
+    }
 }

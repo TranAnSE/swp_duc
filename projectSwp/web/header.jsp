@@ -40,6 +40,9 @@
                                                     <li><a href="/student">Manage Student</a></li>
                                                     <li><a href="/invoice">Invoices</a></li>
                                                     <li><a href="/category">Test Categories</a></li>
+                                                    <li><a href="/study_package?service=manageAssignments">Manage Assignments</a></li>
+                                                    <li><a href="/study_package?service=assignToParent">Assign to Parent</a></li>
+                                                    <li><a href="/packageSubjectURL">Package Subjects</a></li>
                                                 </ul>
                                             </li>
                                         </c:if>

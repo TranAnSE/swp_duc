@@ -8,7 +8,9 @@ import model.StudentPackage;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -149,5 +151,111 @@ public class StudentPackageDAO extends DBContext {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public List<StudentPackage> getStudentPackagesByPackage(int packageId) {
+        List<StudentPackage> list = new ArrayList<>();
+        String sql = "SELECT sp.*, pkg.name as package_name, s.full_name as student_name, a.full_name as parent_name "
+                + "FROM student_package sp "
+                + "JOIN study_package pkg ON sp.package_id = pkg.id "
+                + "JOIN student s ON sp.student_id = s.id "
+                + "JOIN account a ON sp.parent_id = a.id "
+                + "WHERE sp.package_id = ? ORDER BY sp.purchased_at DESC";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, packageId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                StudentPackage studentPackage = new StudentPackage();
+                studentPackage.setId(rs.getInt("id"));
+                studentPackage.setStudent_id(rs.getInt("student_id"));
+                studentPackage.setPackage_id(rs.getInt("package_id"));
+                studentPackage.setParent_id(rs.getInt("parent_id"));
+                studentPackage.setPurchased_at(rs.getTimestamp("purchased_at").toLocalDateTime());
+                studentPackage.setExpires_at(rs.getTimestamp("expires_at").toLocalDateTime());
+                studentPackage.setIs_active(rs.getBoolean("is_active"));
+                studentPackage.setPackage_name(rs.getString("package_name"));
+                studentPackage.setStudent_name(rs.getString("student_name"));
+                studentPackage.setParent_name(rs.getString("parent_name"));
+                list.add(studentPackage);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public int countActiveAssignments() {
+        String sql = "SELECT COUNT(*) FROM student_package WHERE is_active = 1 AND expires_at > NOW()";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    public int countExpiredAssignments() {
+        String sql = "SELECT COUNT(*) FROM student_package WHERE is_active = 0 OR expires_at <= NOW()";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    public int countStudentsWithPackages() {
+        String sql = "SELECT COUNT(DISTINCT student_id) FROM student_package";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    public Map<String, Object> getAssignmentDetails(int assignmentId) {
+        Map<String, Object> details = new HashMap<>();
+        String sql = "SELECT sp.*, pkg.name as package_name, pkg.type as package_type, pkg.price as package_price, "
+                + "s.full_name as student_name, s.username as student_username, "
+                + "a.full_name as parent_name, a.email as parent_email, "
+                + "g.name as grade_name, "
+                + "DATEDIFF(sp.expires_at, NOW()) as days_remaining "
+                + "FROM student_package sp "
+                + "JOIN study_package pkg ON sp.package_id = pkg.id "
+                + "JOIN student s ON sp.student_id = s.id "
+                + "JOIN account a ON sp.parent_id = a.id "
+                + "JOIN grade g ON s.grade_id = g.id "
+                + "WHERE sp.id = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, assignmentId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                details.put("studentName", rs.getString("student_name"));
+                details.put("studentUsername", rs.getString("student_username"));
+                details.put("gradeName", rs.getString("grade_name"));
+                details.put("packageName", rs.getString("package_name"));
+                details.put("packageType", rs.getString("package_type"));
+                details.put("packagePrice", rs.getString("package_price"));
+                details.put("parentName", rs.getString("parent_name"));
+                details.put("parentEmail", rs.getString("parent_email"));
+                details.put("purchasedAt", rs.getTimestamp("purchased_at").toString());
+                details.put("expiresAt", rs.getTimestamp("expires_at").toString());
+                details.put("daysRemaining", rs.getInt("days_remaining"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return details;
     }
 }

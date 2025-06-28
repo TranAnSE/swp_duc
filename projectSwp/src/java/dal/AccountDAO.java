@@ -373,9 +373,9 @@ public class AccountDAO extends DBContext {
     }
 
     // Google Account methods
-    
     /**
      * Tìm Google Account theo ID
+     *
      * @param googleId Google ID cần tìm
      * @return GoogleAccount nếu tìm thấy, null nếu không tìm thấy
      */
@@ -403,9 +403,10 @@ public class AccountDAO extends DBContext {
         }
         return null;
     }
-    
+
     /**
      * Thêm Google Account mới
+     *
      * @param googleAccount GoogleAccount cần thêm
      * @return true nếu thêm thành công, false nếu thất bại
      */
@@ -422,7 +423,7 @@ public class AccountDAO extends DBContext {
             statement.setString(7, googleAccount.getPicture());
             statement.setInt(8, googleAccount.getAccount_id());
             statement.setBoolean(9, googleAccount.isVerified_email());
-            
+
             int rowsAffected = statement.executeUpdate();
             return rowsAffected > 0;
         } catch (SQLException e) {
@@ -430,9 +431,10 @@ public class AccountDAO extends DBContext {
         }
         return false;
     }
-    
+
     /**
      * Cập nhật thông tin Google Account
+     *
      * @param googleAccount GoogleAccount cần cập nhật
      * @return true nếu cập nhật thành công, false nếu thất bại
      */
@@ -448,7 +450,7 @@ public class AccountDAO extends DBContext {
             statement.setString(6, googleAccount.getPicture());
             statement.setBoolean(7, googleAccount.isVerified_email());
             statement.setString(8, googleAccount.getGoogle_id());
-            
+
             int rowsAffected = statement.executeUpdate();
             return rowsAffected > 0;
         } catch (SQLException e) {
@@ -456,9 +458,10 @@ public class AccountDAO extends DBContext {
         }
         return false;
     }
-    
+
     /**
      * Xóa Google Account
+     *
      * @param googleId Google ID cần xóa
      * @return true nếu xóa thành công, false nếu thất bại
      */
@@ -482,4 +485,60 @@ public class AccountDAO extends DBContext {
         return passwordEncode.checkPassword(providedPassword, storedPassword);
     }
 
+    /**
+     * Get accounts by role
+     *
+     * @param role the role to filter by
+     * @return list of accounts with the specified role
+     * @throws SQLException if database error occurs
+     */
+    public List<Account> getAccountsByRole(String role) throws SQLException {
+        List<Account> accounts = new ArrayList<>();
+        String sql = "SELECT * FROM account WHERE role = ? AND status = 'active' ORDER BY full_name";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, role);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Account account = new Account();
+                    account.setId(rs.getInt("id"));
+                    account.setEmail(rs.getString("email"));
+                    account.setPassword(rs.getString("password"));
+                    account.setStatus(rs.getString("status"));
+                    account.setRole(rs.getString("role"));
+                    account.setFull_name(rs.getString("full_name"));
+
+                    // Handle nullable fields
+                    Integer sex = rs.getObject("sex", Integer.class);
+                    account.setSex(sex);
+
+                    Date dobDate = rs.getDate("dob");
+                    if (dobDate != null) {
+                        account.setDob(dobDate.toLocalDate());
+                    }
+
+                    Integer imageId = rs.getObject("image_id", Integer.class);
+                    account.setImage_id(imageId);
+
+                    accounts.add(account);
+                }
+            }
+        }
+        return accounts;
+    }
+
+    /**
+     * Find accounts by role (alternative method name for compatibility)
+     *
+     * @param role the role to filter by
+     * @return list of accounts with the specified role
+     */
+    public List<Account> findByRole(String role) {
+        try {
+            return getAccountsByRole(role);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
 }

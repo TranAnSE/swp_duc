@@ -4,6 +4,7 @@
  */
 package controller.StudyPackage;
 
+import dal.AccountDAO;
 import dal.DAOSubject;
 import dal.InvoiceDAO;
 import dal.StudyPackageDAO;
@@ -24,7 +25,9 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import model.Account;
 import model.Invoice;
 import model.Subject;
@@ -114,6 +117,25 @@ public class StudyPackageController extends HttpServlet {
                 case "assignPackage":
                     assignPackageToStudent(request, response);
                     break;
+                case "manageAssignments":
+                    showManageAssignments(request, response);
+                    break;
+                case "assignToParent":
+                    if (request.getMethod().equalsIgnoreCase("GET")) {
+                        showAssignToParentForm(request, response);
+                    } else {
+                        processAssignToParent(request, response);
+                    }
+                    break;
+                case "deactivateAssignment":
+                    deactivateStudentPackage(request, response);
+                    break;
+                case "getAssignmentDetails":
+                    getAssignmentDetails(request, response);
+                    break;
+                case "getStudentsByParent":
+                    handleGetStudentsByParent(request, response);
+                    return;
                 default:
                     listStudyPackage(request, response);
                     break;
@@ -598,6 +620,244 @@ public class StudyPackageController extends HttpServlet {
                 .replace("\n", "\\n")
                 .replace("\r", "\\r")
                 .replace("\t", "\\t");
+    }
+
+    private void showManageAssignments(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            // Get all packages with their assignments
+            List<Map<String, Object>> packageAssignments = new ArrayList<>();
+            List<StudyPackage> allPackages = dao.getStudyPackage("SELECT * FROM study_package WHERE is_active = 1");
+
+            for (StudyPackage pkg : allPackages) {
+                Map<String, Object> packageData = new HashMap<>();
+                packageData.put("packageId", pkg.getId());
+                packageData.put("packageName", pkg.getName());
+                packageData.put("packageType", pkg.getType());
+                packageData.put("maxStudents", pkg.getMax_students());
+
+                // Get assignments for this package
+                List<StudentPackage> assignments = studentPackageDAO.getStudentPackagesByPackage(pkg.getId());
+                packageData.put("assignments", assignments);
+                packageData.put("assignmentCount", assignments.size());
+
+                packageAssignments.add(packageData);
+            }
+
+            // Get statistics
+            int totalPackages = allPackages.size();
+            int activeAssignments = studentPackageDAO.countActiveAssignments();
+            int expiredAssignments = studentPackageDAO.countExpiredAssignments();
+            int totalStudents = studentPackageDAO.countStudentsWithPackages();
+
+            request.setAttribute("packageAssignments", packageAssignments);
+            request.setAttribute("totalPackages", totalPackages);
+            request.setAttribute("activeAssignments", activeAssignments);
+            request.setAttribute("expiredAssignments", expiredAssignments);
+            request.setAttribute("totalStudents", totalStudents);
+
+            request.getRequestDispatcher("/studypackage/manageAssignments.jsp").forward(request, response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Error loading assignments: " + e.getMessage());
+            listStudyPackage(request, response);
+        }
+    }
+
+    private void showAssignToParentForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            // Get all active packages
+            List<StudyPackage> packages = dao.getActivePackages();
+            request.setAttribute("packages", packages);
+
+            // Get all parents - FIX: Use correct method name
+            AccountDAO accountDAO = new AccountDAO();
+            List<Account> parents = accountDAO.getAccountsByRole("parent");
+            request.setAttribute("parents", parents);
+
+            // Debug logging
+            System.out.println("DEBUG: Found " + packages.size() + " packages");
+            System.out.println("DEBUG: Found " + parents.size() + " parents");
+
+            request.getRequestDispatcher("/studypackage/assignToParent.jsp").forward(request, response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Error loading assignment form: " + e.getMessage());
+            listStudyPackage(request, response);
+        }
+    }
+
+    private void processAssignToParent(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            int packageId = Integer.parseInt(request.getParameter("packageId"));
+            int parentId = Integer.parseInt(request.getParameter("parentId"));
+            String[] studentIds = request.getParameterValues("studentIds");
+
+            if (studentIds == null || studentIds.length == 0) {
+                request.setAttribute("errorMessage", "Please select at least one student.");
+                showAssignToParentForm(request, response);
+                return;
+            }
+
+            StudyPackage studyPackage = dao.findStudyPackageById(packageId);
+            if (studyPackage == null) {
+                request.setAttribute("errorMessage", "Study package not found.");
+                showAssignToParentForm(request, response);
+                return;
+            }
+
+            // Check if package has available slots
+            int currentAssignments = studentPackageDAO.countAssignedStudents(packageId);
+            if (currentAssignments + studentIds.length > studyPackage.getMax_students()) {
+                request.setAttribute("errorMessage",
+                        "Cannot assign package. This would exceed the maximum student limit ("
+                        + studyPackage.getMax_students() + ").");
+                showAssignToParentForm(request, response);
+                return;
+            }
+
+            // Assign package to each selected student
+            boolean allAssigned = true;
+            int successCount = 0;
+
+            for (String studentIdStr : studentIds) {
+                try {
+                    int studentId = Integer.parseInt(studentIdStr);
+                    boolean assigned = studentPackageDAO.assignPackageToStudent(
+                            studentId, packageId, parentId, studyPackage.getDuration_days()
+                    );
+
+                    if (assigned) {
+                        successCount++;
+                    } else {
+                        allAssigned = false;
+                    }
+                } catch (NumberFormatException e) {
+                    allAssigned = false;
+                }
+            }
+
+            if (successCount > 0) {
+                request.setAttribute("message",
+                        "Successfully assigned package to " + successCount + " student(s)!");
+            }
+
+            if (!allAssigned) {
+                request.setAttribute("errorMessage",
+                        "Some assignments failed. Please check and try again.");
+            }
+
+            showManageAssignments(request, response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Error processing assignment: " + e.getMessage());
+            showAssignToParentForm(request, response);
+        }
+    }
+
+    private void deactivateStudentPackage(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            int assignmentId = Integer.parseInt(request.getParameter("assignmentId"));
+            boolean success = studentPackageDAO.deactivateStudentPackage(assignmentId);
+
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+
+            if (success) {
+                response.getWriter().write("{\"success\": true, \"message\": \"Assignment deactivated successfully\"}");
+            } else {
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to deactivate assignment\"}");
+            }
+        } catch (Exception e) {
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+        }
+    }
+
+    private void getAssignmentDetails(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            int assignmentId = Integer.parseInt(request.getParameter("assignmentId"));
+
+            // Get assignment details with all related information
+            Map<String, Object> details = studentPackageDAO.getAssignmentDetails(assignmentId);
+
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+
+            // Convert to JSON manually or use a JSON library
+            StringBuilder json = new StringBuilder("{");
+            for (Map.Entry<String, Object> entry : details.entrySet()) {
+                if (json.length() > 1) {
+                    json.append(",");
+                }
+                json.append("\"").append(entry.getKey()).append("\":\"")
+                        .append(entry.getValue().toString().replace("\"", "\\\"")).append("\"");
+            }
+            json.append("}");
+
+            response.getWriter().write(json.toString());
+
+        } catch (Exception e) {
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"Failed to load assignment details\"}");
+        }
+    }
+
+    private void handleGetStudentsByParent(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int parentId = Integer.parseInt(request.getParameter("parentId"));
+
+            // Get students by parent ID
+            StudentDAO studentDAO = new StudentDAO();
+            List<Student> students = studentDAO.getStudentsByParentId(parentId);
+
+            // Get grades for display
+            GradeDAO gradeDAO = new GradeDAO();
+            List<Grade> grades = gradeDAO.findAllFromGrade();
+
+            // Create grade map for quick lookup
+            Map<Integer, String> gradeMap = new HashMap<>();
+            for (Grade grade : grades) {
+                gradeMap.put(grade.getId(), grade.getName());
+            }
+
+            // Build JSON response
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < students.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Student student = students.get(i);
+                String gradeName = gradeMap.getOrDefault(student.getGrade_id(), "Unknown");
+
+                json.append("{")
+                        .append("\"id\":").append(student.getId())
+                        .append(",\"full_name\":\"").append(escapeJson(student.getFull_name()))
+                        .append("\",\"username\":\"").append(escapeJson(student.getUsername()))
+                        .append("\",\"grade_name\":\"").append(escapeJson(gradeName))
+                        .append("\"}");
+            }
+            json.append("]");
+
+            System.out.println("DEBUG: Returning JSON for parent " + parentId + ": " + json.toString());
+            response.getWriter().write(json.toString());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("ERROR in handleGetStudentsByParent: " + e.getMessage());
+            response.getWriter().write("[]");
+        }
     }
 
     private void assignPackageToStudent(HttpServletRequest request, HttpServletResponse response)
