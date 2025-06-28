@@ -258,4 +258,54 @@ public class StudentPackageDAO extends DBContext {
         }
         return details;
     }
+
+    public Map<String, Object> getDashboardData() {
+        Map<String, Object> data = new HashMap<>();
+
+        try {
+            // Get basic statistics
+            String totalSql = "SELECT COUNT(*) FROM student_package";
+            String activeSql = "SELECT COUNT(*) FROM student_package WHERE is_active = 1 AND expires_at > NOW()";
+            String expiredSql = "SELECT COUNT(*) FROM student_package WHERE is_active = 0 OR expires_at <= NOW()";
+            String studentsSql = "SELECT COUNT(DISTINCT student_id) FROM student_package";
+
+            try (PreparedStatement ps = connection.prepareStatement(totalSql)) {
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    data.put("totalAssignments", rs.getInt(1));
+                }
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(activeSql)) {
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    data.put("activeAssignments", rs.getInt(1));
+                }
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(expiredSql)) {
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    data.put("expiredAssignments", rs.getInt(1));
+                }
+            }
+
+            try (PreparedStatement ps = connection.prepareStatement(studentsSql)) {
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    data.put("totalStudents", rs.getInt(1));
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Set default values if error occurs
+            data.put("totalAssignments", 0);
+            data.put("activeAssignments", 0);
+            data.put("expiredAssignments", 0);
+            data.put("totalStudents", 0);
+        }
+
+        return data;
+    }
 }

@@ -248,26 +248,22 @@
                                 <c:when test="${not empty packageData.assignments}">
                                     <div class="assignment-grid">
                                         <c:forEach items="${packageData.assignments}" var="assignment">
-                                            <div class="student-assignment ${assignment.isActive && assignment.expiresAt.isAfter(java.time.LocalDateTime.now()) ? '' : 'expired'}">
+                                            <div class="student-assignment ${assignment.statusClass}">
                                                 <div class="student-name">
-                                                    <i class="fas fa-user"></i> ${assignment.studentName}
+                                                    <i class="fas fa-user"></i> ${assignment.student_name}
                                                 </div>
                                                 <div class="assignment-info">
-                                                    <div><strong>Parent:</strong> ${assignment.parentName}</div>
-                                                    <div><strong>Purchased:</strong> 
-                                                        <fmt:formatDate value="${assignment.purchasedAt}" pattern="dd/MM/yyyy"/>
-                                                    </div>
-                                                    <div><strong>Expires:</strong> 
-                                                        <fmt:formatDate value="${assignment.expiresAt}" pattern="dd/MM/yyyy"/>
-                                                    </div>
+                                                    <div><strong>Parent:</strong> ${assignment.parent_name}</div>
+                                                    <div><strong>Purchased:</strong> ${assignment.formattedPurchasedDate}</div>
+                                                    <div><strong>Expires:</strong> ${assignment.formattedExpiresDate}</div>
                                                     <div>
-                                                        <span class="status-badge ${assignment.isActive && assignment.expiresAt.isAfter(java.time.LocalDateTime.now()) ? 'status-active' : 'status-expired'}">
-                                                            ${assignment.isActive && assignment.expiresAt.isAfter(java.time.LocalDateTime.now()) ? 'Active' : 'Expired'}
+                                                        <span class="status-badge ${assignment.statusBadgeClass}">
+                                                            ${assignment.statusText}
                                                         </span>
                                                     </div>
                                                 </div>
                                                 <div class="mt-2">
-                                                    <c:if test="${assignment.isActive && assignment.expiresAt.isAfter(java.time.LocalDateTime.now())}">
+                                                    <c:if test="${assignment.active}">
                                                         <button class="btn btn-warning btn-action" 
                                                                 onclick="deactivateAssignment(${assignment.id})"
                                                                 title="Deactivate Assignment">
@@ -334,104 +330,87 @@
         <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
 
         <script>
-                                                                function deactivateAssignment(assignmentId) {
-                                                                    if (confirm('Are you sure you want to deactivate this assignment? The student will lose access to the package.')) {
-                                                                        $.ajax({
-                                                                            url: 'study_package',
-                                                                            type: 'POST',
-                                                                            data: {
-                                                                                service: 'deactivateAssignment',
-                                                                                assignmentId: assignmentId
-                                                                            },
-                                                                            success: function (response) {
-                                                                                if (response.success) {
-                                                                                    alert('Assignment deactivated successfully.');
-                                                                                    location.reload();
-                                                                                } else {
-                                                                                    alert('Error: ' + response.message);
-                                                                                }
-                                                                            },
-                                                                            error: function () {
-                                                                                alert('Error deactivating assignment. Please try again.');
-                                                                            }
-                                                                        });
-                                                                    }
-                                                                }
+            function deactivateAssignment(assignmentId) {
+                if (confirm('Are you sure you want to deactivate this assignment? The student will lose access to the package.')) {
+                    $.ajax({
+                        url: 'study_package',
+                        type: 'POST',
+                        data: {
+                            service: 'deactivateAssignment',
+                            assignmentId: assignmentId
+                        },
+                        success: function (response) {
+                            if (response.success) {
+                                alert('Assignment deactivated successfully.');
+                                location.reload();
+                            } else {
+                                alert('Error: ' + response.message);
+                            }
+                        },
+                        error: function () {
+                            alert('Error deactivating assignment. Please try again.');
+                        }
+                    });
+                }
+            }
 
-                                                                function viewAssignmentDetails(assignmentId) {
-                                                                    $('#assignmentModal').modal('show');
-                                                                    $('#assignmentModalBody').html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading assignment details...</div>');
+            function viewAssignmentDetails(assignmentId) {
+                $('#assignmentModal').modal('show');
+                $('#assignmentModalBody').html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading assignment details...</div>');
 
-                                                                    $.ajax({
-                                                                        url: 'study_package',
-                                                                        type: 'GET',
-                                                                        data: {
-                                                                            service: 'getAssignmentDetails',
-                                                                            assignmentId: assignmentId
-                                                                        },
-                                                                        success: function (data) {
-                                                                            let html = '<div class="assignment-details">';
-                                                                            html += '<div class="row">';
-                                                                            html += '<div class="col-md-6">';
-                                                                            html += '<h6><i class="fas fa-user"></i> Student Information</h6>';
-                                                                            html += '<p><strong>Name:</strong> ' + data.studentName + '</p>';
-                                                                            html += '<p><strong>Username:</strong> ' + data.studentUsername + '</p>';
-                                                                            html += '<p><strong>Grade:</strong> ' + data.gradeName + '</p>';
-                                                                            html += '</div>';
-                                                                            html += '<div class="col-md-6">';
-                                                                            html += '<h6><i class="fas fa-box"></i> Package Information</h6>';
-                                                                            html += '<p><strong>Package:</strong> ' + data.packageName + '</p>';
-                                                                            html += '<p><strong>Type:</strong> ' + data.packageType + '</p>';
-                                                                            html += '<p><strong>Price:</strong> ' + data.packagePrice + ' VND</p>';
-                                                                            html += '</div>';
-                                                                            html += '</div>';
-                                                                            html += '<hr>';
-                                                                            html += '<div class="row">';
-                                                                            html += '<div class="col-md-6">';
-                                                                            html += '<h6><i class="fas fa-calendar"></i> Assignment Timeline</h6>';
-                                                                            html += '<p><strong>Purchased:</strong> ' + data.purchasedAt + '</p>';
-                                                                            html += '<p><strong>Expires:</strong> ' + data.expiresAt + '</p>';
-                                                                            html += '<p><strong>Days Remaining:</strong> ' + data.daysRemaining + '</p>';
-                                                                            html += '</div>';
-                                                                            html += '<div class="col-md-6">';
-                                                                            html += '<h6><i class="fas fa-user-friends"></i> Parent Information</h6>';
-                                                                            html += '<p><strong>Parent:</strong> ' + data.parentName + '</p>';
-                                                                            html += '<p><strong>Email:</strong> ' + data.parentEmail + '</p>';
-                                                                            html += '</div>';
-                                                                            html += '</div>';
-                                                                            if (data.accessLogs && data.accessLogs.length > 0) {
-                                                                                html += '<hr>';
-                                                                                html += '<h6><i class="fas fa-history"></i> Recent Access History</h6>';
-                                                                                html += '<div class="table-responsive">';
-                                                                                html += '<table class="table table-sm">';
-                                                                                html += '<thead><tr><th>Date</th><th>Activity</th><th>Lesson</th></tr></thead>';
-                                                                                html += '<tbody>';
-                                                                                data.accessLogs.forEach(function (log) {
-                                                                                    html += '<tr>';
-                                                                                    html += '<td>' + log.accessedAt + '</td>';
-                                                                                    html += '<td>' + log.accessType + '</td>';
-                                                                                    html += '<td>' + (log.lessonName || '-') + '</td>';
-                                                                                    html += '</tr>';
-                                                                                });
-                                                                                html += '</tbody></table>';
-                                                                                html += '</div>';
-                                                                            }
-                                                                            html += '</div>';
+                $.ajax({
+                    url: 'study_package',
+                    type: 'GET',
+                    data: {
+                        service: 'getAssignmentDetails',
+                        assignmentId: assignmentId
+                    },
+                    success: function (data) {
+                        let html = '<div class="assignment-details">';
+                        html += '<div class="row">';
+                        html += '<div class="col-md-6">';
+                        html += '<h6><i class="fas fa-user"></i> Student Information</h6>';
+                        html += '<p><strong>Name:</strong> ' + data.studentName + '</p>';
+                        html += '<p><strong>Username:</strong> ' + data.studentUsername + '</p>';
+                        html += '<p><strong>Grade:</strong> ' + data.gradeName + '</p>';
+                        html += '</div>';
+                        html += '<div class="col-md-6">';
+                        html += '<h6><i class="fas fa-box"></i> Package Information</h6>';
+                        html += '<p><strong>Package:</strong> ' + data.packageName + '</p>';
+                        html += '<p><strong>Type:</strong> ' + data.packageType + '</p>';
+                        html += '<p><strong>Price:</strong> ' + data.packagePrice + ' VND</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '<hr>';
+                        html += '<div class="row">';
+                        html += '<div class="col-md-6">';
+                        html += '<h6><i class="fas fa-calendar"></i> Assignment Timeline</h6>';
+                        html += '<p><strong>Purchased:</strong> ' + data.purchasedAt + '</p>';
+                        html += '<p><strong>Expires:</strong> ' + data.expiresAt + '</p>';
+                        html += '<p><strong>Days Remaining:</strong> ' + data.daysRemaining + '</p>';
+                        html += '</div>';
+                        html += '<div class="col-md-6">';
+                        html += '<h6><i class="fas fa-user-friends"></i> Parent Information</h6>';
+                        html += '<p><strong>Parent:</strong> ' + data.parentName + '</p>';
+                        html += '<p><strong>Email:</strong> ' + data.parentEmail + '</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '</div>';
 
-                                                                            $('#assignmentModalBody').html(html);
-                                                                        },
-                                                                        error: function () {
-                                                                            $('#assignmentModalBody').html('<div class="alert alert-danger">Error loading assignment details.</div>');
-                                                                        }
-                                                                    });
-                                                                }
+                        $('#assignmentModalBody').html(html);
+                    },
+                    error: function () {
+                        $('#assignmentModalBody').html('<div class="alert alert-danger">Error loading assignment details.</div>');
+                    }
+                });
+            }
 
-                                                                // Auto-refresh every 5 minutes to keep data current
-                                                                setInterval(function () {
-                                                                    if (document.visibilityState === 'visible') {
-                                                                        location.reload();
-                                                                    }
-                                                                }, 300000); // 5 minutes
+            // Auto-refresh every 5 minutes to keep data current
+            setInterval(function () {
+                if (document.visibilityState === 'visible') {
+                    location.reload();
+                }
+            }, 300000); // 5 minutes
         </script>
 
     </body>

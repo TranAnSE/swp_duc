@@ -202,6 +202,109 @@
             select[style*="display: none"] {
                 display: block !important;
             }
+            .students-container {
+                display: none;
+                margin-top: 25px;
+                padding: 20px;
+                background-color: #f8f9fa;
+                border-radius: 10px;
+                border: 1px solid #dee2e6;
+            }
+
+            .students-container.show {
+                display: block;
+                animation: fadeIn 0.3s ease-in;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .student-card {
+                border: 2px solid #e9ecef;
+                border-radius: 10px;
+                padding: 20px;
+                margin-bottom: 15px;
+                transition: all 0.3s ease;
+                cursor: pointer;
+                background: white;
+                position: relative;
+            }
+
+            .student-card:hover {
+                border-color: #007bff;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(0,123,255,0.2);
+            }
+
+            .student-card.selected {
+                border-color: #28a745;
+                background-color: #d4edda;
+                box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+            }
+
+            .student-card.selected::before {
+                content: '✓';
+                position: absolute;
+                top: 15px;
+                right: 20px;
+                background-color: #28a745;
+                color: white;
+                border-radius: 50%;
+                width: 30px;
+                height: 30px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 16px;
+            }
+
+            .student-info h6 {
+                color: #495057;
+                font-weight: 600;
+                margin-bottom: 5px;
+            }
+
+            .student-info p {
+                color: #6c757d;
+                margin-bottom: 5px;
+                font-size: 14px;
+            }
+
+            .no-students {
+                text-align: center;
+                padding: 30px;
+                color: #6c757d;
+                background: #f8f9fa;
+                border-radius: 10px;
+            }
+
+            .loading {
+                text-align: center;
+                padding: 20px;
+                color: #6c757d;
+            }
+
+            /* Button styling improvements */
+            .btn:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
+            .btn-container {
+                text-align: center;
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid #e9ecef;
+            }
         </style>
     </head>
     <body>
@@ -324,6 +427,7 @@
                 $('#packageId').on('change', function () {
                     showPackageInfo();
                     resetStudentSelection();
+                    hideStudentsContainer(); // Hide students when package changes
                 });
 
                 // Parent selection handler
@@ -334,13 +438,14 @@
 
                 // Form validation
                 $('#assignForm').on('submit', function (e) {
-                    if (selectedStudents.length === 0) {
+                    if (!validateForm()) {
                         e.preventDefault();
-                        showAlert('Please select at least one student for assignment.', 'warning');
                         return false;
                     }
 
-                    var confirmMessage = 'Are you sure you want to assign this package to ' + selectedStudents.length + ' student(s)?';
+                    var confirmMessage = 'Are you sure you want to assign "' + $('#pkgName').text() +
+                            '" to ' + selectedStudents.length + ' student(s) of parent "' +
+                            $('#parentId option:selected').text() + '"?';
                     if (!confirm(confirmMessage)) {
                         e.preventDefault();
                         return false;
@@ -375,6 +480,12 @@
                 updateAssignButton();
             }
 
+            function hideStudentsContainer() {
+                const studentsContainer = document.getElementById('studentsContainer');
+                studentsContainer.classList.remove('show');
+                updateAssignButton();
+            }
+
             function loadStudents() {
                 const parentId = $('#parentId').val();
                 const studentsContainer = document.getElementById('studentsContainer');
@@ -382,6 +493,7 @@
 
                 if (!parentId) {
                     studentsContainer.classList.remove('show');
+                    updateAssignButton();
                     return;
                 }
 
@@ -389,12 +501,12 @@
                 studentsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading students...</div>';
                 studentsContainer.classList.add('show');
 
-                // AJAX call to get students - FIX: Use correct service name
+                // AJAX call to get students
                 $.ajax({
                     url: 'study_package',
                     method: 'GET',
                     data: {
-                        service: 'getStudentsByParent', // Changed from 'getByParent'
+                        service: 'getStudentsByParent',
                         parentId: parentId
                     },
                     dataType: 'json',
@@ -406,123 +518,166 @@
                         console.error('Error loading students:', error);
                         console.error('Response:', xhr.responseText);
                         studentsList.innerHTML = '<div class="alert alert-danger">Error loading students. Please try again.</div>';
+                        updateAssignButton();
                     }
                 });
+            }
 
-                function displayStudents(students) {
-                    const studentsList = document.getElementById('studentsList');
+            function displayStudents(students) {
+                const studentsList = document.getElementById('studentsList');
 
-                    if (!students || students.length === 0) {
-                        studentsList.innerHTML = '<div class="no-students"><i class="fas fa-user-slash"></i><br>No students found for this parent.</div>';
+                if (!students || students.length === 0) {
+                    studentsList.innerHTML = '<div class="no-students"><i class="fas fa-user-slash"></i><br>No students found for this parent.</div>';
+                    updateAssignButton();
+                    return;
+                }
+
+                var html = '';
+                for (var i = 0; i < students.length; i++) {
+                    var student = students[i];
+                    html += '<div class="student-card" data-student-id="' + student.id + '" onclick="toggleStudentSelection(' + student.id + ')">';
+                    html += '<div class="student-info">';
+                    html += '<h6><i class="fas fa-user"></i> ' + student.full_name + '</h6>';
+                    html += '<p><i class="fas fa-id-card"></i> Username: ' + student.username + '</p>';
+                    html += '<p><i class="fas fa-graduation-cap"></i> Grade: ' + student.grade_name + '</p>';
+                    html += '</div>';
+                    html += '<input type="checkbox" name="studentIds" value="' + student.id + '" style="display: none;">';
+                    html += '</div>';
+                }
+
+                studentsList.innerHTML = html;
+                updateAssignButton();
+            }
+
+            function toggleStudentSelection(studentId) {
+                const card = document.querySelector('[data-student-id="' + studentId + '"]');
+                const checkbox = card.querySelector('input[type="checkbox"]');
+
+                if (selectedStudents.includes(studentId)) {
+                    // Deselect
+                    selectedStudents = selectedStudents.filter(function (id) {
+                        return id !== studentId;
+                    });
+                    card.classList.remove('selected');
+                    checkbox.checked = false;
+                } else {
+                    // Check max limit
+                    if (maxStudents > 0 && selectedStudents.length >= maxStudents) {
+                        showAlert('You can only select up to ' + maxStudents + ' student(s) for this package.', 'warning');
                         return;
                     }
 
-                    var html = '';
-                    for (var i = 0; i < students.length; i++) {
-                        var student = students[i];
-                        html += '<div class="student-card" data-student-id="' + student.id + '" onclick="toggleStudentSelection(' + student.id + ')">';
-                        html += '<div class="student-info">';
-                        html += '<h6><i class="fas fa-user"></i> ' + student.full_name + '</h6>';
-                        html += '<p><i class="fas fa-id-card"></i> Username: ' + student.username + '</p>';
-                        html += '<p><i class="fas fa-graduation-cap"></i> Grade: ' + student.grade_name + '</p>';
-                        html += '</div>';
-                        html += '<input type="checkbox" name="studentIds" value="' + student.id + '" style="display: none;">';
-                        html += '</div>';
-                    }
-
-                    studentsList.innerHTML = html;
+                    // Select
+                    selectedStudents.push(studentId);
+                    card.classList.add('selected');
+                    checkbox.checked = true;
                 }
 
-                function toggleStudentSelection(studentId) {
-                    const card = document.querySelector('[data-student-id="' + studentId + '"]');
+                updateAssignButton();
+            }
+
+            function resetStudentSelection() {
+                selectedStudents = [];
+                document.querySelectorAll('.student-card').forEach(function (card) {
+                    card.classList.remove('selected');
                     const checkbox = card.querySelector('input[type="checkbox"]');
-
-                    if (selectedStudents.includes(studentId)) {
-                        // Deselect
-                        selectedStudents = selectedStudents.filter(function (id) {
-                            return id !== studentId;
-                        });
-                        card.classList.remove('selected');
+                    if (checkbox)
                         checkbox.checked = false;
+                });
+                updateAssignButton();
+            }
+
+            function updateAssignButton() {
+                const packageSelected = $('#packageId').val();
+                const parentSelected = $('#parentId').val();
+                const studentsSelected = selectedStudents.length > 0;
+                const assignBtn = document.getElementById('assignBtn');
+
+                console.log('DEBUG: Package:', packageSelected, 'Parent:', parentSelected, 'Students:', selectedStudents.length);
+
+                if (packageSelected && parentSelected && studentsSelected) {
+                    assignBtn.disabled = false;
+                    assignBtn.innerHTML = '<i class="fas fa-user-plus"></i> Assign to ' + selectedStudents.length + ' Student(s)';
+                    assignBtn.className = 'btn btn-success';
+                } else {
+                    assignBtn.disabled = true;
+                    if (!packageSelected) {
+                        assignBtn.innerHTML = '<i class="fas fa-user-plus"></i> Select Package First';
+                    } else if (!parentSelected) {
+                        assignBtn.innerHTML = '<i class="fas fa-user-plus"></i> Select Parent First';
+                    } else if (!studentsSelected) {
+                        assignBtn.innerHTML = '<i class="fas fa-user-plus"></i> Select Students First';
                     } else {
-                        // Check max limit
-                        if (maxStudents > 0 && selectedStudents.length >= maxStudents) {
-                            showAlert('You can only select up to ' + maxStudents + ' student(s) for this package.', 'warning');
-                            return;
-                        }
-
-                        // Select
-                        selectedStudents.push(studentId);
-                        card.classList.add('selected');
-                        checkbox.checked = true;
+                        assignBtn.innerHTML = '<i class="fas fa-user-plus"></i> Complete Selection';
                     }
+                    assignBtn.className = 'btn btn-secondary';
+                }
+            }
 
-                    updateAssignButton();
+            function validateForm() {
+                const packageSelected = $('#packageId').val();
+                const parentSelected = $('#parentId').val();
+                const studentsSelected = selectedStudents.length > 0;
+
+                if (!packageSelected) {
+                    showAlert('Please select a study package.', 'warning');
+                    return false;
                 }
 
-                function resetStudentSelection() {
-                    selectedStudents = [];
-                    document.querySelectorAll('.student-card').forEach(function (card) {
-                        card.classList.remove('selected');
-                        const checkbox = card.querySelector('input[type="checkbox"]');
-                        if (checkbox)
-                            checkbox.checked = false;
-                    });
-                    updateAssignButton();
+                if (!parentSelected) {
+                    showAlert('Please select a parent.', 'warning');
+                    return false;
                 }
 
-                function updateAssignButton() {
-                    const packageSelected = $('#packageId').val();
-                    const parentSelected = $('#parentId').val();
-                    const studentsSelected = selectedStudents.length > 0;
-                    const assignBtn = document.getElementById('assignBtn');
+                if (!studentsSelected) {
+                    showAlert('Please select at least one student for assignment.', 'warning');
+                    return false;
+                }
 
-                    if (packageSelected && parentSelected && studentsSelected) {
-                        assignBtn.disabled = false;
-                        assignBtn.innerHTML = '<i class="fas fa-user-plus"></i> Assign to ' + selectedStudents.length + ' Student(s)';
-                    } else {
-                        assignBtn.disabled = true;
-                        assignBtn.innerHTML = '<i class="fas fa-user-plus"></i> Select Package, Parent & Students';
+                if (maxStudents > 0 && selectedStudents.length > maxStudents) {
+                    showAlert('You can only assign up to ' + maxStudents + ' student(s) for this package.', 'warning');
+                    return false;
+                }
+
+                return true;
+            }
+
+            function showAlert(message, type) {
+                if (!type)
+                    type = 'info';
+
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show';
+
+                var iconClass = 'info-circle';
+                if (type === 'warning')
+                    iconClass = 'exclamation-triangle';
+                if (type === 'danger')
+                    iconClass = 'exclamation-circle';
+                if (type === 'success')
+                    iconClass = 'check-circle';
+
+                alertDiv.innerHTML = '<i class="fas fa-' + iconClass + '"></i> ' + message +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+
+                const container = document.querySelector('.assign-container');
+                const firstChild = container.children[1]; // After h2 title
+                container.insertBefore(alertDiv, firstChild);
+
+                // Auto dismiss after 5 seconds
+                setTimeout(function () {
+                    if (alertDiv.parentNode) {
+                        alertDiv.remove();
                     }
-                }
+                }, 5000);
+            }
 
-                function showAlert(message, type) {
-                    if (!type)
-                        type = 'info';
-
-                    const alertDiv = document.createElement('div');
-                    alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show';
-
-                    var iconClass = 'info-circle';
-                    if (type === 'warning')
-                        iconClass = 'exclamation-triangle';
-                    if (type === 'danger')
-                        iconClass = 'exclamation-circle';
-                    if (type === 'success')
-                        iconClass = 'check-circle';
-
-                    alertDiv.innerHTML = '<i class="fas fa-' + iconClass + '"></i> ' + message +
-                            '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-
-                    const container = document.querySelector('.assign-container');
-                    const firstChild = container.children[1]; // After h2 title
-                    container.insertBefore(alertDiv, firstChild);
-
-                    // Auto dismiss after 5 seconds
-                    setTimeout(function () {
-                        if (alertDiv.parentNode) {
-                            alertDiv.remove();
-                        }
-                    }, 5000);
-                }
-
-                // Prevent nice-select conflicts
-                $(document).ready(function () {
-                    // Remove any nice-select elements that might interfere
-                    $('.nice-select').remove();
-                    $('select').show();
-                }
-                );
+            // Prevent nice-select conflicts
+            $(document).ready(function () {
+                // Remove any nice-select elements that might interfere
+                $('.nice-select').remove();
+                $('select').show();
+            });
         </script>
     </body>
 </html>

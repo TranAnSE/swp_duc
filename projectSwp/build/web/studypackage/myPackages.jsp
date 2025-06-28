@@ -123,11 +123,11 @@
                 </c:when>
                 <c:otherwise>
                     <c:forEach items="${studentPackages}" var="studentPackage">
-                        <div class="package-card ${studentPackage.expires_at.isAfter(java.time.LocalDateTime.now()) && studentPackage.is_active ? 'active' : 'expired'}">
+                        <div class="package-card ${studentPackage.statusClass}">
                             <div class="package-header">
                                 <div class="package-title">${studentPackage.package_name}</div>
-                                <div class="status-badge ${studentPackage.expires_at.isAfter(java.time.LocalDateTime.now()) && studentPackage.is_active ? 'status-active' : 'status-expired'}">
-                                    ${studentPackage.expires_at.isAfter(java.time.LocalDateTime.now()) && studentPackage.is_active ? 'Active' : 'Expired'}
+                                <div class="status-badge ${studentPackage.statusBadgeClass}">
+                                    ${studentPackage.statusText}
                                 </div>
                             </div>
 
@@ -138,23 +138,18 @@
                                 </div>
                                 <div class="info-item">
                                     <div class="info-label">Purchased Date</div>
-                                    <div class="info-value">
-                                        <fmt:formatDate value="${studentPackage.purchased_at}" pattern="dd/MM/yyyy HH:mm"/>
-                                    </div>
+                                    <div class="info-value">${studentPackage.formattedPurchasedAt}</div>
                                 </div>
                                 <div class="info-item">
                                     <div class="info-label">Expires Date</div>
-                                    <div class="info-value">
-                                        <fmt:formatDate value="${studentPackage.expires_at}" pattern="dd/MM/yyyy HH:mm"/>
-                                    </div>
+                                    <div class="info-value">${studentPackage.formattedExpiresAt}</div>
                                 </div>
                                 <div class="info-item">
                                     <div class="info-label">Days Remaining</div>
                                     <div class="info-value">
                                         <c:choose>
-                                            <c:when test="${studentPackage.expires_at.isAfter(java.time.LocalDateTime.now()) && studentPackage.is_active}">
-                                                <c:set var="daysLeft" value="${java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDateTime.now(), studentPackage.expires_at)}"/>
-                                                <span class="text-success">${daysLeft} days</span>
+                                            <c:when test="${studentPackage.active}">
+                                                <span class="text-success">${studentPackage.daysRemaining} days</span>
                                             </c:when>
                                             <c:otherwise>
                                                 <span class="text-danger">Expired</span>
@@ -169,7 +164,7 @@
                                    class="btn btn-info btn-sm">
                                     <i class="fas fa-eye"></i> View Package Details
                                 </a>
-                                <c:if test="${studentPackage.expires_at.isAfter(java.time.LocalDateTime.now()) && studentPackage.is_active}">
+                                <c:if test="${studentPackage.active}">
                                     <a href="${pageContext.request.contextPath}/video-viewer" 
                                        class="btn btn-success btn-sm">
                                         <i class="fas fa-play"></i> Start Learning

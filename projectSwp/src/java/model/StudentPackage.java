@@ -5,6 +5,10 @@
 package model;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
 
 /**
  *
@@ -35,6 +39,78 @@ public class StudentPackage {
         this.expires_at = expires_at;
         this.is_active = true;
         this.purchased_at = LocalDateTime.now();
+    }
+
+    // Helper methods for JSP compatibility
+    public boolean isActive() {
+        return is_active && expires_at != null && expires_at.isAfter(LocalDateTime.now());
+    }
+    
+    public boolean isExpired() {
+        return !is_active || expires_at == null || expires_at.isBefore(LocalDateTime.now());
+    }
+    
+    public long getDaysRemaining() {
+        if (expires_at == null || expires_at.isBefore(LocalDateTime.now())) {
+            return 0;
+        }
+        return ChronoUnit.DAYS.between(LocalDateTime.now(), expires_at);
+    }
+    
+    public String getStatusClass() {
+        return isActive() ? "active" : "expired";
+    }
+    
+    public String getStatusBadgeClass() {
+        return isActive() ? "status-active" : "status-expired";
+    }
+    
+    public String getStatusText() {
+        return isActive() ? "Active" : "Expired";
+    }
+
+    // Date conversion methods for JSP fmt:formatDate compatibility
+    public Date getPurchasedAtAsDate() {
+        if (purchased_at != null) {
+            return Date.from(purchased_at.atZone(ZoneId.systemDefault()).toInstant());
+        }
+        return null;
+    }
+    
+    public Date getExpiresAtAsDate() {
+        if (expires_at != null) {
+            return Date.from(expires_at.atZone(ZoneId.systemDefault()).toInstant());
+        }
+        return null;
+    }
+    
+    // Formatted string methods for direct display
+    public String getFormattedPurchasedAt() {
+        if (purchased_at != null) {
+            return purchased_at.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        }
+        return "";
+    }
+    
+    public String getFormattedExpiresAt() {
+        if (expires_at != null) {
+            return expires_at.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        }
+        return "";
+    }
+    
+    public String getFormattedPurchasedDate() {
+        if (purchased_at != null) {
+            return purchased_at.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        }
+        return "";
+    }
+    
+    public String getFormattedExpiresDate() {
+        if (expires_at != null) {
+            return expires_at.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        }
+        return "";
     }
 
     // Getters and Setters

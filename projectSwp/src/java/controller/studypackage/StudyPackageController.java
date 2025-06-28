@@ -644,17 +644,17 @@ public class StudyPackageController extends HttpServlet {
                 packageAssignments.add(packageData);
             }
 
-            // Get statistics
+            // Get statistics using the new method
+            Map<String, Object> dashboardData = studentPackageDAO.getDashboardData();
+
+            // Get package statistics
             int totalPackages = allPackages.size();
-            int activeAssignments = studentPackageDAO.countActiveAssignments();
-            int expiredAssignments = studentPackageDAO.countExpiredAssignments();
-            int totalStudents = studentPackageDAO.countStudentsWithPackages();
 
             request.setAttribute("packageAssignments", packageAssignments);
             request.setAttribute("totalPackages", totalPackages);
-            request.setAttribute("activeAssignments", activeAssignments);
-            request.setAttribute("expiredAssignments", expiredAssignments);
-            request.setAttribute("totalStudents", totalStudents);
+            request.setAttribute("activeAssignments", dashboardData.get("activeAssignments"));
+            request.setAttribute("expiredAssignments", dashboardData.get("expiredAssignments"));
+            request.setAttribute("totalStudents", dashboardData.get("totalStudents"));
 
             request.getRequestDispatcher("/studypackage/manageAssignments.jsp").forward(request, response);
 
@@ -697,6 +697,11 @@ public class StudyPackageController extends HttpServlet {
             int parentId = Integer.parseInt(request.getParameter("parentId"));
             String[] studentIds = request.getParameterValues("studentIds");
 
+            System.out.println("DEBUG: Processing assignment - Package: " + packageId
+                    + ", Parent: " + parentId + ", Students: "
+                    + (studentIds != null ? studentIds.length : 0));
+
+            // Validation
             if (studentIds == null || studentIds.length == 0) {
                 request.setAttribute("errorMessage", "Please select at least one student.");
                 showAssignToParentForm(request, response);
@@ -715,14 +720,34 @@ public class StudyPackageController extends HttpServlet {
             if (currentAssignments + studentIds.length > studyPackage.getMax_students()) {
                 request.setAttribute("errorMessage",
                         "Cannot assign package. This would exceed the maximum student limit ("
-                        + studyPackage.getMax_students() + ").");
+                        + studyPackage.getMax_students() + "). Current assignments: " + currentAssignments);
                 showAssignToParentForm(request, response);
                 return;
+            }
+
+            // Verify all students belong to the selected parent
+            StudentDAO studentDAO = new StudentDAO();
+            for (String studentIdStr : studentIds) {
+                try {
+                    int studentId = Integer.parseInt(studentIdStr);
+                    Student student = studentDAO.findById(studentId);
+                    if (student == null || student.getParent_id() != parentId) {
+                        request.setAttribute("errorMessage",
+                                "Invalid student selection. Student does not belong to selected parent.");
+                        showAssignToParentForm(request, response);
+                        return;
+                    }
+                } catch (Exception e) {
+                    request.setAttribute("errorMessage", "Invalid student ID: " + studentIdStr);
+                    showAssignToParentForm(request, response);
+                    return;
+                }
             }
 
             // Assign package to each selected student
             boolean allAssigned = true;
             int successCount = 0;
+            List<String> failedStudents = new ArrayList<>();
 
             for (String studentIdStr : studentIds) {
                 try {
@@ -733,24 +758,40 @@ public class StudyPackageController extends HttpServlet {
 
                     if (assigned) {
                         successCount++;
+                        System.out.println("DEBUG: Successfully assigned package " + packageId
+                                + " to student " + studentId);
                     } else {
                         allAssigned = false;
+                        Student student = studentDAO.findById(studentId);
+                        failedStudents.add(student != null ? student.getFull_name() : "ID:" + studentId);
+                        System.out.println("DEBUG: Failed to assign package " + packageId
+                                + " to student " + studentId);
                     }
                 } catch (NumberFormatException e) {
                     allAssigned = false;
+                    failedStudents.add("Invalid ID: " + studentIdStr);
+                } catch (Exception e) {
+                    allAssigned = false;
+                    failedStudents.add("Error with student: " + studentIdStr);
+                    e.printStackTrace();
                 }
             }
 
+            // Set result messages
             if (successCount > 0) {
-                request.setAttribute("message",
-                        "Successfully assigned package to " + successCount + " student(s)!");
+                String successMessage = "Successfully assigned package \"" + studyPackage.getName()
+                        + "\" to " + successCount + " student(s)!";
+                request.setAttribute("message", successMessage);
+                System.out.println("DEBUG: " + successMessage);
             }
 
-            if (!allAssigned) {
-                request.setAttribute("errorMessage",
-                        "Some assignments failed. Please check and try again.");
+            if (!allAssigned && !failedStudents.isEmpty()) {
+                String errorMessage = "Some assignments failed for: " + String.join(", ", failedStudents);
+                request.setAttribute("errorMessage", errorMessage);
+                System.out.println("DEBUG: " + errorMessage);
             }
 
+            // Redirect to manage assignments to see results
             showManageAssignments(request, response);
 
         } catch (Exception e) {
