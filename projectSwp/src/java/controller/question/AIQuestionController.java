@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -112,13 +114,13 @@ public class AIQuestionController extends HttpServlet {
             switch (action) {
                 case "generate":
                     generateQuestions(request, response);
-                    return; // Important: return after handling
+                    return;
                 case "chat":
                     handleChatWithAI(request, response);
                     return;
                 case "approve":
                     approveAndSaveQuestions(request, response);
-                    return; // Important: return after handling
+                    return;
                 default:
                     response.sendRedirect("/Question");
                     return;
@@ -136,7 +138,6 @@ public class AIQuestionController extends HttpServlet {
     private void showAIGenerationForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            // Load hierarchy data
             List<Grade> grades = gradeDAO.findAllFromGrade();
             List<Lesson> lessons = lessonDAO.getAllLessons();
 
@@ -176,104 +177,19 @@ public class AIQuestionController extends HttpServlet {
             // Store context for later use
             storeGenerationContext(request, generationMode);
 
-            // Build content based on generation mode
-            StringBuilder contentBuilder = new StringBuilder();
-            String contextName = "";
+            // Build content and lesson mapping based on generation mode
+            ContentAndLessonMapping contentMapping = buildContentAndLessonMapping(request, generationMode);
 
-            if ("lesson".equals(generationMode)) {
-                int lessonId = Integer.parseInt(request.getParameter("lesson_id"));
-                Lesson lesson = lessonDAO.getLessonById(lessonId);
-                if (lesson == null) {
-                    throw new Exception("Lesson not found");
-                }
-                contentBuilder.append(lesson.getContent());
-                contextName = lesson.getName();
-
-                // Get lesson context
-                Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
-                Subject subject = subjectDAO.findById(chapter.getSubject_id());
-                Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
-
-                request.setAttribute("contextGrade", grade);
-                request.setAttribute("contextSubject", subject);
-                request.setAttribute("contextChapter", chapter);
-                request.setAttribute("contextLesson", lesson);
-
-            } else if ("chapter".equals(generationMode)) {
-                int chapterId = Integer.parseInt(request.getParameter("chapter_id"));
-                Chapter chapter = chapterDAO.findChapterById(chapterId);
-                if (chapter == null) {
-                    throw new Exception("Chapter not found");
-                }
-
-                // Get all lessons in this chapter
-                List<Lesson> lessons = lessonDAO.getAllLessons();
-                boolean hasLessons = false;
-                for (Lesson lesson : lessons) {
-                    if (lesson.getChapter_id() == chapterId) {
-                        contentBuilder.append("Lesson: ").append(lesson.getName()).append("\n");
-                        contentBuilder.append(lesson.getContent()).append("\n\n");
-                        hasLessons = true;
-                    }
-                }
-
-                // If no lessons found, use chapter description
-                if (!hasLessons) {
-                    contentBuilder.append("Chapter: ").append(chapter.getName()).append("\n");
-                    contentBuilder.append(chapter.getDescription()).append("\n\n");
-                }
-
-                contextName = chapter.getName();
-
-                // Get chapter context
-                Subject subject = subjectDAO.findById(chapter.getSubject_id());
-                Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
-
-                request.setAttribute("contextGrade", grade);
-                request.setAttribute("contextSubject", subject);
-                request.setAttribute("contextChapter", chapter);
-
-            } else if ("subject".equals(generationMode)) {
-                int subjectId = Integer.parseInt(request.getParameter("subject_id"));
-                Subject subject = subjectDAO.findById(subjectId);
-                if (subject == null) {
-                    throw new Exception("Subject not found");
-                }
-
-                // Get all chapters and lessons in this subject
-                List<Chapter> chapters = chapterDAO.findChapterBySubjectId(subjectId);
-                for (Chapter chapter : chapters) {
-                    contentBuilder.append("Chapter: ").append(chapter.getName()).append("\n");
-                    contentBuilder.append(chapter.getDescription()).append("\n");
-
-                    List<Lesson> lessons = lessonDAO.getAllLessons();
-                    for (Lesson lesson : lessons) {
-                        if (lesson.getChapter_id() == chapter.getId()) {
-                            contentBuilder.append("  Lesson: ").append(lesson.getName()).append("\n");
-                            contentBuilder.append("  ").append(lesson.getContent()).append("\n");
-                        }
-                    }
-                    contentBuilder.append("\n");
-                }
-                contextName = subject.getName();
-
-                // Get subject context
-                Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
-
-                request.setAttribute("contextGrade", grade);
-                request.setAttribute("contextSubject", subject);
+            if (contentMapping == null) {
+                throw new Exception("Failed to build content mapping");
             }
 
             // Build AI request
             GeminiAIService.AIGenerationRequest aiRequest = new GeminiAIService.AIGenerationRequest();
-
-            Grade grade = (Grade) request.getAttribute("contextGrade");
-            Subject subject = (Subject) request.getAttribute("contextSubject");
-
-            aiRequest.setGradeName(grade != null ? grade.getName() : "Unknown Grade");
-            aiRequest.setSubjectName(subject != null ? subject.getName() : "Unknown Subject");
-            aiRequest.setLessonName(contextName);
-            aiRequest.setLessonContent(contentBuilder.toString());
+            aiRequest.setGradeName(contentMapping.getGradeName());
+            aiRequest.setSubjectName(contentMapping.getSubjectName());
+            aiRequest.setLessonName(contentMapping.getContextName());
+            aiRequest.setLessonContent(contentMapping.getContent());
             aiRequest.setNumberOfQuestions(numberOfQuestions);
             aiRequest.setDifficulty(difficulty);
             aiRequest.setQuestionType(questionType);
@@ -282,11 +198,16 @@ public class AIQuestionController extends HttpServlet {
             // Generate questions using AI
             List<GeminiAIService.AIQuestion> generatedQuestions = aiService.generateQuestions(aiRequest);
 
+            // Enhanced: Add lesson mapping information to each question
+            enhanceQuestionsWithLessonMapping(generatedQuestions, contentMapping);
+
             // Store in session for preview
             HttpSession session = request.getSession();
             session.setAttribute("generatedQuestions", generatedQuestions);
             session.setAttribute("generationMode", generationMode);
-            session.setAttribute("aiGenerationContext", buildContextString(grade, subject, contextName));
+            session.setAttribute("contentMapping", contentMapping);
+            session.setAttribute("aiGenerationContext", buildContextString(
+                    contentMapping.getGrade(), contentMapping.getSubject(), contentMapping.getContextName()));
 
             response.sendRedirect("/ai-question?action=preview");
 
@@ -295,6 +216,207 @@ public class AIQuestionController extends HttpServlet {
             request.setAttribute("error", "Failed to generate questions: " + e.getMessage());
             showAIGenerationForm(request, response);
         }
+    }
+
+    /**
+     * Build content and lesson mapping based on generation mode
+     */
+    private ContentAndLessonMapping buildContentAndLessonMapping(HttpServletRequest request, String generationMode)
+            throws Exception {
+
+        ContentAndLessonMapping mapping = new ContentAndLessonMapping();
+        StringBuilder contentBuilder = new StringBuilder();
+
+        if ("lesson".equals(generationMode)) {
+            int lessonId = Integer.parseInt(request.getParameter("lesson_id"));
+            Lesson lesson = lessonDAO.getLessonById(lessonId);
+            if (lesson == null) {
+                throw new Exception("Lesson not found");
+            }
+
+            contentBuilder.append(lesson.getContent());
+            mapping.setContextName(lesson.getName());
+
+            // For single lesson, create simple mapping
+            Map<String, Integer> lessonMapping = new HashMap<>();
+            lessonMapping.put(lesson.getName(), lesson.getId());
+            mapping.setLessonMapping(lessonMapping);
+
+            // Get lesson context
+            Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
+            Subject subject = subjectDAO.findById(chapter.getSubject_id());
+            Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
+
+            mapping.setGrade(grade);
+            mapping.setSubject(subject);
+            mapping.setChapter(chapter);
+            mapping.setLesson(lesson);
+
+        } else if ("chapter".equals(generationMode)) {
+            int chapterId = Integer.parseInt(request.getParameter("chapter_id"));
+            Chapter chapter = chapterDAO.findChapterById(chapterId);
+            if (chapter == null) {
+                throw new Exception("Chapter not found");
+            }
+
+            // Get all lessons in this chapter
+            List<Lesson> lessons = lessonDAO.getAllLessons();
+            Map<String, Integer> lessonMapping = new HashMap<>();
+            Map<String, String> lessonContentMap = new HashMap<>();
+
+            for (Lesson lesson : lessons) {
+                if (lesson.getChapter_id() == chapterId) {
+                    String lessonKey = "Lesson: " + lesson.getName();
+                    contentBuilder.append(lessonKey).append("\n");
+                    contentBuilder.append(lesson.getContent()).append("\n\n");
+
+                    // Store lesson mapping for intelligent assignment
+                    lessonMapping.put(lesson.getName().toLowerCase(), lesson.getId());
+                    lessonContentMap.put(lesson.getName().toLowerCase(), lesson.getContent());
+                }
+            }
+
+            mapping.setLessonMapping(lessonMapping);
+            mapping.setLessonContentMap(lessonContentMap);
+            mapping.setContextName(chapter.getName());
+
+            // Get chapter context
+            Subject subject = subjectDAO.findById(chapter.getSubject_id());
+            Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
+
+            mapping.setGrade(grade);
+            mapping.setSubject(subject);
+            mapping.setChapter(chapter);
+
+        } else if ("subject".equals(generationMode)) {
+            int subjectId = Integer.parseInt(request.getParameter("subject_id"));
+            Subject subject = subjectDAO.findById(subjectId);
+            if (subject == null) {
+                throw new Exception("Subject not found");
+            }
+
+            // Get all chapters and lessons in this subject
+            List<Chapter> chapters = chapterDAO.findChapterBySubjectId(subjectId);
+            Map<String, Integer> lessonMapping = new HashMap<>();
+            Map<String, String> lessonContentMap = new HashMap<>();
+
+            for (Chapter chapter : chapters) {
+                contentBuilder.append("Chapter: ").append(chapter.getName()).append("\n");
+                contentBuilder.append(chapter.getDescription()).append("\n");
+
+                List<Lesson> lessons = lessonDAO.getAllLessons();
+                for (Lesson lesson : lessons) {
+                    if (lesson.getChapter_id() == chapter.getId()) {
+                        String lessonKey = "Lesson: " + lesson.getName();
+                        contentBuilder.append("  ").append(lessonKey).append("\n");
+                        contentBuilder.append("  ").append(lesson.getContent()).append("\n");
+
+                        // Store lesson mapping for intelligent assignment
+                        lessonMapping.put(lesson.getName().toLowerCase(), lesson.getId());
+                        lessonContentMap.put(lesson.getName().toLowerCase(), lesson.getContent());
+                    }
+                }
+                contentBuilder.append("\n");
+            }
+
+            mapping.setLessonMapping(lessonMapping);
+            mapping.setLessonContentMap(lessonContentMap);
+            mapping.setContextName(subject.getName());
+
+            // Get subject context
+            Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
+
+            mapping.setGrade(grade);
+            mapping.setSubject(subject);
+        }
+
+        mapping.setContent(contentBuilder.toString());
+        mapping.setGradeName(mapping.getGrade() != null ? mapping.getGrade().getName() : "Unknown Grade");
+        mapping.setSubjectName(mapping.getSubject() != null ? mapping.getSubject().getName() : "Unknown Subject");
+
+        return mapping;
+    }
+
+    /**
+     * Enhance generated questions with lesson mapping information
+     */
+    private void enhanceQuestionsWithLessonMapping(List<GeminiAIService.AIQuestion> questions,
+            ContentAndLessonMapping mapping) {
+
+        for (GeminiAIService.AIQuestion question : questions) {
+            // Try to intelligently assign lesson based on question content
+            int assignedLessonId = intelligentLessonAssignment(question, mapping);
+            question.setAssignedLessonId(assignedLessonId);
+        }
+    }
+
+    /**
+     * Intelligently assign lesson ID based on question content and available
+     * lessons
+     */
+    private int intelligentLessonAssignment(GeminiAIService.AIQuestion question, ContentAndLessonMapping mapping) {
+        String questionText = question.getQuestion().toLowerCase();
+        Map<String, Integer> lessonMapping = mapping.getLessonMapping();
+        Map<String, String> lessonContentMap = mapping.getLessonContentMap();
+
+        // If only one lesson available, assign to it
+        if (lessonMapping.size() == 1) {
+            return lessonMapping.values().iterator().next();
+        }
+
+        // Try to match question content with lesson content
+        int bestMatchScore = 0;
+        int bestLessonId = -1;
+
+        for (Map.Entry<String, Integer> entry : lessonMapping.entrySet()) {
+            String lessonName = entry.getKey();
+            int lessonId = entry.getValue();
+
+            // Calculate similarity score
+            int score = calculateContentSimilarity(questionText, lessonName, lessonContentMap.get(lessonName));
+
+            if (score > bestMatchScore) {
+                bestMatchScore = score;
+                bestLessonId = lessonId;
+            }
+        }
+
+        // If no good match found, assign to first available lesson
+        if (bestLessonId == -1) {
+            bestLessonId = lessonMapping.values().iterator().next();
+        }
+
+        return bestLessonId;
+    }
+
+    /**
+     * Calculate content similarity between question and lesson
+     */
+    private int calculateContentSimilarity(String questionText, String lessonName, String lessonContent) {
+        int score = 0;
+
+        // Check if question contains lesson name or keywords
+        if (questionText.contains(lessonName.toLowerCase())) {
+            score += 10;
+        }
+
+        // Check for common keywords
+        if (lessonContent != null) {
+            String[] questionWords = questionText.split("\\s+");
+            String[] lessonWords = lessonContent.toLowerCase().split("\\s+");
+
+            for (String qWord : questionWords) {
+                if (qWord.length() > 3) { // Only consider meaningful words
+                    for (String lWord : lessonWords) {
+                        if (qWord.equals(lWord)) {
+                            score += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        return score;
     }
 
     private void handleChatWithAI(HttpServletRequest request, HttpServletResponse response)
@@ -309,7 +431,6 @@ public class AIQuestionController extends HttpServlet {
 
             String aiResponse = aiService.chatWithAI(message, context);
 
-            // Return JSON response
             PrintWriter out = response.getWriter();
             out.print("{\"response\": \"" + aiResponse.replace("\"", "\\\"").replace("\n", "\\n") + "\"}");
             out.flush();
@@ -329,7 +450,7 @@ public class AIQuestionController extends HttpServlet {
             HttpSession session = request.getSession();
             List<GeminiAIService.AIQuestion> generatedQuestions
                     = (List<GeminiAIService.AIQuestion>) session.getAttribute("generatedQuestions");
-            String generationMode = (String) session.getAttribute("generationMode");
+            ContentAndLessonMapping contentMapping = (ContentAndLessonMapping) session.getAttribute("contentMapping");
 
             if (generatedQuestions == null) {
                 throw new Exception("No generated questions found in session");
@@ -379,8 +500,12 @@ public class AIQuestionController extends HttpServlet {
                         break;
                 }
 
-                // For chapter/subject mode, we need to assign to a representative lesson
-                int lessonId = getRepresentativeLessonId(session, generationMode);
+                // Enhanced: Use intelligent lesson assignment
+                int lessonId = aiQuestion.getAssignedLessonId();
+                if (lessonId <= 0) {
+                    // Fallback to default assignment if intelligent assignment failed
+                    lessonId = getDefaultLessonId(contentMapping);
+                }
 
                 // Save question to database
                 Question question = new Question();
@@ -414,15 +539,20 @@ public class AIQuestionController extends HttpServlet {
                 }
 
                 savedCount++;
+
+                // Log the lesson assignment for debugging
+                logger.info("Question saved to lesson ID: " + lessonId + " - Question: "
+                        + finalQuestionText.substring(0, Math.min(50, finalQuestionText.length())));
             }
 
             // Clear session data
             session.removeAttribute("generatedQuestions");
             session.removeAttribute("generationMode");
+            session.removeAttribute("contentMapping");
             session.removeAttribute("aiGenerationContext");
 
             // Set success message and redirect
-            session.setAttribute("message", "Successfully saved " + savedCount + " AI-generated questions to your question bank!");
+            session.setAttribute("message", "Successfully saved " + savedCount + " AI-generated questions with intelligent lesson assignment!");
             response.sendRedirect("/Question");
 
         } catch (Exception e) {
@@ -432,95 +562,21 @@ public class AIQuestionController extends HttpServlet {
         }
     }
 
-    // Helper method to get representative lesson ID for chapter/subject mode
-    private int getRepresentativeLessonId(HttpSession session, String generationMode) {
-        try {
-            if ("lesson".equals(generationMode)) {
-                // Get lesson ID from the form submission
-                return Integer.parseInt(session.getAttribute("selectedLessonId").toString());
-            } else if ("chapter".equals(generationMode)) {
-                // Get first lesson in the selected chapter
-                int chapterId = Integer.parseInt(session.getAttribute("selectedChapterId").toString());
-                List<Lesson> lessons = lessonDAO.getAllLessons();
-                for (Lesson lesson : lessons) {
-                    if (lesson.getChapter_id() == chapterId) {
-                        return lesson.getId();
-                    }
-                }
-
-                // If no lessons found in chapter, create a placeholder lesson
-                return createPlaceholderLesson(chapterId, "Chapter Content");
-
-            } else if ("subject".equals(generationMode)) {
-                // Get first lesson in the first chapter of the subject
-                int subjectId = Integer.parseInt(session.getAttribute("selectedSubjectId").toString());
-                List<Chapter> chapters = chapterDAO.findChapterBySubjectId(subjectId);
-                if (!chapters.isEmpty()) {
-                    List<Lesson> lessons = lessonDAO.getAllLessons();
-                    for (Lesson lesson : lessons) {
-                        if (lesson.getChapter_id() == chapters.get(0).getId()) {
-                            return lesson.getId();
-                        }
-                    }
-
-                    // If no lessons found, create a placeholder lesson in first chapter
-                    return createPlaceholderLesson(chapters.get(0).getId(), "Subject Content");
-                }
-            }
-        } catch (Exception e) {
-            logger.log(Level.WARNING, "Error getting representative lesson ID", e);
+    /**
+     * Get default lesson ID as fallback
+     */
+    private int getDefaultLessonId(ContentAndLessonMapping mapping) {
+        if (mapping != null && mapping.getLessonMapping() != null && !mapping.getLessonMapping().isEmpty()) {
+            return mapping.getLessonMapping().values().iterator().next();
         }
 
-        // Last resort: get any available lesson or create one
+        // Last resort: get any available lesson
         List<Lesson> allLessons = lessonDAO.getAllLessons();
         if (!allLessons.isEmpty()) {
             return allLessons.get(0).getId();
         }
 
-        // If no lessons exist at all, create a default one
-        return createDefaultLesson();
-    }
-
-    private int createPlaceholderLesson(int chapterId, String contentType) {
-        try {
-            Chapter chapter = chapterDAO.findChapterById(chapterId);
-            String lessonName = contentType + " - " + (chapter != null ? chapter.getName() : "Generated Content");
-
-            Lesson placeholderLesson = new Lesson();
-            placeholderLesson.setName(lessonName);
-            placeholderLesson.setContent("This lesson was automatically created to organize AI-generated questions for " + contentType.toLowerCase() + ".");
-            placeholderLesson.setChapter_id(chapterId);
-            placeholderLesson.setVideo_link("");
-
-            lessonDAO.addLesson(placeholderLesson);
-
-            // Get the newly created lesson ID
-            List<Lesson> lessons = lessonDAO.getAllLessons();
-            for (Lesson lesson : lessons) {
-                if (lesson.getName().equals(lessonName) && lesson.getChapter_id() == chapterId) {
-                    logger.info("Created placeholder lesson with ID: " + lesson.getId());
-                    return lesson.getId();
-                }
-            }
-        } catch (Exception e) {
-            logger.log(Level.WARNING, "Failed to create placeholder lesson", e);
-        }
-
-        return 1; // Fallback to lesson ID 1 if creation fails
-    }
-
-    private int createDefaultLesson() {
-        try {
-            // Get first available chapter
-            List<Chapter> chapters = chapterDAO.getChapter("SELECT * FROM chapter LIMIT 1");
-            if (!chapters.isEmpty()) {
-                return createPlaceholderLesson(chapters.get(0).getId(), "Default Content");
-            }
-        } catch (Exception e) {
-            logger.log(Level.WARNING, "Failed to create default lesson", e);
-        }
-
-        return 1; // fallback
+        return 1; // Ultimate fallback
     }
 
     // AJAX handlers for hierarchical data loading (same as in QuestionController)
@@ -608,7 +664,6 @@ public class AIQuestionController extends HttpServlet {
         }
     }
 
-    // New methods for getting aggregated content
     private void handleGetChapterContent(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         response.setContentType("application/json");
@@ -738,6 +793,104 @@ public class AIQuestionController extends HttpServlet {
 
         } catch (NumberFormatException e) {
             logger.warning("Invalid ID parameter in generation context: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Inner class to hold content and lesson mapping information
+     */
+    public static class ContentAndLessonMapping {
+
+        private String content;
+        private String contextName;
+        private String gradeName;
+        private String subjectName;
+        private Grade grade;
+        private Subject subject;
+        private Chapter chapter;
+        private Lesson lesson;
+        private Map<String, Integer> lessonMapping;
+        private Map<String, String> lessonContentMap;
+
+        // Getters and setters
+        public String getContent() {
+            return content;
+        }
+
+        public void setContent(String content) {
+            this.content = content;
+        }
+
+        public String getContextName() {
+            return contextName;
+        }
+
+        public void setContextName(String contextName) {
+            this.contextName = contextName;
+        }
+
+        public String getGradeName() {
+            return gradeName;
+        }
+
+        public void setGradeName(String gradeName) {
+            this.gradeName = gradeName;
+        }
+
+        public String getSubjectName() {
+            return subjectName;
+        }
+
+        public void setSubjectName(String subjectName) {
+            this.subjectName = subjectName;
+        }
+
+        public Grade getGrade() {
+            return grade;
+        }
+
+        public void setGrade(Grade grade) {
+            this.grade = grade;
+        }
+
+        public Subject getSubject() {
+            return subject;
+        }
+
+        public void setSubject(Subject subject) {
+            this.subject = subject;
+        }
+
+        public Chapter getChapter() {
+            return chapter;
+        }
+
+        public void setChapter(Chapter chapter) {
+            this.chapter = chapter;
+        }
+
+        public Lesson getLesson() {
+            return lesson;
+        }
+
+        public void setLesson(Lesson lesson) {
+            this.lesson = lesson;
+        }
+
+        public Map<String, Integer> getLessonMapping() {
+            return lessonMapping;
+        }
+
+        public void setLessonMapping(Map<String, Integer> lessonMapping) {
+            this.lessonMapping = lessonMapping;
+        }
+
+        public Map<String, String> getLessonContentMap() {
+            return lessonContentMap;
+        }
+
+        public void setLessonContentMap(Map<String, String> lessonContentMap) {
+            this.lessonContentMap = lessonContentMap;
         }
     }
 }

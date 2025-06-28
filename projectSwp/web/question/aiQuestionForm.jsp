@@ -690,6 +690,48 @@
                             <i class="fas fa-cogs"></i>
                             Content Scope Selection
                         </div>
+                        <!-- Intelligent Assignment Info -->
+                        <div class="form-section">
+                            <div class="section-title">
+                                <i class="fas fa-brain"></i>
+                                Intelligent Question Assignment
+                            </div>
+
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-lightbulb me-2"></i>Smart Lesson Assignment</h6>
+                                <p class="mb-2">When generating questions for <strong>Entire Chapter</strong> or <strong>Full Subject</strong>, our AI system will:</p>
+                                <ul class="mb-0">
+                                    <li><strong>Analyze question content</strong> - Examine the question text and context</li>
+                                    <li><strong>Match with lessons</strong> - Compare with available lesson content and topics</li>
+                                    <li><strong>Assign intelligently</strong> - Place each question in the most relevant lesson</li>
+                                    <li><strong>Ensure organization</strong> - Maintain proper categorization in your question bank</li>
+                                </ul>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <i class="fas fa-book fa-2x text-primary mb-2"></i>
+                                        <h6>Single Lesson</h6>
+                                        <small class="text-muted">Direct assignment to selected lesson</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <i class="fas fa-folder fa-2x text-warning mb-2"></i>
+                                        <h6>Entire Chapter</h6>
+                                        <small class="text-muted">Smart distribution across chapter lessons</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <i class="fas fa-graduation-cap fa-2x text-success mb-2"></i>
+                                        <h6>Full Subject</h6>
+                                        <small class="text-muted">Intelligent assignment to all subject lessons</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="generation-mode-grid">
                             <div class="mode-card" data-mode="lesson">
                                 <input type="radio" name="generation_mode" value="lesson" id="modeLesson">

@@ -163,7 +163,7 @@ public class GeminiAIService {
         generationConfig.addProperty("temperature", 0.4); // Slightly higher for hard questions
         generationConfig.addProperty("topK", 30);
         generationConfig.addProperty("topP", 0.9);
-        generationConfig.addProperty("maxOutputTokens", 8192); // Increased for complex questions
+        generationConfig.addProperty("maxOutputTokens", 65536);
         requestBody.add("generationConfig", generationConfig);
 
         // More permissive safety settings
@@ -688,6 +688,7 @@ public class GeminiAIService {
         private String explanation;
         private String questionType;
         private String difficulty;
+        private int assignedLessonId;
 
         // Getters and setters
         public String getQuestion() {
@@ -744,6 +745,14 @@ public class GeminiAIService {
 
         public void setDifficulty(String difficulty) {
             this.difficulty = difficulty;
+        }
+
+        public int getAssignedLessonId() {
+            return assignedLessonId;
+        }
+
+        public void setAssignedLessonId(int assignedLessonId) {
+            this.assignedLessonId = assignedLessonId;
         }
     }
 }

@@ -754,6 +754,25 @@
                             </c:if>
                         </div>
 
+                        <!-- Lesson Assignment Info -->
+                        <c:if test="${not empty generationMode && generationMode != 'lesson'}">
+                            <div class="lesson-assignment-info mt-3 p-3" style="background: linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%); border-radius: 8px; border-left: 4px solid #0ea5e9;">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                                    <strong class="text-primary">Intelligent Assignment:</strong>
+                                    <span class="ms-2 text-secondary">
+                                        This question will be assigned to the most relevant lesson based on content analysis
+                                    </span>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        The system analyzes question content and matches it with appropriate lessons automatically
+                                    </small>
+                                </div>
+                            </div>
+                        </c:if>
+
                         <div class="question-actions">
                             <div class="approve-checkbox">
                                 <input type="checkbox" name="approved" value="${status.index}" 
