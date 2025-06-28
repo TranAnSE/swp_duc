@@ -19,6 +19,10 @@
         <link rel="stylesheet" href="/assets/css/nice-select.css">
         <link rel="stylesheet" href="/assets/css/style.css">
 
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
         <style>
             html, body {
                 margin: 0;
@@ -97,12 +101,58 @@
                 margin-bottom: 25px;
             }
 
-            .smart-adding-section {
+            .adding-section {
                 background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
                 border: 2px solid #f59e0b;
                 border-radius: 12px;
                 padding: 25px;
                 margin-bottom: 25px;
+            }
+
+            .hierarchy-section {
+                background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+                border: 2px solid #0ea5e9;
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 20px;
+                display: none;
+            }
+
+            .hierarchy-section.active {
+                display: block;
+                animation: slideDown 0.3s ease;
+            }
+
+            @keyframes slideDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .hierarchy-steps {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+
+            .step-item {
+                background: white;
+                padding: 15px;
+                border-radius: 8px;
+                border: 1px solid #e2e8f0;
+            }
+
+            .step-item label {
+                font-weight: 600;
+                color: #374151;
+                margin-bottom: 8px;
+                display: block;
             }
 
             .generation-controls {
@@ -296,43 +346,85 @@
                 display: flex;
                 align-items: center;
                 gap: 5px;
+                color: #374151;
             }
 
             .btn-bulk:hover {
-                background: #f3f4f6;
-                border-color: #9ca3af;
                 transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             }
 
-            .btn-bulk.primary {
-                background: #007BFF;
-                color: white;
-                border-color: #007BFF;
-            }
-            .btn-bulk.primary:hover {
-                background: #0056b3;
-                border-color: #0056b3;
-            }
-            .btn-bulk.danger {
-                background: #ef4444;
-                color: white;
-                border-color: #ef4444;
-            }
-            .btn-bulk.danger:hover {
-                background: #dc2626;
-                border-color: #dc2626;
-            }
-            .btn-bulk.success {
-                background: #10b981;
+            /* Improved color scheme for bulk action buttons */
+            .btn-bulk.keep-all {
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
                 color: white;
                 border-color: #10b981;
             }
-            .btn-bulk.success:hover {
-                background: #059669;
+            .btn-bulk.keep-all:hover {
+                background: linear-gradient(135deg, #059669 0%, #047857 100%);
                 border-color: #059669;
             }
 
-            input[type="text"], select {
+            .btn-bulk.remove-all {
+                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                color: white;
+                border-color: #ef4444;
+            }
+            .btn-bulk.remove-all:hover {
+                background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+                border-color: #dc2626;
+            }
+
+            .btn-bulk.select-all {
+                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                color: white;
+                border-color: #3b82f6;
+            }
+            .btn-bulk.select-all:hover {
+                background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                border-color: #2563eb;
+            }
+
+            .btn-bulk.deselect-all {
+                background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+                color: white;
+                border-color: #6b7280;
+            }
+            .btn-bulk.deselect-all:hover {
+                background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+                border-color: #4b5563;
+            }
+
+            .btn-bulk.generate {
+                background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+                color: white;
+                border-color: #8b5cf6;
+            }
+            .btn-bulk.generate:hover {
+                background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+                border-color: #7c3aed;
+            }
+
+            /* Select2 Custom Styling */
+            .select2-container--bootstrap-5 .select2-selection {
+                border: 2px solid #e2e8f0 !important;
+                border-radius: 8px !important;
+                min-height: 45px !important;
+                padding: 5px 10px !important;
+            }
+
+            .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+                border-color: #0ea5e9 !important;
+                box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1) !important;
+            }
+
+            .select2-dropdown {
+                border: 2px solid #0ea5e9 !important;
+                border-radius: 8px !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+            }
+
+            input[type="text"], select:not(.select2-hidden-accessible) {
                 width: 100%;
                 padding: 12px;
                 margin: 6px 0 15px 0;
@@ -410,6 +502,27 @@
                 text-decoration: none;
             }
 
+            .adding-method-selector {
+                margin-bottom: 20px;
+                padding: 15px;
+                background: white;
+                border-radius: 8px;
+                border: 1px solid #e2e8f0;
+            }
+
+            .adding-method-selector label {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 10px;
+                font-weight: 500;
+                cursor: pointer;
+            }
+
+            .adding-method-selector input[type="radio"] {
+                transform: scale(1.2);
+            }
+
             @media (max-width: 768px) {
                 .generation-controls {
                     grid-template-columns: 1fr;
@@ -421,6 +534,9 @@
                     flex-direction: column;
                     gap: 10px;
                     text-align: center;
+                }
+                .hierarchy-steps {
+                    grid-template-columns: 1fr;
                 }
             }
         </style>
@@ -487,14 +603,11 @@
                             </div>
 
                             <div class="bulk-actions">
-                                <button type="button" class="btn-bulk danger" id="removeAllBtn">
-                                    <i class="fas fa-trash"></i> Remove All Selected
-                                </button>
-                                <button type="button" class="btn-bulk" id="selectAllCurrentBtn">
+                                <button type="button" class="btn-bulk keep-all" id="selectAllCurrentBtn">
                                     <i class="fas fa-check-square"></i> Keep All Questions
                                 </button>
-                                <button type="button" class="btn-bulk" id="deselectAllCurrentBtn">
-                                    <i class="fas fa-square"></i> Remove All Questions
+                                <button type="button" class="btn-bulk remove-all" id="deselectAllCurrentBtn">
+                                    <i class="fas fa-times-circle"></i> Remove All Questions
                                 </button>
                             </div>
 
@@ -542,68 +655,153 @@
                             </div>
                         </div>
 
-                        <!-- Smart Adding Section -->
-                        <c:if test="${not empty contextLessonId}">
-                            <div class="smart-adding-section">
-                                <h4><i class="fas fa-magic"></i> Smart Question Adding</h4>
-                                <div class="alert alert-warning">
-                                    <i class="fas fa-robot"></i>
-                                    Add more questions from the same lesson context with intelligent filtering
-                                </div>
+                        <!-- Question Adding Section -->
+                        <div class="adding-section">
+                            <h4><i class="fas fa-plus-circle"></i> Add More Questions</h4>
+                            <div class="alert alert-info">
+                                <i class="fas fa-lightbulb"></i>
+                                Choose how you want to add more questions to this test.
+                            </div>
 
-                                <div class="generation-controls">
-                                    <div class="control-group">
-                                        <label for="questionCount">Number of Questions</label>
-                                        <input type="number" id="questionCount" min="1" max="20" value="5" class="form-control">
+                            <div class="adding-method-selector">
+                                <label>
+                                    <input type="radio" name="addingMethod" value="smart" checked onchange="toggleAddingMethod()">
+                                    <i class="fas fa-magic"></i> Smart Question Adding - Auto-generate based on criteria
+                                </label>
+                                <label>
+                                    <input type="radio" name="addingMethod" value="manual" onchange="toggleAddingMethod()">
+                                    <i class="fas fa-hand-pointer"></i> Manual Question Adding - Browse and select manually
+                                </label>
+                            </div>
+
+                            <!-- Smart Adding Controls -->
+                            <div id="smartAddingControls">
+                                <c:if test="${not empty contextLessonId}">
+                                    <div class="generation-controls">
+                                        <div class="control-group">
+                                            <label for="questionCount">Number of Questions</label>
+                                            <input type="number" id="questionCount" min="1" max="20" value="5" class="form-control">
+                                        </div>
+
+                                        <div class="control-group">
+                                            <label for="difficultyFilter">Difficulty Level</label>
+                                            <select id="difficultyFilter" class="form-control">
+                                                <option value="all">All Levels</option>
+                                                <option value="easy">Easy</option>
+                                                <option value="medium" selected>Medium</option>
+                                                <option value="hard">Hard</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="control-group">
+                                            <label for="categoryFilter">Question Category</label>
+                                            <select id="categoryFilter" class="form-control">
+                                                <option value="all">All Categories</option>
+                                                <option value="conceptual">Conceptual</option>
+                                                <option value="application">Application</option>
+                                                <option value="analysis">Analysis</option>
+                                                <option value="synthesis">Synthesis</option>
+                                                <option value="evaluation">Evaluation</option>
+                                            </select>
+                                        </div>
                                     </div>
 
-                                    <div class="control-group">
-                                        <label for="difficultyFilter">Difficulty Level</label>
-                                        <select id="difficultyFilter" class="form-control">
-                                            <option value="all">All Levels</option>
-                                            <option value="easy">Easy</option>
-                                            <option value="medium" selected>Medium</option>
-                                            <option value="hard">Hard</option>
-                                        </select>
+                                    <div style="text-align: center; margin-bottom: 20px;">
+                                        <button type="button" class="btn-generate" id="generateSmartBtn">
+                                            <i class="fas fa-dice"></i> Generate Smart Questions
+                                        </button>
+                                    </div>
+                                </c:if>
+                                <c:if test="${empty contextLessonId}">
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        Smart question generation is not available because this test doesn't have a specific lesson context.
+                                        Please use Manual Question Adding instead.
+                                    </div>
+                                </c:if>
+                            </div>
+
+                            <!-- Manual Adding Controls -->
+                            <div id="manualAddingControls" style="display: none;">
+                                <!-- Learning Path Selection -->
+                                <div class="hierarchy-section active" id="hierarchySection">
+                                    <h5><i class="fas fa-sitemap"></i> Select Learning Path</h5>
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-route"></i>
+                                        Navigate through Grade → Subject → Chapter → Lesson to find questions
                                     </div>
 
-                                    <div class="control-group">
-                                        <label for="categoryFilter">Question Category</label>
-                                        <select id="categoryFilter" class="form-control">
-                                            <option value="all">All Categories</option>
-                                            <option value="conceptual">Conceptual</option>
-                                            <option value="application">Application</option>
-                                            <option value="analysis">Analysis</option>
-                                            <option value="synthesis">Synthesis</option>
-                                            <option value="evaluation">Evaluation</option>
-                                        </select>
+                                    <div class="hierarchy-steps">
+                                        <div class="step-item">
+                                            <label for="gradeSelect">Grade</label>
+                                            <select id="gradeSelect" class="form-select select2-dropdown">
+                                                <option value="">-- Select Grade --</option>
+                                                <c:forEach var="grade" items="${gradeList}">
+                                                    <option value="${grade.id}">${grade.name}</option>
+                                                </c:forEach>
+                                            </select>
+                                        </div>
+
+                                        <div class="step-item">
+                                            <label for="subjectSelect">Subject</label>
+                                            <select id="subjectSelect" class="form-select select2-dropdown" disabled>
+                                                <option value="">-- Select Subject --</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="step-item">
+                                            <label for="chapterSelect">Chapter</label>
+                                            <select id="chapterSelect" class="form-select select2-dropdown" disabled>
+                                                <option value="">-- Select Chapter --</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="step-item">
+                                            <label for="lessonSelect">Lesson</label>
+                                            <select id="lessonSelect" class="form-select select2-dropdown" disabled>
+                                                <option value="">-- Select Lesson --</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div style="text-align: center; margin-bottom: 20px;">
-                                    <button type="button" class="btn-generate" id="generateSmartBtn">
-                                        <i class="fas fa-dice"></i> Generate Smart Questions
-                                    </button>
-                                </div>
+                                <div id="manualQuestionsContainer" style="display: none;">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i>
+                                        Select questions to add to your test. Questions already in the test are excluded.
+                                    </div>
 
-                                <div class="questions-preview" id="smartQuestionsPreview">
-                                    <h5>Smart Generated Questions Preview</h5>
-                                    <div class="selection-stats" id="smartStats"></div>
+                                    <div class="selection-stats" id="manualStats"></div>
                                     <div class="bulk-actions">
-                                        <button type="button" class="btn-bulk success" id="selectAllSmartBtn">
+                                        <button type="button" class="btn-bulk select-all" id="selectAllManualBtn">
                                             <i class="fas fa-check-square"></i> Select All
                                         </button>
-                                        <button type="button" class="btn-bulk" id="deselectAllSmartBtn">
+                                        <button type="button" class="btn-bulk deselect-all" id="deselectAllManualBtn">
                                             <i class="fas fa-square"></i> Deselect All
                                         </button>
-                                        <button type="button" class="btn-bulk primary" id="regenerateSmartBtn">
-                                            <i class="fas fa-sync"></i> Regenerate
-                                        </button>
                                     </div>
-                                    <div id="smartQuestionsList"></div>
+                                    <div class="question-list" id="manualQuestionsList"></div>
                                 </div>
                             </div>
-                        </c:if>
+
+                            <!-- Questions Preview for both Smart and Manual -->
+                            <div class="questions-preview" id="addingQuestionsPreview">
+                                <h5 id="previewTitle">Questions Preview</h5>
+                                <div class="selection-stats" id="addingStats"></div>
+                                <div class="bulk-actions">
+                                    <button type="button" class="btn-bulk select-all" id="selectAllAddingBtn">
+                                        <i class="fas fa-check-square"></i> Select All
+                                    </button>
+                                    <button type="button" class="btn-bulk deselect-all" id="deselectAllAddingBtn">
+                                        <i class="fas fa-square"></i> Deselect All
+                                    </button>
+                                    <button type="button" class="btn-bulk generate" id="regenerateBtn" style="display: none;">
+                                        <i class="fas fa-sync"></i> Regenerate
+                                    </button>
+                                </div>
+                                <div id="addingQuestionsList"></div>
+                            </div>
+                        </div>
 
                         <div style="text-align: center; margin-top: 30px;">
                             <input type="submit" value="Update Test" />
@@ -623,6 +821,10 @@
         <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/popper.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
+
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
         <script src="${pageContext.request.contextPath}/assets/js/jquery.slicknav.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/owl.carousel.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/slick.min.js"></script>
@@ -642,311 +844,600 @@
         <script src="${pageContext.request.contextPath}/assets/js/jquery.ajaxchimp.min.js"></script>
 
         <script>
-// Declare all global functions first, before document ready
-            let contextLessonId;
-            let currentlySelectedIds = new Set();
+                                        // Global variables
+                                        let contextLessonId;
+                                        let currentlySelectedIds = new Set();
+                                        let currentAddingMethod = 'smart';
 
-// Global function definitions
-            function updateCurrentSelectionStats() {
-                const totalCurrent = $('.current-question-checkbox').length;
-                const selectedCurrent = $('.current-question-checkbox:checked').length;
-                $('#currentSelectedCount').text(selectedCurrent);
+                                        // Initialize Select2
+                                        function initializeSelect2(selector) {
+                                            $(selector).select2({
+                                                theme: 'bootstrap-5',
+                                                width: '100%',
+                                                allowClear: false,
+                                                dropdownParent: $('body')
+                                            });
+                                        }
 
-                // Update visual selection for current questions
-                $('#currentQuestionsList .question-item').each(function () {
-                    const $item = $(this);
-                    if ($item.find('.current-question-checkbox').is(':checked')) {
-                        $item.removeClass('to-remove');
-                    } else {
-                        $item.addClass('to-remove');
-                    }
-                });
-            }
+                                        // Update current selection stats
+                                        function updateCurrentSelectionStats() {
+                                            const totalCurrent = $('.current-question-checkbox').length;
+                                            const selectedCurrent = $('.current-question-checkbox:checked').length;
+                                            $('#currentSelectedCount').text(selectedCurrent);
 
-            function updateSmartStats() {
-                const total = $('#smartQuestionsList .question-checkbox').length;
-                const selected = $('#smartQuestionsList .question-checkbox:checked').length;
+                                            // Update visual selection for current questions
+                                            $('#currentQuestionsList .question-item').each(function () {
+                                                const $item = $(this);
+                                                if ($item.find('.current-question-checkbox').is(':checked')) {
+                                                    $item.removeClass('to-remove');
+                                                } else {
+                                                    $item.addClass('to-remove');
+                                                }
+                                            });
 
-                const statsHtml = `<i class="fas fa-chart-bar"></i> Selected: ${selected} / ${total} smart questions`;
-                $('#smartStats').html(statsHtml);
+                                            // Update currently selected IDs set
+                                            currentlySelectedIds.clear();
+                                            $('.current-question-checkbox:checked').each(function () {
+                                                currentlySelectedIds.add(parseInt($(this).val()));
+                                            });
+                                        }
 
-                // Update visual selection
-                $('#smartQuestionsList .question-item').each(function () {
-                    const $item = $(this);
-                    if ($item.find('.question-checkbox').is(':checked')) {
-                        $item.addClass('selected');
-                    } else {
-                        $item.removeClass('selected');
-                    }
-                });
-            }
+                                        // Update adding questions stats
+                                        function updateAddingStats() {
+                                            const total = $('#addingQuestionsList .question-checkbox').length;
+                                            const selected = $('#addingQuestionsList .question-checkbox:checked').length;
 
-// Bulk selection functions for current questions
-            function selectAllCurrent() {
-                $('.current-question-checkbox').prop('checked', true);
-                updateCurrentSelectionStats();
-            }
+                                            const method = currentAddingMethod === 'smart' ? 'Smart Generated' : 'Manual Selected';
+                                            const statsHtml = `<i class="fas fa-chart-bar"></i> Selected: ${selected} / ${total} ${method} questions`;
+                                            $('#addingStats').html(statsHtml);
 
-            function deselectAllCurrent() {
-                $('.current-question-checkbox').prop('checked', false);
-                updateCurrentSelectionStats();
-            }
+                                            // Update visual selection
+                                            $('#addingQuestionsList .question-item').each(function () {
+                                                const $item = $(this);
+                                                if ($item.find('.question-checkbox').is(':checked')) {
+                                                    $item.addClass('selected');
+                                                } else {
+                                                    $item.removeClass('selected');
+                                                }
+                                            });
+                                        }
 
-            function removeAllSelected() {
-                if (confirm('Are you sure you want to remove all currently selected questions from this test?')) {
-                    $('.current-question-checkbox').prop('checked', false);
-                    updateCurrentSelectionStats();
-                }
-            }
+                                        // Update manual questions stats
+                                        function updateManualStats() {
+                                            const total = $('#manualQuestionsList .question-checkbox').length;
+                                            const selected = $('#manualQuestionsList .question-checkbox:checked').length;
 
-// Smart questions functions
-            function selectAllSmart() {
-                $('#smartQuestionsList .question-checkbox').prop('checked', true);
-                updateSmartStats();
-            }
+                                            const statsHtml = `<i class="fas fa-chart-bar"></i> Available: ${total} questions, Selected: ${selected}`;
+                                            $('#manualStats').html(statsHtml);
+                                        }
 
-            function deselectAllSmart() {
-                $('#smartQuestionsList .question-checkbox').prop('checked', false);
-                updateSmartStats();
-            }
+                                        // Toggle adding method
+                                        function toggleAddingMethod() {
+                                            const method = $('input[name="addingMethod"]:checked').val();
+                                            currentAddingMethod = method;
 
-            function regenerateSmartQuestions() {
-                generateSmartQuestions();
-            }
+                                            if (method === 'smart') {
+                                                $('#smartAddingControls').show();
+                                                $('#manualAddingControls').hide();
+                                                $('#regenerateBtn').show();
+                                                $('#previewTitle').text('Smart Generated Questions Preview');
+                                            } else {
+                                                $('#smartAddingControls').hide();
+                                                $('#manualAddingControls').show();
+                                                $('#regenerateBtn').hide();
+                                                $('#previewTitle').text('Manual Selected Questions Preview');
+                                            }
 
-// Smart question generation
-            function generateSmartQuestions() {
-                if (!contextLessonId) {
-                    alert('No lesson context found for this test');
-                    return;
-                }
+                                            // Clear preview
+                                            $('#addingQuestionsPreview').removeClass('active');
+                                            $('#addingQuestionsList').empty();
+                                            $('#manualQuestionsContainer').hide();
+                                        }
 
-                const count = $('#questionCount').val() || 5;
-                const difficulty = $('#difficultyFilter').val();
-                const category = $('#categoryFilter').val();
+                                        // Bulk selection functions for current questions
+                                        function selectAllCurrent() {
+                                            $('.current-question-checkbox').prop('checked', true);
+                                            updateCurrentSelectionStats();
+                                        }
 
-                console.log('Generating smart questions with params:', {
-                    lessonId: contextLessonId,
-                    count: count,
-                    difficulty: difficulty,
-                    category: category,
-                    excludeIds: Array.from(currentlySelectedIds)
-                });
+                                        function deselectAllCurrent() {
+                                            if (confirm('Are you sure you want to remove all currently selected questions from this test?')) {
+                                                $('.current-question-checkbox').prop('checked', false);
+                                                updateCurrentSelectionStats();
+                                            }
+                                        }
 
-                // Show loading state
-                $('#smartQuestionsList').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Generating smart questions...</div>');
-                $('#smartQuestionsPreview').addClass('active');
+                                        // Bulk selection functions for adding questions
+                                        function selectAllAdding() {
+                                            $('#addingQuestionsList .question-checkbox').prop('checked', true);
+                                            updateAddingStats();
+                                        }
 
-                $.ajax({
-                    url: 'test',
-                    method: 'GET',
-                    data: {
-                        action: 'getSmartQuestions',
-                        lessonId: contextLessonId,
-                        count: count,
-                        difficulty: difficulty,
-                        category: category,
-                        excludeIds: Array.from(currentlySelectedIds).join(',')
-                    },
-                    success: function (data) {
-                        console.log('Smart questions received:', data);
-                        displaySmartQuestions(data);
-                    },
-                    error: function (xhr, status, error) {
-                        console.error('Failed to generate smart questions:', error);
-                        $('#smartQuestionsList').html(
-                                '<div class="alert alert-danger">' +
-                                '<i class="fas fa-exclamation-triangle"></i> ' +
-                                'Failed to generate smart questions. Please try again.' +
-                                '</div>'
-                                );
-                    }
-                });
-            }
+                                        function deselectAllAdding() {
+                                            $('#addingQuestionsList .question-checkbox').prop('checked', false);
+                                            updateAddingStats();
+                                        }
 
-            function displaySmartQuestions(questions) {
-                const container = $('#smartQuestionsList');
-                container.empty();
+                                        // Bulk selection functions for manual questions
+                                        function selectAllManual() {
+                                            $('#manualQuestionsList .question-checkbox').prop('checked', true);
+                                            updateManualStats();
+                                            // Copy selected questions to preview
+                                            copyManualSelectionsToPreview();
+                                        }
 
-                if (!questions || questions.length === 0) {
-                    container.html(
-                            '<div class="alert alert-warning">' +
-                            '<i class="fas fa-info-circle"></i> ' +
-                            'No additional questions found matching your criteria. Try adjusting the filters.' +
-                            '</div>'
-                            );
-                    updateSmartStats();
-                    return;
-                }
+                                        function deselectAllManual() {
+                                            $('#manualQuestionsList .question-checkbox').prop('checked', false);
+                                            updateManualStats();
+                                            // Clear preview
+                                            $('#addingQuestionsPreview').removeClass('active');
+                                            $('#addingQuestionsList').empty();
+                                        }
 
-                questions.forEach(function (question) {
-                    // Double-check to avoid duplicates
-                    if (currentlySelectedIds.has(question.id)) {
-                        return;
-                    }
+                                        // Copy manual selections to preview
+                                        function copyManualSelectionsToPreview() {
+                                            const selectedQuestions = [];
+                                            $('#manualQuestionsList .question-item').each(function () {
+                                                const $item = $(this);
+                                                if ($item.find('.question-checkbox').is(':checked')) {
+                                                    selectedQuestions.push({
+                                                        id: $item.data('question-id'),
+                                                        question: $item.find('.question-text').text(),
+                                                        difficulty: $item.data('difficulty') || 'medium',
+                                                        category: $item.data('category') || 'conceptual',
+                                                        question_type: $item.data('type') || 'SINGLE',
+                                                        isAI: $item.data('source') === 'ai'
+                                                    });
+                                                }
+                                            });
 
-                    const difficulty = question.difficulty || 'medium';
-                    const category = question.category || 'conceptual';
-                    const type = question.question_type || 'SINGLE';
-                    const isAI = question.AIGenerated || false;
-                    const questionText = question.question || 'No question text';
+                                            if (selectedQuestions.length > 0) {
+                                                displayAddingQuestions(selectedQuestions);
+                                                $('#addingQuestionsPreview').addClass('active');
+                                            } else {
+                                                $('#addingQuestionsPreview').removeClass('active');
+                                            }
+                                        }
 
-                    const aiGeneratedBadge = isAI ?
-                            '<span class="meta-badge ai-badge">AI Generated</span>' :
-                            '<span class="meta-badge manual-badge">Manual</span>';
+                                        // Smart question generation
+                                        function generateSmartQuestions() {
+                                            if (!contextLessonId) {
+                                                alert('No lesson context found for this test');
+                                                return;
+                                            }
 
-                    const questionDiv = $('<div></div>')
-                            .addClass('question-item')
-                            .attr('data-question-id', question.id)
-                            .attr('data-difficulty', difficulty)
-                            .attr('data-category', category)
-                            .attr('data-source', isAI ? 'ai' : 'manual');
+                                            const count = $('#questionCount').val() || 5;
+                                            const difficulty = $('#difficultyFilter').val();
+                                            const category = $('#categoryFilter').val();
 
-                    const checkbox = $('<input>')
-                            .attr('type', 'checkbox')
-                            .attr('name', 'questionIds')
-                            .attr('value', question.id)
-                            .addClass('question-checkbox')
-                            .prop('checked', true) // Auto-select generated questions
-                            .on('change', updateSmartStats);
+                                            console.log('Generating smart questions with params:', {
+                                                lessonId: contextLessonId,
+                                                count: count,
+                                                difficulty: difficulty,
+                                                category: category,
+                                                excludeIds: Array.from(currentlySelectedIds)
+                                            });
 
-                    const contentDiv = $('<div></div>').addClass('question-content');
-                    const textDiv = $('<div></div>').addClass('question-text').text(questionText);
+                                            // Show loading state
+                                            $('#addingQuestionsList').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Generating smart questions...</div>');
+                                            $('#addingQuestionsPreview').addClass('active');
 
-                    const metaDiv = $('<div></div>').addClass('question-meta');
-                    metaDiv.append($('<span></span>').addClass('lesson-name').html('<i class="fas fa-book"></i> Smart Generated'));
-                    metaDiv.append($('<span></span>').addClass('meta-badge difficulty-' + difficulty).text(difficulty));
-                    metaDiv.append($('<span></span>').addClass('meta-badge category-badge').text(category));
-                    metaDiv.append($('<span></span>').addClass('meta-badge').text(type));
-                    metaDiv.append($(aiGeneratedBadge));
-                    metaDiv.append($('<span></span>').addClass('meta-badge').css({
-                        'background': '#10b981',
-                        'color': 'white'
-                    }).text('Smart'));
+                                            $.ajax({
+                                                url: 'test',
+                                                method: 'GET',
+                                                data: {
+                                                    action: 'getSmartQuestions',
+                                                    lessonId: contextLessonId,
+                                                    count: count,
+                                                    difficulty: difficulty,
+                                                    category: category,
+                                                    excludeIds: Array.from(currentlySelectedIds).join(',')
+                                                },
+                                                success: function (data) {
+                                                    console.log('Smart questions received:', data);
+                                                    if (data && data.length > 0) {
+                                                        displayAddingQuestions(data);
+                                                    } else {
+                                                        $('#addingQuestionsList').html(
+                                                                '<div class="alert alert-warning">' +
+                                                                '<i class="fas fa-info-circle"></i> ' +
+                                                                'No additional questions found matching your criteria. Try adjusting the filters.' +
+                                                                '</div>'
+                                                                );
+                                                    }
+                                                },
+                                                error: function (xhr, status, error) {
+                                                    console.error('Failed to generate smart questions:', error);
+                                                    $('#addingQuestionsList').html(
+                                                            '<div class="alert alert-danger">' +
+                                                            '<i class="fas fa-exclamation-triangle"></i> ' +
+                                                            'Failed to generate smart questions. Please try again.' +
+                                                            '</div>'
+                                                            );
+                                                }
+                                            });
+                                        }
 
-                    contentDiv.append(textDiv).append(metaDiv);
-                    questionDiv.append(checkbox).append(contentDiv);
+                                        function regenerateQuestions() {
+                                            if (currentAddingMethod === 'smart') {
+                                                generateSmartQuestions();
+                                            }
+                                        }
 
-                    container.append(questionDiv);
-                });
+                                        // Display adding questions (both smart and manual)
+                                        function displayAddingQuestions(questions) {
+                                            const container = $('#addingQuestionsList');
+                                            container.empty();
 
-                updateSmartStats();
+                                            if (!questions || questions.length === 0) {
+                                                container.html(
+                                                        '<div class="alert alert-warning">' +
+                                                        '<i class="fas fa-info-circle"></i> ' +
+                                                        'No questions available to add.' +
+                                                        '</div>'
+                                                        );
+                                                updateAddingStats();
+                                                return;
+                                            }
 
-                // Scroll to show generated questions
-                $('#smartQuestionsPreview')[0].scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }
+                                            questions.forEach(function (question) {
+                                                // Double-check to avoid duplicates
+                                                if (currentlySelectedIds.has(question.id)) {
+                                                    return;
+                                                }
 
-            // Document ready function
-            $(document).ready(function () {
-                // Initialize global variables
-                contextLessonId = $('#contextLessonId').val();
-                currentlySelectedIds = new Set();
+                                                const difficulty = question.difficulty || 'medium';
+                                                const category = question.category || 'conceptual';
+                                                const type = question.question_type || 'SINGLE';
+                                                const isAI = question.isAI || false;
+                                                const questionText = question.question || 'No question text';
 
-                // Initialize currently selected question IDs
-                $('.current-question-checkbox:checked').each(function () {
-                    currentlySelectedIds.add(parseInt($(this).val()));
-                });
+                                                const questionDiv = $('<div></div>')
+                                                        .addClass('question-item')
+                                                        .attr('data-question-id', question.id)
+                                                        .attr('data-difficulty', difficulty)
+                                                        .attr('data-category', category)
+                                                        .attr('data-type', type)
+                                                        .attr('data-source', isAI ? 'ai' : 'manual');
 
-                console.log('Context Lesson ID:', contextLessonId);
-                console.log('Currently selected question IDs:', Array.from(currentlySelectedIds));
+                                                const checkbox = $('<input>')
+                                                        .attr('type', 'checkbox')
+                                                        .attr('name', 'questionIds')
+                                                        .attr('value', question.id)
+                                                        .addClass('question-checkbox')
+                                                        .prop('checked', true) // Auto-select new questions
+                                                        .on('change', updateAddingStats);
 
-                // Initialize selection stats
-                updateCurrentSelectionStats();
+                                                const contentDiv = $('<div></div>').addClass('question-content');
+                                                const textDiv = $('<div></div>').addClass('question-text').text(questionText);
 
-                // Form submission validation
-                $('#updateTestForm').on('submit', function (e) {
-                    const totalSelected = $('input[name="questionIds"]:checked').length;
-                    if (totalSelected === 0) {
-                        e.preventDefault();
-                        alert('Please select at least one question for the test');
-                        return false;
-                    }
+                                                const metaDiv = $('<div></div>').addClass('question-meta');
 
-                    // Collect all selected question IDs
-                    const selectedIds = [];
-                    $('input[name="questionIds"]:checked').each(function () {
-                        selectedIds.push($(this).val());
-                    });
+                                                // Add source indicator
+                                                const sourceText = currentAddingMethod === 'smart' ? 'Smart Generated' : 'Manual Selection';
+                                                metaDiv.append($('<span></span>').addClass('lesson-name').html('<i class="fas fa-plus"></i> ' + sourceText));
 
-                    console.log('Submitting test with question IDs:', selectedIds);
+                                                metaDiv.append($('<span></span>').addClass('meta-badge difficulty-' + difficulty).text(difficulty));
+                                                metaDiv.append($('<span></span>').addClass('meta-badge category-badge').text(category));
+                                                metaDiv.append($('<span></span>').addClass('meta-badge').text(type));
 
-                    // Show loading state
-                    $('input[type="submit"]').prop('disabled', true).val('Updating Test...');
-                    return true;
-                });
+                                                const aiGeneratedBadge = isAI ?
+                                                        $('<span></span>').addClass('meta-badge ai-badge').text('AI Generated') :
+                                                        $('<span></span>').addClass('meta-badge manual-badge').text('Manual');
+                                                metaDiv.append(aiGeneratedBadge);
 
-                // Enhanced visual feedback
-                $('.question-item').on('mouseenter', function () {
-                    $(this).css('transform', 'translateY(-2px)');
-                }).on('mouseleave', function () {
-                    $(this).css('transform', 'translateY(0)');
-                });
+                                                contentDiv.append(textDiv).append(metaDiv);
+                                                questionDiv.append(checkbox).append(contentDiv);
 
-                // Question text expansion for long questions
-                $('.question-text').on('click', function () {
-                    const fullText = $(this).text();
-                    if (fullText.length > 100) {
-                        const isExpanded = $(this).hasClass('expanded');
-                        if (isExpanded) {
-                            $(this).removeClass('expanded').css({
-                                'max-height': '3em',
-                                'overflow': 'hidden'
-                            });
-                        } else {
-                            $(this).addClass('expanded').css({
-                                'max-height': 'none',
-                                'overflow': 'visible'
-                            });
-                        }
-                    }
-                });
+                                                container.append(questionDiv);
+                                            });
 
-                // Initialize long question text truncation
-                $('.question-text').each(function () {
-                    const text = $(this).text();
-                    if (text.length > 150) {
-                        $(this).css({
-                            'max-height': '3em',
-                            'overflow': 'hidden',
-                            'cursor': 'pointer',
-                            'position': 'relative'
-                        }).attr('title', 'Click to expand/collapse');
-                    }
-                });
+                                            updateAddingStats();
 
-                // Keyboard shortcuts
-                $(document).on('keydown', function (e) {
-                    // Ctrl+S: Submit form
-                    if (e.ctrlKey && e.key === 's') {
-                        e.preventDefault();
-                        $('#updateTestForm').submit();
-                    }
-                    // Ctrl+G: Generate smart questions
-                    if (e.ctrlKey && e.key === 'g') {
-                        e.preventDefault();
-                        if (contextLessonId) {
-                            generateSmartQuestions();
-                        }
-                    }
-                });
+                                            // Scroll to show generated questions
+                                            $('#addingQuestionsPreview')[0].scrollIntoView({
+                                                behavior: 'smooth',
+                                                block: 'start'
+                                            });
+                                        }
 
-                $('#removeAllBtn').on('click', removeAllSelected);
-                $('#selectAllCurrentBtn').on('click', selectAllCurrent);
-                $('#deselectAllCurrentBtn').on('click', deselectAllCurrent);
-                $('#generateSmartBtn').on('click', generateSmartQuestions);
-                $('#selectAllSmartBtn').on('click', selectAllSmart);
-                $('#deselectAllSmartBtn').on('click', deselectAllSmart);
-                $('#regenerateSmartBtn').on('click', regenerateSmartQuestions);
+                                        // Load manual questions for selected lesson
+                                        function loadManualQuestions(lessonId) {
+                                            console.log('Loading manual questions for lesson:', lessonId);
 
-                // Add event handler for current question checkboxes
-                $(document).on('change', '.current-question-checkbox', function () {
-                    updateCurrentSelectionStats();
-                });
-                console.log('Enhanced Test Update page initialized successfully');
-            });
+                                            // Show loading state
+                                            $('#manualQuestionsList').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Loading questions...</div>');
+                                            $('#manualQuestionsContainer').show();
+
+                                            $.get('test', {
+                                                action: 'getQuestionsByLesson',
+                                                lessonId: lessonId
+                                            }, function (data) {
+                                                console.log('Manual questions loaded:', data);
+                                                displayManualQuestions(data);
+                                            }).fail(function (xhr, status, error) {
+                                                console.error('Failed to load manual questions:', error);
+                                                $('#manualQuestionsList').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Failed to load questions: ' + error + '</div>');
+                                            });
+                                        }
+
+                                        // Display manual questions for selection
+                                        function displayManualQuestions(questions) {
+                                            const container = $('#manualQuestionsList');
+                                            container.empty();
+
+                                            if (!questions || questions.length === 0) {
+                                                container.html('<div class="alert alert-warning"><i class="fas fa-info-circle"></i> No questions found for this lesson</div>');
+                                                return;
+                                            }
+
+                                            // Filter out already selected questions
+                                            const availableQuestions = questions.filter(q => !currentlySelectedIds.has(q.id));
+
+                                            if (availableQuestions.length === 0) {
+                                                container.html('<div class="alert alert-info"><i class="fas fa-info-circle"></i> All questions from this lesson are already selected in the test</div>');
+                                                return;
+                                            }
+
+                                            availableQuestions.forEach(function (question) {
+                                                const difficulty = question.difficulty || 'medium';
+                                                const category = question.category || 'conceptual';
+                                                const type = question.type || 'SINGLE';
+                                                const isAI = question.isAI || false;
+                                                const questionText = question.question || 'No question text';
+
+                                                const questionDiv = $('<div></div>')
+                                                        .addClass('question-item')
+                                                        .attr('data-question-id', question.id)
+                                                        .attr('data-difficulty', difficulty)
+                                                        .attr('data-category', category)
+                                                        .attr('data-type', type)
+                                                        .attr('data-source', isAI ? 'ai' : 'manual');
+
+                                                const checkbox = $('<input>')
+                                                        .attr('type', 'checkbox')
+                                                        .attr('value', question.id)
+                                                        .addClass('question-checkbox')
+                                                        .on('change', function () {
+                                                            updateManualStats();
+                                                            copyManualSelectionsToPreview();
+                                                        });
+
+                                                const contentDiv = $('<div></div>').addClass('question-content');
+                                                const textDiv = $('<div></div>').addClass('question-text').text(questionText);
+
+                                                const metaDiv = $('<div></div>').addClass('question-meta');
+                                                metaDiv.append($('<span></span>').addClass('lesson-name').html('<i class="fas fa-book"></i> Available for Selection'));
+                                                metaDiv.append($('<span></span>').addClass('meta-badge difficulty-' + difficulty).text(difficulty));
+                                                metaDiv.append($('<span></span>').addClass('meta-badge category-badge').text(category));
+                                                metaDiv.append($('<span></span>').addClass('meta-badge').text(type));
+
+                                                const aiGeneratedBadge = isAI ?
+                                                        $('<span></span>').addClass('meta-badge ai-badge').text('AI Generated') :
+                                                        $('<span></span>').addClass('meta-badge manual-badge').text('Manual');
+                                                metaDiv.append(aiGeneratedBadge);
+
+                                                contentDiv.append(textDiv).append(metaDiv);
+                                                questionDiv.append(checkbox).append(contentDiv);
+
+                                                container.append(questionDiv);
+                                            });
+
+                                            updateManualStats();
+                                        }
+
+                                        // Hierarchy loading functions
+                                        function loadSubjects(gradeId) {
+                                            $.get('test', {
+                                                action: 'getSubjectsByGrade',
+                                                gradeId: gradeId
+                                            }, function (data) {
+                                                populateSelect('#subjectSelect', data, '-- Select Subject --');
+                                            }).fail(function (xhr, status, error) {
+                                                console.error('Failed to load subjects:', error);
+                                            });
+                                        }
+
+                                        function loadChapters(subjectId) {
+                                            $.get('test', {
+                                                action: 'getChaptersBySubject',
+                                                subjectId: subjectId
+                                            }, function (data) {
+                                                populateSelect('#chapterSelect', data, '-- Select Chapter --');
+                                            }).fail(function (xhr, status, error) {
+                                                console.error('Failed to load chapters:', error);
+                                            });
+                                        }
+
+                                        function loadLessons(chapterId) {
+                                            $.get('test', {
+                                                action: 'getLessonsByChapter',
+                                                chapterId: chapterId
+                                            }, function (data) {
+                                                populateSelect('#lessonSelect', data, '-- Select Lesson --');
+                                            }).fail(function (xhr, status, error) {
+                                                console.error('Failed to load lessons:', error);
+                                            });
+                                        }
+
+                                        function populateSelect(selector, data, placeholder) {
+                                            const $select = $(selector);
+                                            $select.empty().append('<option value="">' + placeholder + '</option>');
+                                            $.each(data, function (i, item) {
+                                                $select.append('<option value="' + item.id + '">' + item.name + '</option>');
+                                            });
+                                            $select.prop('disabled', false);
+                                            $select.select2('destroy');
+                                            initializeSelect2(selector);
+                                        }
+
+                                        function resetSubsequentSelects(selectors) {
+                                            selectors.forEach(selector => {
+                                                $(selector).empty().append('<option value="">-- Select --</option>').prop('disabled', true);
+                                                $(selector).select2('destroy');
+                                                initializeSelect2(selector);
+                                            });
+                                        }
+
+                                        // Document ready function
+                                        $(document).ready(function () {
+                                            // Initialize global variables
+                                            contextLessonId = $('#contextLessonId').val();
+                                            currentlySelectedIds = new Set();
+
+                                            // Initialize currently selected question IDs
+                                            $('.current-question-checkbox:checked').each(function () {
+                                                currentlySelectedIds.add(parseInt($(this).val()));
+                                            });
+
+                                            console.log('Context Lesson ID:', contextLessonId);
+                                            console.log('Currently selected question IDs:', Array.from(currentlySelectedIds));
+
+                                            // Initialize Select2 dropdowns
+                                            $('.select2-dropdown').each(function () {
+                                                initializeSelect2('#' + $(this).attr('id'));
+                                            });
+
+                                            // Initialize selection stats
+                                            updateCurrentSelectionStats();
+
+                                            // Initialize adding method
+                                            toggleAddingMethod();
+
+                                            // Event handlers for current questions
+                                            $(document).on('change', '.current-question-checkbox', function () {
+                                                updateCurrentSelectionStats();
+                                            });
+
+                                            // Event handlers for bulk actions
+                                            $('#selectAllCurrentBtn').on('click', selectAllCurrent);
+                                            $('#deselectAllCurrentBtn').on('click', deselectAllCurrent);
+                                            $('#selectAllAddingBtn').on('click', selectAllAdding);
+                                            $('#deselectAllAddingBtn').on('click', deselectAllAdding);
+                                            $('#selectAllManualBtn').on('click', selectAllManual);
+                                            $('#deselectAllManualBtn').on('click', deselectAllManual);
+                                            $('#generateSmartBtn').on('click', generateSmartQuestions);
+                                            $('#regenerateBtn').on('click', regenerateQuestions);
+
+                                            // Hierarchy selection handlers
+                                            $('#gradeSelect').on('change', function () {
+                                                const gradeId = $(this).val();
+                                                if (gradeId) {
+                                                    loadSubjects(gradeId);
+                                                    resetSubsequentSelects(['#subjectSelect', '#chapterSelect', '#lessonSelect']);
+                                                    $('#manualQuestionsContainer').hide();
+                                                }
+                                            });
+
+                                            $('#subjectSelect').on('change', function () {
+                                                const subjectId = $(this).val();
+                                                if (subjectId) {
+                                                    loadChapters(subjectId);
+                                                    resetSubsequentSelects(['#chapterSelect', '#lessonSelect']);
+                                                    $('#manualQuestionsContainer').hide();
+                                                }
+                                            });
+
+                                            $('#chapterSelect').on('change', function () {
+                                                const chapterId = $(this).val();
+                                                if (chapterId) {
+                                                    loadLessons(chapterId);
+                                                    resetSubsequentSelects(['#lessonSelect']);
+                                                    $('#manualQuestionsContainer').hide();
+                                                }
+                                            });
+
+                                            $('#lessonSelect').on('change', function () {
+                                                const lessonId = $(this).val();
+                                                if (lessonId) {
+                                                    loadManualQuestions(lessonId);
+                                                }
+                                            });
+
+                                            // Form submission validation
+                                            $('#updateTestForm').on('submit', function (e) {
+                                                const totalSelected = $('input[name="questionIds"]:checked').length;
+                                                if (totalSelected === 0) {
+                                                    e.preventDefault();
+                                                    alert('Please select at least one question for the test');
+                                                    return false;
+                                                }
+
+                                                // Collect all selected question IDs
+                                                const selectedIds = [];
+                                                $('input[name="questionIds"]:checked').each(function () {
+                                                    selectedIds.push($(this).val());
+                                                });
+
+                                                console.log('Submitting test with question IDs:', selectedIds);
+
+                                                // Show loading state
+                                                $('input[type="submit"]').prop('disabled', true).val('Updating Test...');
+                                                return true;
+                                            });
+
+                                            // Enhanced visual feedback
+                                            $('.question-item').on('mouseenter', function () {
+                                                $(this).css('transform', 'translateY(-2px)');
+                                            }).on('mouseleave', function () {
+                                                $(this).css('transform', 'translateY(0)');
+                                            });
+
+                                            // Question text expansion for long questions
+                                            $(document).on('click', '.question-text', function () {
+                                                const fullText = $(this).text();
+                                                if (fullText.length > 100) {
+                                                    const isExpanded = $(this).hasClass('expanded');
+                                                    if (isExpanded) {
+                                                        $(this).removeClass('expanded').css({
+                                                            'max-height': '3em',
+                                                            'overflow': 'hidden'
+                                                        });
+                                                    } else {
+                                                        $(this).addClass('expanded').css({
+                                                            'max-height': 'none',
+                                                            'overflow': 'visible'
+                                                        });
+                                                    }
+                                                }
+                                            });
+
+                                            // Initialize long question text truncation
+                                            $(document).on('mouseenter', '.question-text', function () {
+                                                const text = $(this).text();
+                                                if (text.length > 150) {
+                                                    $(this).css({
+                                                        'max-height': '3em',
+                                                        'overflow': 'hidden',
+                                                        'cursor': 'pointer',
+                                                        'position': 'relative'
+                                                    }).attr('title', 'Click to expand/collapse');
+                                                }
+                                            });
+
+                                            // Keyboard shortcuts
+                                            $(document).on('keydown', function (e) {
+                                                // Ctrl+S: Submit form
+                                                if (e.ctrlKey && e.key === 's') {
+                                                    e.preventDefault();
+                                                    $('#updateTestForm').submit();
+                                                }
+                                                // Ctrl+G: Generate smart questions
+                                                if (e.ctrlKey && e.key === 'g') {
+                                                    e.preventDefault();
+                                                    if (contextLessonId && currentAddingMethod === 'smart') {
+                                                        generateSmartQuestions();
+                                                    }
+                                                }
+                                            });
+
+                                            console.log('Enhanced Test Update page initialized successfully');
+                                        });
+
+                                        // Make functions globally accessible
+                                        window.toggleAddingMethod = toggleAddingMethod;
+                                        window.generateSmartQuestions = generateSmartQuestions;
+                                        window.regenerateQuestions = regenerateQuestions;
         </script>
     </body>
 </html>
