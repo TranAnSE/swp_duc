@@ -488,6 +488,95 @@ public class TestController extends HttpServlet {
         }
     }
 
+    private void handleGetSmartQuestions(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int lessonId = Integer.parseInt(request.getParameter("lessonId"));
+            int count = Integer.parseInt(request.getParameter("count"));
+            String difficulty = request.getParameter("difficulty");
+            String category = request.getParameter("category");
+            String excludeIdsStr = request.getParameter("excludeIds");
+
+            // Parse excluded IDs
+            Set<Integer> excludeIds = new HashSet<>();
+            if (excludeIdsStr != null && !excludeIdsStr.trim().isEmpty()) {
+                String[] ids = excludeIdsStr.split(",");
+                for (String id : ids) {
+                    try {
+                        excludeIds.add(Integer.parseInt(id.trim()));
+                    } catch (NumberFormatException e) {
+                        // Skip invalid IDs
+                    }
+                }
+            }
+
+            QuestionDAO questionDAO = new QuestionDAO();
+            List<Question> allQuestions = questionDAO.getQuestionsByLessonWithDetails(lessonId);
+            List<Question> filteredQuestions = new ArrayList<>();
+
+            // Filter questions by criteria and exclude already selected ones
+            for (Question question : allQuestions) {
+                // Skip if already selected
+                if (excludeIds.contains(question.getId())) {
+                    continue;
+                }
+
+                boolean matchesCriteria = true;
+
+                if (difficulty != null && !difficulty.isEmpty() && !difficulty.equals("all")) {
+                    String qDifficulty = question.getDifficulty() != null ? question.getDifficulty() : "medium";
+                    if (!qDifficulty.equals(difficulty)) {
+                        matchesCriteria = false;
+                    }
+                }
+
+                if (category != null && !category.isEmpty() && !category.equals("all")) {
+                    String qCategory = question.getCategory() != null ? question.getCategory() : "conceptual";
+                    if (!qCategory.equals(category)) {
+                        matchesCriteria = false;
+                    }
+                }
+
+                if (matchesCriteria) {
+                    filteredQuestions.add(question);
+                }
+            }
+
+            // Shuffle and select random questions
+            Collections.shuffle(filteredQuestions);
+            List<Question> selectedQuestions = filteredQuestions.subList(0, Math.min(count, filteredQuestions.size()));
+
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < selectedQuestions.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Question question = selectedQuestions.get(i);
+                String difficulty_val = question.getDifficulty() != null ? question.getDifficulty() : "medium";
+                String category_val = question.getCategory() != null ? question.getCategory() : "conceptual";
+                String questionType = question.getQuestion_type() != null ? question.getQuestion_type() : "SINGLE";
+
+                json.append("{\"id\":").append(question.getId())
+                        .append(",\"question\":\"").append(escapeJsonString(question.getQuestion()))
+                        .append("\",\"question_type\":\"").append(questionType)
+                        .append("\",\"difficulty\":\"").append(difficulty_val)
+                        .append("\",\"category\":\"").append(category_val)
+                        .append("\",\"isAI\":").append(question.isAIGenerated())
+                        .append("}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("[]");
+        }
+    }
+
     private void handleGetQuestionsByLesson(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         response.setContentType("application/json");
@@ -695,95 +784,6 @@ public class TestController extends HttpServlet {
         return categoryMap;
     }
 
-    private void handleGetSmartQuestions(HttpServletRequest request, HttpServletResponse response)
-            throws IOException {
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-
-        try {
-            int lessonId = Integer.parseInt(request.getParameter("lessonId"));
-            int count = Integer.parseInt(request.getParameter("count"));
-            String difficulty = request.getParameter("difficulty");
-            String category = request.getParameter("category");
-            String excludeIdsStr = request.getParameter("excludeIds");
-
-            // Parse excluded IDs
-            Set<Integer> excludeIds = new HashSet<>();
-            if (excludeIdsStr != null && !excludeIdsStr.trim().isEmpty()) {
-                String[] ids = excludeIdsStr.split(",");
-                for (String id : ids) {
-                    try {
-                        excludeIds.add(Integer.parseInt(id.trim()));
-                    } catch (NumberFormatException e) {
-                        // Skip invalid IDs
-                    }
-                }
-            }
-
-            QuestionDAO questionDAO = new QuestionDAO();
-            List<Question> allQuestions = questionDAO.getQuestionsByLessonWithDetails(lessonId);
-            List<Question> filteredQuestions = new ArrayList<>();
-
-            // Filter questions by criteria and exclude already selected ones
-            for (Question question : allQuestions) {
-                // Skip if already selected
-                if (excludeIds.contains(question.getId())) {
-                    continue;
-                }
-
-                boolean matchesCriteria = true;
-
-                if (difficulty != null && !difficulty.isEmpty() && !difficulty.equals("all")) {
-                    String qDifficulty = question.getDifficulty() != null ? question.getDifficulty() : "medium";
-                    if (!qDifficulty.equals(difficulty)) {
-                        matchesCriteria = false;
-                    }
-                }
-
-                if (category != null && !category.isEmpty() && !category.equals("all")) {
-                    String qCategory = question.getCategory() != null ? question.getCategory() : "conceptual";
-                    if (!qCategory.equals(category)) {
-                        matchesCriteria = false;
-                    }
-                }
-
-                if (matchesCriteria) {
-                    filteredQuestions.add(question);
-                }
-            }
-
-            // Shuffle and select random questions
-            Collections.shuffle(filteredQuestions);
-            List<Question> selectedQuestions = filteredQuestions.subList(0, Math.min(count, filteredQuestions.size()));
-
-            StringBuilder json = new StringBuilder("[");
-            for (int i = 0; i < selectedQuestions.size(); i++) {
-                if (i > 0) {
-                    json.append(",");
-                }
-                Question question = selectedQuestions.get(i);
-                String difficulty_val = question.getDifficulty() != null ? question.getDifficulty() : "medium";
-                String category_val = question.getCategory() != null ? question.getCategory() : "conceptual";
-                String questionType = question.getQuestion_type() != null ? question.getQuestion_type() : "SINGLE";
-
-                json.append("{\"id\":").append(question.getId())
-                        .append(",\"question\":\"").append(escapeJsonString(question.getQuestion()))
-                        .append("\",\"question_type\":\"").append(questionType)
-                        .append("\",\"difficulty\":\"").append(difficulty_val)
-                        .append("\",\"category\":\"").append(category_val)
-                        .append("\",\"isAI\":").append(question.isAIGenerated())
-                        .append("}");
-            }
-            json.append("]");
-
-            response.getWriter().write(json.toString());
-        } catch (Exception e) {
-            e.printStackTrace();
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write("[]");
-        }
-    }
-
     private void handleGetLessonHierarchy(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         response.setContentType("application/json");
@@ -795,7 +795,7 @@ public class TestController extends HttpServlet {
             // Get lesson details with hierarchy
             LessonDAO lessonDAO = new LessonDAO();
             ChapterDAO chapterDAO = new ChapterDAO();
-            SubjectDAO subjectDAO = new SubjectDAO();
+            DAOSubject subjectDAO = new DAOSubject();
             GradeDAO gradeDAO = new GradeDAO();
 
             Lesson lesson = lessonDAO.getLessonById(lessonId);
@@ -804,8 +804,8 @@ public class TestController extends HttpServlet {
                 return;
             }
 
-            Chapter chapter = chapterDAO.getChapterById(lesson.getChapter_id());
-            Subject subject = subjectDAO.getSubjectById(chapter.getSubject_id());
+            Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
+            Subject subject = subjectDAO.findById(chapter.getSubject_id());
             Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
 
             StringBuilder json = new StringBuilder("{");

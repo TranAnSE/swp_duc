@@ -539,6 +539,214 @@
                     grid-template-columns: 1fr;
                 }
             }
+            /* Enhanced Question Item Styles */
+            .question-item[style*="display: none"] {
+                display: none !important;
+            }
+
+            .question-item:not([style*="display: none"]) {
+                animation: fadeIn 0.3s ease-in-out;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            /* Search Highlight */
+            .question-text mark {
+                background: linear-gradient(120deg, #fff3cd 0%, #ffeaa7 100%);
+                padding: 2px 4px;
+                border-radius: 3px;
+                font-weight: bold;
+            }
+
+            /* Filter Active Indicator */
+            .filter-group .form-control:not([value=""]):not([value="all"]) {
+                border-color: #007bff;
+                box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            }
+
+            #questionSearch:not([value=""]) {
+                border-color: #28a745;
+                box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+            }
+
+            /* Enhanced Stats Display */
+            .selection-stats {
+                background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+                border: 1px solid #2196f3;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 15px;
+                font-weight: 500;
+                color: #1565c0;
+            }
+
+            .selection-stats strong {
+                color: #0d47a1;
+                font-weight: 700;
+            }
+
+            /* Improved Alert Styles */
+            .alert-success {
+                background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+                border-color: #28a745;
+                color: #155724;
+            }
+
+            .alert-success i {
+                color: #28a745;
+            }
+
+            /* Loading State Enhancement */
+            .alert-info .fa-spinner {
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                from {
+                    transform: rotate(0deg);
+                }
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* Question Type Badges Enhancement */
+            .meta-badge {
+                font-size: 0.75em;
+                padding: 3px 8px;
+                border-radius: 12px;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .meta-badge.difficulty-easy {
+                background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+                color: #155724;
+                border: 1px solid #28a745;
+            }
+
+            .meta-badge.difficulty-medium {
+                background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+                color: #856404;
+                border: 1px solid #ffc107;
+            }
+
+            .meta-badge.difficulty-hard {
+                background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
+                color: #721c24;
+                border: 1px solid #dc3545;
+            }
+
+            .meta-badge.category-badge {
+                background: linear-gradient(135deg, #e2e3e5 0%, #d1ecf1 100%);
+                color: #495057;
+                border: 1px solid #6c757d;
+            }
+
+            .meta-badge.ai-badge {
+                background: linear-gradient(135deg, #e1f5fe 0%, #b3e5fc 100%);
+                color: #01579b;
+                border: 1px solid #03a9f4;
+            }
+
+            .meta-badge.manual-badge {
+                background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+                color: #4a148c;
+                border: 1px solid #9c27b0;
+            }
+
+            /* Filter Section Enhancement */
+            .filter-section {
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border: 1px solid #dee2e6;
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+
+            .filter-section h6 {
+                color: #495057;
+                margin-bottom: 15px;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .filter-row {
+                display: grid;
+                grid-template-columns: 2fr 1fr 1fr 1fr auto;
+                gap: 15px;
+                align-items: end;
+            }
+
+            @media (max-width: 768px) {
+                .filter-row {
+                    grid-template-columns: 1fr;
+                    gap: 10px;
+                }
+            }
+
+            .filter-group {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .filter-group label {
+                font-size: 0.9em;
+                font-weight: 500;
+                color: #6c757d;
+                margin-bottom: 5px;
+            }
+
+            .search-input-group {
+                position: relative;
+            }
+
+            .search-input-group .form-control {
+                padding-right: 40px;
+            }
+
+            .search-icon {
+                position: absolute;
+                right: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #6c757d;
+                pointer-events: none;
+            }
+
+            .btn-clear-filters {
+                background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 0.9em;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                white-space: nowrap;
+            }
+
+            .btn-clear-filters:hover {
+                background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+            }
         </style>
     </head>
     <body>
@@ -844,12 +1052,14 @@
         <script src="${pageContext.request.contextPath}/assets/js/jquery.ajaxchimp.min.js"></script>
 
         <script>
-                                        // Global variables
+// Global variables
                                         let contextLessonId;
                                         let currentlySelectedIds = new Set();
                                         let currentAddingMethod = 'smart';
+                                        let allManualQuestions = []; // Store all questions for filtering
+                                        let lessonHierarchy = null; // Store lesson hierarchy info
 
-                                        // Initialize Select2
+// Initialize Select2
                                         function initializeSelect2(selector) {
                                             $(selector).select2({
                                                 theme: 'bootstrap-5',
@@ -859,7 +1069,7 @@
                                             });
                                         }
 
-                                        // Update current selection stats
+// Update current selection stats
                                         function updateCurrentSelectionStats() {
                                             const totalCurrent = $('.current-question-checkbox').length;
                                             const selectedCurrent = $('.current-question-checkbox:checked').length;
@@ -882,13 +1092,13 @@
                                             });
                                         }
 
-                                        // Update adding questions stats
+// Update adding questions stats - FIXED for Problem 1
                                         function updateAddingStats() {
                                             const total = $('#addingQuestionsList .question-checkbox').length;
                                             const selected = $('#addingQuestionsList .question-checkbox:checked').length;
 
                                             const method = currentAddingMethod === 'smart' ? 'Smart Generated' : 'Manual Selected';
-                                            const statsHtml = `<i class="fas fa-chart-bar"></i> Selected: ${selected} / ${total} ${method} questions`;
+                                            const statsHtml = '<span><i class="fas fa-chart-bar"></i> Selected: <strong>' + selected + '</strong> / <strong>' + total + '</strong> ' + method + ' questions</span>';
                                             $('#addingStats').html(statsHtml);
 
                                             // Update visual selection
@@ -900,18 +1110,22 @@
                                                     $item.removeClass('selected');
                                                 }
                                             });
+
+                                            console.log('Adding stats updated:', {selected: selected, total: total, method: method});
                                         }
 
-                                        // Update manual questions stats
+// Update manual questions stats
                                         function updateManualStats() {
-                                            const total = $('#manualQuestionsList .question-checkbox').length;
-                                            const selected = $('#manualQuestionsList .question-checkbox:checked').length;
+                                            // Count only visible questions after filtering
+                                            const visibleItems = $('#manualQuestionsList .question-item:visible');
+                                            const total = visibleItems.length;
+                                            const selected = visibleItems.find('.question-checkbox:checked').length;
 
-                                            const statsHtml = `<i class="fas fa-chart-bar"></i> Available: ${total} questions, Selected: ${selected}`;
+                                            const statsHtml = '<span><i class="fas fa-chart-bar"></i> Showing: <strong>' + total + '</strong> questions, Selected: <strong>' + selected + '</strong></span>';
                                             $('#manualStats').html(statsHtml);
                                         }
 
-                                        // Toggle adding method
+// Toggle adding method
                                         function toggleAddingMethod() {
                                             const method = $('input[name="addingMethod"]:checked').val();
                                             currentAddingMethod = method;
@@ -926,15 +1140,54 @@
                                                 $('#manualAddingControls').show();
                                                 $('#regenerateBtn').hide();
                                                 $('#previewTitle').text('Manual Selected Questions Preview');
+
+                                                // Auto-load lesson hierarchy if available - FIXED for Problem 2
+                                                if (contextLessonId && !lessonHierarchy) {
+                                                    loadLessonHierarchy();
+                                                }
                                             }
 
                                             // Clear preview
                                             $('#addingQuestionsPreview').removeClass('active');
                                             $('#addingQuestionsList').empty();
-                                            $('#manualQuestionsContainer').hide();
+                                            updateAddingStats();
                                         }
 
-                                        // Bulk selection functions for current questions
+// Load lesson hierarchy - NEW for Problem 2
+                                        function loadLessonHierarchy() {
+                                            console.log('Loading lesson hierarchy for lesson:', contextLessonId);
+
+                                            $.get('test', {
+                                                action: 'getLessonHierarchy',
+                                                lessonId: contextLessonId
+                                            }, function (data) {
+                                                console.log('Lesson hierarchy loaded:', data);
+                                                lessonHierarchy = data;
+
+                                                if (data.gradeId) {
+                                                    // Auto-populate hierarchy
+                                                    $('#gradeSelect').val(data.gradeId).trigger('change');
+
+                                                    // Chain load subjects, then chapters, then lessons
+                                                    setTimeout(function () {
+                                                        $('#subjectSelect').val(data.subjectId).trigger('change');
+                                                        setTimeout(function () {
+                                                            $('#chapterSelect').val(data.chapterId).trigger('change');
+                                                            setTimeout(function () {
+                                                                $('#lessonSelect').val(data.lessonId).trigger('change');
+                                                            }, 500);
+                                                        }, 500);
+                                                    }, 500);
+
+                                                    // Show context info
+                                                    $('#hierarchySection .alert').html('<i class="fas fa-route"></i><strong>Auto-navigated to test context:</strong> ' + data.gradeName + ' → ' + data.subjectName + ' → ' + data.chapterName + ' → ' + data.lessonName).removeClass('alert-info').addClass('alert-success');
+                                                }
+                                            }).fail(function (xhr, status, error) {
+                                                console.error('Failed to load lesson hierarchy:', error);
+                                            });
+                                        }
+
+// Bulk selection functions for current questions
                                         function selectAllCurrent() {
                                             $('.current-question-checkbox').prop('checked', true);
                                             updateCurrentSelectionStats();
@@ -947,7 +1200,7 @@
                                             }
                                         }
 
-                                        // Bulk selection functions for adding questions
+// Bulk selection functions for adding questions
                                         function selectAllAdding() {
                                             $('#addingQuestionsList .question-checkbox').prop('checked', true);
                                             updateAddingStats();
@@ -958,23 +1211,20 @@
                                             updateAddingStats();
                                         }
 
-                                        // Bulk selection functions for manual questions
+// Bulk selection functions for manual questions
                                         function selectAllManual() {
-                                            $('#manualQuestionsList .question-checkbox').prop('checked', true);
+                                            $('#manualQuestionsList .question-item:visible .question-checkbox').prop('checked', true);
                                             updateManualStats();
-                                            // Copy selected questions to preview
                                             copyManualSelectionsToPreview();
                                         }
 
                                         function deselectAllManual() {
-                                            $('#manualQuestionsList .question-checkbox').prop('checked', false);
+                                            $('#manualQuestionsList .question-item:visible .question-checkbox').prop('checked', false);
                                             updateManualStats();
-                                            // Clear preview
-                                            $('#addingQuestionsPreview').removeClass('active');
-                                            $('#addingQuestionsList').empty();
+                                            copyManualSelectionsToPreview();
                                         }
 
-                                        // Copy manual selections to preview
+// Copy manual selections to preview
                                         function copyManualSelectionsToPreview() {
                                             const selectedQuestions = [];
                                             $('#manualQuestionsList .question-item').each(function () {
@@ -996,10 +1246,12 @@
                                                 $('#addingQuestionsPreview').addClass('active');
                                             } else {
                                                 $('#addingQuestionsPreview').removeClass('active');
+                                                $('#addingQuestionsList').empty();
                                             }
+                                            updateAddingStats();
                                         }
 
-                                        // Smart question generation
+// Smart question generation - FIXED for Problem 1
                                         function generateSmartQuestions() {
                                             if (!contextLessonId) {
                                                 alert('No lesson context found for this test');
@@ -1021,6 +1273,7 @@
                                             // Show loading state
                                             $('#addingQuestionsList').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Generating smart questions...</div>');
                                             $('#addingQuestionsPreview').addClass('active');
+                                            updateAddingStats();
 
                                             $.ajax({
                                                 url: 'test',
@@ -1038,22 +1291,14 @@
                                                     if (data && data.length > 0) {
                                                         displayAddingQuestions(data);
                                                     } else {
-                                                        $('#addingQuestionsList').html(
-                                                                '<div class="alert alert-warning">' +
-                                                                '<i class="fas fa-info-circle"></i> ' +
-                                                                'No additional questions found matching your criteria. Try adjusting the filters.' +
-                                                                '</div>'
-                                                                );
+                                                        $('#addingQuestionsList').html('<div class="alert alert-warning"><i class="fas fa-info-circle"></i> No additional questions found matching your criteria. Try adjusting the filters.</div>');
                                                     }
+                                                    updateAddingStats();
                                                 },
                                                 error: function (xhr, status, error) {
                                                     console.error('Failed to generate smart questions:', error);
-                                                    $('#addingQuestionsList').html(
-                                                            '<div class="alert alert-danger">' +
-                                                            '<i class="fas fa-exclamation-triangle"></i> ' +
-                                                            'Failed to generate smart questions. Please try again.' +
-                                                            '</div>'
-                                                            );
+                                                    $('#addingQuestionsList').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Failed to generate smart questions. Please try again.</div>');
+                                                    updateAddingStats();
                                                 }
                                             });
                                         }
@@ -1064,18 +1309,13 @@
                                             }
                                         }
 
-                                        // Display adding questions (both smart and manual)
+// Display adding questions (both smart and manual)
                                         function displayAddingQuestions(questions) {
                                             const container = $('#addingQuestionsList');
                                             container.empty();
 
                                             if (!questions || questions.length === 0) {
-                                                container.html(
-                                                        '<div class="alert alert-warning">' +
-                                                        '<i class="fas fa-info-circle"></i> ' +
-                                                        'No questions available to add.' +
-                                                        '</div>'
-                                                        );
+                                                container.html('<div class="alert alert-warning"><i class="fas fa-info-circle"></i> No questions available to add.</div>');
                                                 updateAddingStats();
                                                 return;
                                             }
@@ -1106,7 +1346,9 @@
                                                         .attr('value', question.id)
                                                         .addClass('question-checkbox')
                                                         .prop('checked', true) // Auto-select new questions
-                                                        .on('change', updateAddingStats);
+                                                        .on('change', function () {
+                                                            updateAddingStats();
+                                                        });
 
                                                 const contentDiv = $('<div></div>').addClass('question-content');
                                                 const textDiv = $('<div></div>').addClass('question-text').text(questionText);
@@ -1135,13 +1377,15 @@
                                             updateAddingStats();
 
                                             // Scroll to show generated questions
-                                            $('#addingQuestionsPreview')[0].scrollIntoView({
-                                                behavior: 'smooth',
-                                                block: 'start'
-                                            });
+                                            if ($('#addingQuestionsPreview')[0]) {
+                                                $('#addingQuestionsPreview')[0].scrollIntoView({
+                                                    behavior: 'smooth',
+                                                    block: 'start'
+                                                });
+                                            }
                                         }
 
-                                        // Load manual questions for selected lesson
+// Load manual questions for selected lesson - ENHANCED for Problem 2
                                         function loadManualQuestions(lessonId) {
                                             console.log('Loading manual questions for lesson:', lessonId);
 
@@ -1154,14 +1398,18 @@
                                                 lessonId: lessonId
                                             }, function (data) {
                                                 console.log('Manual questions loaded:', data);
+                                                allManualQuestions = data; // Store for filtering
                                                 displayManualQuestions(data);
+
+                                                // Show filter controls after loading
+                                                $('#manualFilterControls').show();
                                             }).fail(function (xhr, status, error) {
                                                 console.error('Failed to load manual questions:', error);
                                                 $('#manualQuestionsList').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Failed to load questions: ' + error + '</div>');
                                             });
                                         }
 
-                                        // Display manual questions for selection
+// Display manual questions for selection - ENHANCED for Problem 2
                                         function displayManualQuestions(questions) {
                                             const container = $('#manualQuestionsList');
                                             container.empty();
@@ -1172,7 +1420,9 @@
                                             }
 
                                             // Filter out already selected questions
-                                            const availableQuestions = questions.filter(q => !currentlySelectedIds.has(q.id));
+                                            const availableQuestions = questions.filter(function (q) {
+                                                return !currentlySelectedIds.has(q.id);
+                                            });
 
                                             if (availableQuestions.length === 0) {
                                                 container.html('<div class="alert alert-info"><i class="fas fa-info-circle"></i> All questions from this lesson are already selected in the test</div>');
@@ -1192,7 +1442,8 @@
                                                         .attr('data-difficulty', difficulty)
                                                         .attr('data-category', category)
                                                         .attr('data-type', type)
-                                                        .attr('data-source', isAI ? 'ai' : 'manual');
+                                                        .attr('data-source', isAI ? 'ai' : 'manual')
+                                                        .attr('data-question-text', questionText.toLowerCase()); // For search
 
                                                 const checkbox = $('<input>')
                                                         .attr('type', 'checkbox')
@@ -1226,7 +1477,72 @@
                                             updateManualStats();
                                         }
 
-                                        // Hierarchy loading functions
+// Filter manual questions - NEW for Problem 2
+                                        function filterManualQuestions() {
+                                            const searchTerm = $('#questionSearch').val().toLowerCase();
+                                            const difficultyFilter = $('#manualDifficultyFilter').val();
+                                            const categoryFilter = $('#manualCategoryFilter').val();
+                                            const typeFilter = $('#manualTypeFilter').val();
+
+                                            $('#manualQuestionsList .question-item').each(function () {
+                                                const $item = $(this);
+                                                let visible = true;
+
+                                                // Search filter
+                                                if (searchTerm && !$item.attr('data-question-text').includes(searchTerm)) {
+                                                    visible = false;
+                                                }
+
+                                                // Difficulty filter
+                                                if (difficultyFilter && difficultyFilter !== 'all' && $item.attr('data-difficulty') !== difficultyFilter) {
+                                                    visible = false;
+                                                }
+
+                                                // Category filter
+                                                if (categoryFilter && categoryFilter !== 'all' && $item.attr('data-category') !== categoryFilter) {
+                                                    visible = false;
+                                                }
+
+                                                // Type filter
+                                                if (typeFilter && typeFilter !== 'all' && $item.attr('data-type') !== typeFilter) {
+                                                    visible = false;
+                                                }
+
+                                                if (visible) {
+                                                    $item.show();
+                                                    // Highlight search term
+                                                    if (searchTerm) {
+                                                        const $questionText = $item.find('.question-text');
+                                                        const text = $questionText.text();
+                                                        const highlightedText = text.replace(new RegExp(searchTerm, 'gi'), '<mark>$&</mark>');
+                                                        $questionText.html(highlightedText);
+                                                    }
+                                                } else {
+                                                    $item.hide();
+                                                }
+                                            });
+
+                                            updateManualStats();
+                                        }
+
+// Clear manual filters - NEW for Problem 2
+                                        function clearManualFilters() {
+                                            $('#questionSearch').val('');
+                                            $('#manualDifficultyFilter').val('all');
+                                            $('#manualCategoryFilter').val('all');
+                                            $('#manualTypeFilter').val('all');
+
+                                            // Remove highlights and show all items
+                                            $('#manualQuestionsList .question-item').show();
+                                            $('#manualQuestionsList .question-text').each(function () {
+                                                const $this = $(this);
+                                                $this.html($this.text()); // Remove HTML tags
+                                            });
+
+                                            updateManualStats();
+                                        }
+
+// Hierarchy loading functions
                                         function loadSubjects(gradeId) {
                                             $.get('test', {
                                                 action: 'getSubjectsByGrade',
@@ -1272,14 +1588,14 @@
                                         }
 
                                         function resetSubsequentSelects(selectors) {
-                                            selectors.forEach(selector => {
+                                            selectors.forEach(function (selector) {
                                                 $(selector).empty().append('<option value="">-- Select --</option>').prop('disabled', true);
                                                 $(selector).select2('destroy');
                                                 initializeSelect2(selector);
                                             });
                                         }
 
-                                        // Document ready function
+// Document ready function
                                         $(document).ready(function () {
                                             // Initialize global variables
                                             contextLessonId = $('#contextLessonId').val();
@@ -1318,6 +1634,11 @@
                                             $('#deselectAllManualBtn').on('click', deselectAllManual);
                                             $('#generateSmartBtn').on('click', generateSmartQuestions);
                                             $('#regenerateBtn').on('click', regenerateQuestions);
+
+                                            // Event handlers for manual question filters - NEW for Problem 2
+                                            $('#questionSearch').on('input', filterManualQuestions);
+                                            $('#manualDifficultyFilter, #manualCategoryFilter, #manualTypeFilter').on('change', filterManualQuestions);
+                                            $('#clearFiltersBtn').on('click', clearManualFilters);
 
                                             // Hierarchy selection handlers
                                             $('#gradeSelect').on('change', function () {
@@ -1429,15 +1750,22 @@
                                                         generateSmartQuestions();
                                                     }
                                                 }
+                                                // Ctrl+F: Focus search
+                                                if (e.ctrlKey && e.key === 'f' && currentAddingMethod === 'manual') {
+                                                    e.preventDefault();
+                                                    $('#questionSearch').focus();
+                                                }
                                             });
 
                                             console.log('Enhanced Test Update page initialized successfully');
                                         });
 
-                                        // Make functions globally accessible
+// Make functions globally accessible
                                         window.toggleAddingMethod = toggleAddingMethod;
                                         window.generateSmartQuestions = generateSmartQuestions;
                                         window.regenerateQuestions = regenerateQuestions;
+                                        window.filterManualQuestions = filterManualQuestions;
+                                        window.clearManualFilters = clearManualFilters;
         </script>
     </body>
 </html>

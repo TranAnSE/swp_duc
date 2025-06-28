@@ -347,10 +347,10 @@ public class QuestionDAO extends DBContext {
     }
 
     public List<Question> getSmartQuestionsForLesson(int lessonId, int count,
-            String difficulty, String category, Set<Integer> excludeIds) {
+            String difficulty, String category, Set<Integer> excludeIds) throws SQLException {
         List<Question> questions = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
-                "SELECT * FROM questions WHERE lesson_id = ? AND status = 'active'"
+                "SELECT * FROM question WHERE lesson_id = ?"
         );
 
         List<Object> params = new ArrayList<>();
@@ -362,7 +362,7 @@ public class QuestionDAO extends DBContext {
             params.add(difficulty);
         }
 
-        // Add category filter
+        // Add category filter  
         if (category != null && !category.equals("all")) {
             sql.append(" AND category = ?");
             params.add(category);
@@ -396,16 +396,31 @@ public class QuestionDAO extends DBContext {
                 Question question = new Question();
                 question.setId(rs.getInt("id"));
                 question.setQuestion(rs.getString("question"));
-                question.setDifficulty(rs.getString("difficulty"));
-                question.setCategory(rs.getString("category"));
-                question.setQuestion_type(rs.getString("question_type"));
+                question.setImage_id(rs.getInt("image_id"));
                 question.setLesson_id(rs.getInt("lesson_id"));
-                question.setAIGenerated(rs.getBoolean("is_ai_generated"));
+                question.setQuestion_type(rs.getString("question_type"));
+
+                // Set additional fields with defaults if null
+                try {
+                    question.setAIGenerated(rs.getBoolean("is_ai_generated"));
+                } catch (SQLException e) {
+                    question.setAIGenerated(false);
+                }
+                try {
+                    String diff = rs.getString("difficulty");
+                    String cat = rs.getString("category");
+                    question.setDifficulty(diff != null ? diff : "medium");
+                    question.setCategory(cat != null ? cat : "conceptual");
+                } catch (SQLException e) {
+                    question.setDifficulty("medium");
+                    question.setCategory("conceptual");
+                }
                 questions.add(question);
             }
 
         } catch (SQLException e) {
             System.err.println("Error getting smart questions: " + e.getMessage());
+            throw e;
         }
 
         return questions;

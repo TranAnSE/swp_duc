@@ -117,9 +117,9 @@ public class ChapterDAO extends DBContext {
         }
         return null;
     }
-    
+
     //tim Chapter theo name
-    public List<Chapter> findChapterByName (String name) {
+    public List<Chapter> findChapterByName(String name) {
         List<Chapter> list = new ArrayList<>();
         String sql = "SELECT * FROM CHAPTER WHERE name LIKE ?";
         try {
@@ -128,33 +128,10 @@ public class ChapterDAO extends DBContext {
             ResultSet rs = pre.executeQuery();
             while (rs.next()) {
                 Chapter chapter = new Chapter(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("description"),
-                    rs.getInt("subject_id")
-                    );
-                list.add(chapter);
-            }
-        } catch (SQLException ex) {
-            Logger.getLogger(ChapterDAO.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return list;
-    }
-    
-    //tim chapter theo subject_id
-    public List<Chapter> findChapterBySubjectId (int subject_id) {
-        List<Chapter> list = new ArrayList<>();
-        String sql = "SELECT * FROM CHAPTER WHERE subject_id = ?";
-        try {
-            PreparedStatement pre = connection.prepareStatement(sql);
-            pre.setInt(1, subject_id);
-            ResultSet rs = pre.executeQuery();
-            while (rs.next()) {
-                Chapter chapter = new Chapter(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("description"),
-                    rs.getInt("subject_id")
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("description"),
+                        rs.getInt("subject_id")
                 );
                 list.add(chapter);
             }
@@ -163,7 +140,49 @@ public class ChapterDAO extends DBContext {
         }
         return list;
     }
-    
+
+    //tim chapter theo subject_id
+    public List<Chapter> findChapterBySubjectId(int subject_id) {
+        List<Chapter> list = new ArrayList<>();
+        String sql = "SELECT * FROM CHAPTER WHERE subject_id = ?";
+        try {
+            PreparedStatement pre = connection.prepareStatement(sql);
+            pre.setInt(1, subject_id);
+            ResultSet rs = pre.executeQuery();
+            while (rs.next()) {
+                Chapter chapter = new Chapter(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("description"),
+                        rs.getInt("subject_id")
+                );
+                list.add(chapter);
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(ChapterDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return list;
+    }
+
+    public Chapter getChapterById(int id) throws Exception {
+        String sql = "SELECT * FROM chapter WHERE id = ?";
+        try {
+            PreparedStatement pre = connection.prepareStatement(sql);
+            pre.setInt(1, id);
+            ResultSet rs = pre.executeQuery();
+            if (rs.next()) {
+                return new Chapter(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("description"),
+                        rs.getInt("subject_id")
+                );
+            }
+        } catch (SQLException ex) {
+            throw new Exception("Error getting chapter by ID: " + ex.getMessage());
+        }
+        return null;
+    }
 
 //    public static void main(String[] args) {
 //        ChapterDAO daoC = new ChapterDAO();
