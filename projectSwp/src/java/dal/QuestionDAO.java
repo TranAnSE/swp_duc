@@ -36,6 +36,13 @@ public class QuestionDAO extends DBContext {
                 } catch (SQLException e) {
                     q.setAIGenerated(false);
                 }
+                try {
+                    q.setDifficulty(rs.getString("difficulty"));
+                    q.setCategory(rs.getString("category"));
+                } catch (SQLException e) {
+                    q.setDifficulty("medium");
+                    q.setCategory("conceptual");
+                }
                 list.add(q);
             }
         }
@@ -60,6 +67,13 @@ public class QuestionDAO extends DBContext {
                     } catch (SQLException e) {
                         q.setAIGenerated(false);
                     }
+                    try {
+                        q.setDifficulty(rs.getString("difficulty"));
+                        q.setCategory(rs.getString("category"));
+                    } catch (SQLException e) {
+                        q.setDifficulty("medium");
+                        q.setCategory("conceptual");
+                    }
                     return q;
                 }
             }
@@ -68,7 +82,7 @@ public class QuestionDAO extends DBContext {
     }
 
     public void insert(Question question) throws SQLException {
-        String sql = "INSERT INTO question (question, image_id, lesson_id, question_type, is_ai_generated) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO question (question, image_id, lesson_id, question_type, is_ai_generated, difficulty, category) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = new DBContext().getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, question.getQuestion());
             if (question.getImage_id() == 0) {
@@ -79,12 +93,14 @@ public class QuestionDAO extends DBContext {
             stmt.setInt(3, question.getLesson_id());
             stmt.setString(4, question.getQuestion_type());
             stmt.setBoolean(5, question.isAIGenerated());
+            stmt.setString(6, question.getDifficulty() != null ? question.getDifficulty() : "medium");
+            stmt.setString(7, question.getCategory() != null ? question.getCategory() : "conceptual");
             stmt.executeUpdate();
         }
     }
 
     public void update(Question question) throws SQLException {
-        String sql = "UPDATE Question SET question = ?, image_id = ?, lesson_id = ?, question_type = ?, is_ai_generated = ? WHERE id = ?";
+        String sql = "UPDATE Question SET question = ?, image_id = ?, lesson_id = ?, question_type = ?, is_ai_generated = ?, difficulty = ?, category = ? WHERE id = ?";
         try (Connection conn = new DBContext().getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, question.getQuestion());
             if (question.getImage_id() == 0) {
@@ -95,7 +111,9 @@ public class QuestionDAO extends DBContext {
             stmt.setInt(3, question.getLesson_id());
             stmt.setString(4, question.getQuestion_type());
             stmt.setBoolean(5, question.isAIGenerated());
-            stmt.setInt(6, question.getId());
+            stmt.setString(6, question.getDifficulty() != null ? question.getDifficulty() : "medium");
+            stmt.setString(7, question.getCategory() != null ? question.getCategory() : "conceptual");
+            stmt.setInt(8, question.getId());
             stmt.executeUpdate();
         }
     }

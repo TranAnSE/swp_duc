@@ -688,6 +688,7 @@ public class GeminiAIService {
         private String explanation;
         private String questionType;
         private String difficulty;
+        private String category;
         private int assignedLessonId;
         private String lessonDisplayInfo;
 
@@ -746,6 +747,14 @@ public class GeminiAIService {
 
         public void setDifficulty(String difficulty) {
             this.difficulty = difficulty;
+        }
+
+        public String getCategory() {
+            return category;
+        }
+
+        public void setCategory(String category) {
+            this.category = category;
         }
 
         public int getAssignedLessonId() {

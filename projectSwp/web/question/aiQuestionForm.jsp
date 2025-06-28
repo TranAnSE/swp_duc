@@ -928,13 +928,13 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label for="numberOfQuestions" class="form-label">Number of Questions</label>
                                 <input type="number" name="number_of_questions" id="numberOfQuestions" 
                                        class="form-control" min="1" max="50" value="5" required>
                                 <div class="form-text">Generate between 1-50 questions</div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label for="questionCategory" class="form-label">Question Focus</label>
                                 <select name="question_category" id="questionCategory" class="form-select select2-dropdown" required>
                                     <option value="conceptual">Conceptual Understanding</option>
@@ -945,6 +945,16 @@
                                     <option value="mixed">Mixed (Recommended)</option>
                                 </select>
                                 <div class="form-text">Choose the cognitive level for questions</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="questionComplexity" class="form-label">Question Complexity</label>
+                                <select name="question_complexity" id="questionComplexity" class="form-select select2-dropdown">
+                                    <option value="simple">Simple & Direct</option>
+                                    <option value="moderate">Moderate Complexity</option>
+                                    <option value="complex">Complex & Detailed</option>
+                                    <option value="adaptive">Adaptive (AI Choice)</option>
+                                </select>
+                                <div class="form-text">Control question complexity level</div>
                             </div>
                         </div>
                     </div>

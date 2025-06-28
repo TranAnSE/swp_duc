@@ -505,6 +505,8 @@ public class AIQuestionController extends HttpServlet {
             // Get modified questions from form
             String[] questionTexts = request.getParameterValues("question_text");
             String[] explanations = request.getParameterValues("explanation");
+            String[] difficulties = request.getParameterValues("difficulty");
+            String[] categories = request.getParameterValues("category");
             String[] approvedFlags = request.getParameterValues("approved");
 
             int savedCount = 0;
@@ -532,6 +534,10 @@ public class AIQuestionController extends HttpServlet {
                         ? questionTexts[i] : aiQuestion.getQuestion();
                 String finalExplanation = (explanations != null && i < explanations.length)
                         ? explanations[i] : aiQuestion.getExplanation();
+                String finalDifficulty = (difficulties != null && i < difficulties.length)
+                        ? difficulties[i] : aiQuestion.getDifficulty();
+                String finalCategory = (categories != null && i < categories.length)
+                        ? categories[i] : (aiQuestion.getCategory() != null ? aiQuestion.getCategory() : "conceptual");
 
                 // Determine question type for database
                 String dbQuestionType = "SINGLE"; // Default
@@ -560,6 +566,8 @@ public class AIQuestionController extends HttpServlet {
                 question.setQuestion_type(dbQuestionType);
                 question.setImage_id(0); // No image for AI generated questions
                 question.setAIGenerated(true); // Mark as AI generated
+                question.setDifficulty(finalDifficulty);    // Set difficulty
+                question.setCategory(finalCategory);        // Set category
 
                 questionDAO.insert(question);
 

@@ -8,6 +8,8 @@ public class Question {
     private int lesson_id;
     private String question_type; // 'SINGLE' hoặc 'MULTIPLE'
     private boolean isAIGenerated;
+    private String difficulty;
+    private String category;
 
     public Question() {
     }
@@ -19,6 +21,8 @@ public class Question {
         this.lesson_id = lesson_id;
         this.question_type = question_type;
         this.isAIGenerated = false; // Default is manual
+        this.difficulty = "medium";      // Default value
+        this.category = "conceptual";    // Default value
     }
 
     public Question(String question, int image_id, int lesson_id, String question_type) {
@@ -27,6 +31,8 @@ public class Question {
         this.lesson_id = lesson_id;
         this.question_type = question_type;
         this.isAIGenerated = false; // Default is manual
+        this.difficulty = "medium";
+        this.category = "conceptual";
     }
 
     public Question(String question, int image_id, int lesson_id, String question_type, boolean isAIGenerated) {
@@ -35,6 +41,8 @@ public class Question {
         this.lesson_id = lesson_id;
         this.question_type = question_type;
         this.isAIGenerated = isAIGenerated;
+        this.difficulty = "medium";
+        this.category = "conceptual";
     }
 
     public int getId() {
@@ -83,5 +91,21 @@ public class Question {
 
     public void setAIGenerated(boolean isAIGenerated) {
         this.isAIGenerated = isAIGenerated;
+    }
+
+    public String getDifficulty() {
+        return difficulty;
+    }
+
+    public void setDifficulty(String difficulty) {
+        this.difficulty = difficulty;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 }
