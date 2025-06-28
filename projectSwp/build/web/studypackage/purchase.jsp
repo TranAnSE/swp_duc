@@ -127,127 +127,269 @@
                 <p><strong>Price:</strong> <span class="price">${studyPackage.price} VND</span></p>
             </div>
 
-            <c:if test="${not empty children}">
-                <div class="student-selection">
-                    <h5>Select Students for This Package:</h5>
-                    <div class="warning-text">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>Important:</strong> You can assign up to ${studyPackage.max_students} student(s) to this package. 
-                        Each assignment will last for ${studyPackage.duration_days} days from the purchase date.
+            <div class="assignment-section" style="margin-top: 30px;">
+                <h5>Assignment Options:</h5>
+
+                <!-- Option 1: Direct Assignment (for admin/teacher) -->
+                <c:if test="${sessionScope.account.role == 'admin' || sessionScope.account.role == 'teacher'}">
+                    <div class="assignment-option" style="margin-bottom: 20px; padding: 15px; border: 1px solid #dee2e6; border-radius: 6px;">
+                        <h6><i class="fas fa-user-plus"></i> Direct Assignment (Admin/Teacher)</h6>
+                        <p class="text-muted">Assign this package directly to selected students without payment.</p>
+
+                        <form id="assignForm" action="${pageContext.request.contextPath}/study_package" method="post">
+                            <input type="hidden" name="service" value="assignPackage">
+                            <input type="hidden" name="packageId" value="${packageId}">
+
+                            <c:if test="${not empty children}">
+                                <div class="student-selection">
+                                    <c:forEach items="${children}" var="child">
+                                        <div class="student-card" onclick="toggleStudentAssign(${child.id})">
+                                            <input type="checkbox" name="studentIds" value="${child.id}" id="assign_student_${child.id}">
+                                            <label for="assign_student_${child.id}" style="cursor: pointer; margin: 0;">
+                                                <strong>${child.full_name}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    Username: ${child.username} | 
+                                                    Grade: <c:forEach items="${gradeList}" var="grade">
+                                                        <c:if test="${grade.id == child.grade_id}">${grade.name}</c:if>
+                                                    </c:forEach>
+                                                </small>
+                                            </label>
+                                        </div>
+                                    </c:forEach>
+                                </div>
+
+                                <div class="btn-container">
+                                    <button type="submit" class="btn btn-success" id="assignBtn" disabled>
+                                        <i class="fas fa-user-plus"></i> Assign Package Directly
+                                    </button>
+                                </div>
+                            </c:if>
+                        </form>
                     </div>
 
-                    <form id="purchaseForm" action="${pageContext.request.contextPath}/payment" method="post">
-                        <input type="hidden" name="packageId" value="${packageId}">
-                        <input type="hidden" name="amount" value="${amount}">
+                    <hr style="margin: 20px 0;">
+                </c:if>
 
-                        <c:forEach items="${children}" var="child">
-                            <div class="student-card" onclick="toggleStudent(${child.id})">
-                                <input type="checkbox" name="studentIds" value="${child.id}" id="student_${child.id}">
-                                <label for="student_${child.id}" style="cursor: pointer; margin: 0;">
-                                    <strong>${child.full_name}</strong>
-                                    <br>
-                                    <small class="text-muted">
-                                        Username: ${child.username} | 
-                                        Grade: <c:forEach items="${gradeList}" var="grade">
-                                            <c:if test="${grade.id == child.grade_id}">${grade.name}</c:if>
-                                        </c:forEach>
-                                    </small>
-                                </label>
+                <!-- Option 2: Purchase with Payment (for parents) -->
+                <c:if test="${sessionScope.account.role == 'parent'}">
+                    <div class="assignment-option" style="padding: 15px; border: 1px solid #dee2e6; border-radius: 6px;">
+                        <h6><i class="fas fa-credit-card"></i> Purchase with Payment</h6>
+                        <p class="text-muted">Purchase this package with payment processing.</p>
+
+                        <c:if test="${not empty children}">
+                            <div class="student-selection">
+                                <div class="warning-text">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Important:</strong> You can assign up to ${studyPackage.max_students} student(s) to this package. 
+                                    Each assignment will last for ${studyPackage.duration_days} days from the purchase date.
+                                </div>
+
+                                <form id="purchaseForm" action="${pageContext.request.contextPath}/payment" method="post">
+                                    <input type="hidden" name="packageId" value="${packageId}">
+                                    <input type="hidden" name="amount" value="${amount}">
+
+                                    <c:forEach items="${children}" var="child">
+                                        <div class="student-card" onclick="toggleStudent(${child.id})">
+                                            <input type="checkbox" name="studentIds" value="${child.id}" id="student_${child.id}">
+                                            <label for="student_${child.id}" style="cursor: pointer; margin: 0;">
+                                                <strong>${child.full_name}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    Username: ${child.username} | 
+                                                    Grade: <c:forEach items="${gradeList}" var="grade">
+                                                        <c:if test="${grade.id == child.grade_id}">${grade.name}</c:if>
+                                                    </c:forEach>
+                                                </small>
+                                            </label>
+                                        </div>
+                                    </c:forEach>
+
+                                    <div class="btn-container">
+                                        <button type="submit" class="btn btn-success" id="purchaseBtn" disabled>
+                                            <i class="fas fa-credit-card"></i> Proceed to Payment
+                                        </button>
+                                        <a href="${pageContext.request.contextPath}/study_package" class="btn btn-secondary">
+                                            <i class="fas fa-arrow-left"></i> Back to Packages
+                                        </a>
+                                    </div>
+                                </form>
                             </div>
-                        </c:forEach>
+                        </c:if>
+                    </div>
+                </c:if>
 
-                        <div class="btn-container">
-                            <button type="submit" class="btn btn-success" id="purchaseBtn" disabled>
-                                <i class="fas fa-credit-card"></i> Proceed to Payment
-                            </button>
-                            <a href="${pageContext.request.contextPath}/study_package" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Back to Packages
-                            </a>
+                <c:if test="${not empty children}">
+                    <div class="student-selection">
+                        <h5>Select Students for This Package:</h5>
+                        <div class="warning-text">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Important:</strong> You can assign up to ${studyPackage.max_students} student(s) to this package. 
+                            Each assignment will last for ${studyPackage.duration_days} days from the purchase date.
                         </div>
-                    </form>
-                </div>
-            </c:if>
 
-            <c:if test="${empty children}">
-                <div class="warning-text text-center">
-                    <h5>No Students Found</h5>
-                    <p>You need to add students to your account before purchasing study packages.</p>
-                    <a href="${pageContext.request.contextPath}/student?action=create" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Add Student
-                    </a>
-                </div>
-            </c:if>
-        </div>
+                        <form id="purchaseForm" action="${pageContext.request.contextPath}/payment" method="post">
+                            <input type="hidden" name="packageId" value="${packageId}">
+                            <input type="hidden" name="amount" value="${amount}">
 
-        <%@include file="../footer.jsp" %>
+                            <c:forEach items="${children}" var="child">
+                                <div class="student-card" onclick="toggleStudent(${child.id})">
+                                    <input type="checkbox" name="studentIds" value="${child.id}" id="student_${child.id}">
+                                    <label for="student_${child.id}" style="cursor: pointer; margin: 0;">
+                                        <strong>${child.full_name}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            Username: ${child.username} | 
+                                            Grade: <c:forEach items="${gradeList}" var="grade">
+                                                <c:if test="${grade.id == child.grade_id}">${grade.name}</c:if>
+                                            </c:forEach>
+                                        </small>
+                                    </label>
+                                </div>
+                            </c:forEach>
 
-        <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
-        <script>
-                        let maxStudents = ${studyPackage.max_students};
-                        let selectedCount = 0;
+                            <div class="btn-container">
+                                <button type="submit" class="btn btn-success" id="purchaseBtn" disabled>
+                                    <i class="fas fa-credit-card"></i> Proceed to Payment
+                                </button>
+                                <a href="${pageContext.request.contextPath}/study_package" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to Packages
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </c:if>
 
-                        function toggleStudent(studentId) {
-                            const checkbox = document.getElementById('student_' + studentId);
-                            const card = checkbox.closest('.student-card');
+                <c:if test="${empty children}">
+                    <div class="warning-text text-center">
+                        <h5>No Students Found</h5>
+                        <p>You need to add students to your account before purchasing study packages.</p>
+                        <a href="${pageContext.request.contextPath}/student?action=create" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Student
+                        </a>
+                    </div>
+                </c:if>
+            </div>
 
-                            if (checkbox.checked) {
-                                if (selectedCount >= maxStudents) {
-                                    alert('You can only select up to ' + maxStudents + ' student(s) for this package.');
-                                    return;
-                                }
-                                checkbox.checked = false;
-                                card.classList.remove('selected');
-                                selectedCount--;
-                            } else {
-                                if (selectedCount >= maxStudents) {
-                                    alert('You can only select up to ' + maxStudents + ' student(s) for this package.');
-                                    return;
-                                }
-                                checkbox.checked = true;
-                                card.classList.add('selected');
-                                selectedCount++;
-                            }
+            <%@include file="../footer.jsp" %>
 
-                            updatePurchaseButton();
-                        }
+            <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
+            <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
+            <script>
+                                let maxStudents = ${studyPackage.max_students};
+                                let selectedCount = 0;
+                                let maxStudentsAssign = ${studyPackage.max_students};
+                                let selectedCountAssign = 0;
 
-                        function updatePurchaseButton() {
-                            const purchaseBtn = document.getElementById('purchaseBtn');
-                            if (selectedCount > 0) {
-                                purchaseBtn.disabled = false;
-                                purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase for ' + selectedCount + ' Student(s)';
-                            } else {
-                                purchaseBtn.disabled = true;
-                                purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Select Students First';
-                            }
-                        }
+                                function toggleStudent(studentId) {
+                                    const checkbox = document.getElementById('student_' + studentId);
+                                    const card = checkbox.closest('.student-card');
 
-                        // Form validation
-                        document.getElementById('purchaseForm').addEventListener('submit', function (e) {
-                            if (selectedCount === 0) {
-                                e.preventDefault();
-                                alert('Please select at least one student for this package.');
-                                return false;
-                            }
+                                    if (checkbox.checked) {
+                                        if (selectedCount >= maxStudents) {
+                                            alert('You can only select up to ' + maxStudents + ' student(s) for this package.');
+                                            return;
+                                        }
+                                        checkbox.checked = false;
+                                        card.classList.remove('selected');
+                                        selectedCount--;
+                                    } else {
+                                        if (selectedCount >= maxStudents) {
+                                            alert('You can only select up to ' + maxStudents + ' student(s) for this package.');
+                                            return;
+                                        }
+                                        checkbox.checked = true;
+                                        card.classList.add('selected');
+                                        selectedCount++;
+                                    }
 
-                            if (!confirm('Are you sure you want to purchase this package for ' + selectedCount + ' student(s)?')) {
-                                e.preventDefault();
-                                return false;
-                            }
-                        });
-
-                        // Initialize checkboxes
-                        document.addEventListener('DOMContentLoaded', function () {
-                            const checkboxes = document.querySelectorAll('input[name="studentIds"]');
-                            checkboxes.forEach(function (checkbox) {
-                                checkbox.addEventListener('change', function () {
-                                    // This ensures the checkbox state is properly managed
                                     updatePurchaseButton();
+                                }
+
+                                function updatePurchaseButton() {
+                                    const purchaseBtn = document.getElementById('purchaseBtn');
+                                    if (selectedCount > 0) {
+                                        purchaseBtn.disabled = false;
+                                        purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase for ' + selectedCount + ' Student(s)';
+                                    } else {
+                                        purchaseBtn.disabled = true;
+                                        purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Select Students First';
+                                    }
+                                }
+
+                                function toggleStudentAssign(studentId) {
+                                    const checkbox = document.getElementById('assign_student_' + studentId);
+                                    const card = checkbox.closest('.student-card');
+
+                                    if (checkbox.checked) {
+                                        checkbox.checked = false;
+                                        card.classList.remove('selected');
+                                        selectedCountAssign--;
+                                    } else {
+                                        if (selectedCountAssign >= maxStudentsAssign) {
+                                            alert('You can only select up to ' + maxStudentsAssign + ' student(s) for this package.');
+                                            return;
+                                        }
+                                        checkbox.checked = true;
+                                        card.classList.add('selected');
+                                        selectedCountAssign++;
+                                    }
+
+                                    updateAssignButton();
+                                }
+
+                                function updateAssignButton() {
+                                    const assignBtn = document.getElementById('assignBtn');
+                                    if (assignBtn) {
+                                        if (selectedCountAssign > 0) {
+                                            assignBtn.disabled = false;
+                                            assignBtn.innerHTML = '<i class="fas fa-user-plus"></i> Assign to ' + selectedCountAssign + ' Student(s)';
+                                        } else {
+                                            assignBtn.disabled = true;
+                                            assignBtn.innerHTML = '<i class="fas fa-user-plus"></i> Select Students First';
+                                        }
+                                    }
+                                }
+
+                                // Form validation
+                                document.getElementById('purchaseForm').addEventListener('submit', function (e) {
+                                    if (selectedCount === 0) {
+                                        e.preventDefault();
+                                        alert('Please select at least one student for this package.');
+                                        return false;
+                                    }
+
+                                    if (!confirm('Are you sure you want to purchase this package for ' + selectedCount + ' student(s)?')) {
+                                        e.preventDefault();
+                                        return false;
+                                    }
                                 });
-                            });
-                        });
-        </script>
+
+                                // Form validation for assignment
+                                document.getElementById('assignForm')?.addEventListener('submit', function (e) {
+                                    if (selectedCountAssign === 0) {
+                                        e.preventDefault();
+                                        alert('Please select at least one student for assignment.');
+                                        return false;
+                                    }
+
+                                    if (!confirm('Are you sure you want to assign this package to ' + selectedCountAssign + ' student(s)?')) {
+                                        e.preventDefault();
+                                        return false;
+                                    }
+                                });
+
+                                // Initialize checkboxes
+                                document.addEventListener('DOMContentLoaded', function () {
+                                    const checkboxes = document.querySelectorAll('input[name="studentIds"]');
+                                    checkboxes.forEach(function (checkbox) {
+                                        checkbox.addEventListener('change', function () {
+                                            // This ensures the checkbox state is properly managed
+                                            updatePurchaseButton();
+                                        });
+                                    });
+                                });
+            </script>
 
     </body>
 </html>

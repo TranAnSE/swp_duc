@@ -282,9 +282,9 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="grade_id">Target Grade</label>
-                            <select name="grade_id" id="grade_id" class="select2-no-nice">
-                                <option value="">-- Select Grade (Optional for Subject Combo) --</option>
+                            <label for="grade_id">Target Grade *</label>
+                            <select name="grade_id" id="grade_id" class="select2-no-nice" required>
+                                <option value="">-- Select Grade (Required) --</option>
                                 <c:forEach items="${grades}" var="grade">
                                     <option value="${grade.id}" 
                                             ${studyPackageToEdit != null && studyPackageToEdit.grade_id != null && studyPackageToEdit.grade_id == grade.id ? 'selected' : ''}>
@@ -402,7 +402,7 @@
                 });
 
                 $('#grade_id').select2({
-                    placeholder: "-- Select Grade (Optional for Subject Combo) --",
+                    placeholder: "-- Select Grade (Required) --",
                     allowClear: true,
                     width: '100%'
                 });
@@ -418,9 +418,70 @@
                     toggleGradeSelection();
                 });
 
+                // Handle grade change to load subjects
+                $('#grade_id').on('change', function () {
+                    loadSubjectsByGrade();
+                    toggleGradeSelection();
+                });
+
                 // Initialize on page load
                 toggleGradeSelection();
+
+                // Load subjects if grade is already selected (for edit mode)
+                if ($('#grade_id').val()) {
+                    loadSubjectsByGrade();
+                }
             });
+
+            function loadSubjectsByGrade() {
+                const gradeId = $('#grade_id').val();
+                const subjectSelect = $('#subject_ids');
+
+                if (!gradeId) {
+                    subjectSelect.empty().trigger('change');
+                    return;
+                }
+
+                // Show loading state
+                subjectSelect.empty().append('<option value="">Loading subjects...</option>').trigger('change');
+
+                $.ajax({
+                    url: 'study_package',
+                    type: 'GET',
+                    data: {
+                        service: 'getSubjectsByGrade',
+                        gradeId: gradeId
+                    },
+                    dataType: 'json',
+                    success: function (subjects) {
+                        subjectSelect.empty();
+
+                        if (subjects && subjects.length > 0) {
+                            subjects.forEach(function (subject) {
+                                const option = new Option(subject.name, subject.id, false, false);
+
+                                // Check if this subject was previously selected (for edit mode)
+            <c:if test="${not empty selectedSubjectIds}">
+                <c:forEach items="${selectedSubjectIds}" var="selectedId">
+                                if (subject.id == ${selectedId}) {
+                                    option.selected = true;
+                                }
+                </c:forEach>
+            </c:if>
+
+                                subjectSelect.append(option);
+                            });
+                        } else {
+                            subjectSelect.append('<option value="">No subjects available for this grade</option>');
+                        }
+
+                        subjectSelect.trigger('change');
+                    },
+                    error: function () {
+                        subjectSelect.empty().append('<option value="">Error loading subjects</option>').trigger('change');
+                    }
+                });
+            }
 
             function toggleGradeSelection() {
                 const typeSelect = $('#type');
@@ -442,21 +503,28 @@
                     subjectSelection.removeClass('show');
                     $('#subject_ids').prop('required', false);
                 } else if (selectedType === 'SUBJECT_COMBO') {
-                    gradeSelect.prop('required', false);
+                    gradeSelect.prop('required', true); // Make grade required for subject combo too
                     comboInfo.show();
                     subjectSelection.addClass('show');
                     $('#subject_ids').prop('required', true);
                 } else {
-                    gradeSelect.prop('required', false);
+                    gradeSelect.prop('required', true); // Grade is always required now
                     $('#subject_ids').prop('required', false);
                 }
             }
 
-            // Form validation
+            // Form validation - updated to make grade required
             $('#packageForm').on('submit', function (e) {
                 const type = $('#type').val();
                 const gradeId = $('#grade_id').val();
                 const subjectIds = $('#subject_ids').val();
+
+                // Grade is now always required
+                if (!gradeId) {
+                    e.preventDefault();
+                    alert('Please select a grade. Grade is required for all package types.');
+                    return false;
+                }
 
                 if (type === 'GRADE_ALL' && !gradeId) {
                     e.preventDefault();

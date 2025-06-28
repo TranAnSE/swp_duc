@@ -108,6 +108,12 @@ public class StudyPackageController extends HttpServlet {
                 case "getAvailableSubjects":
                     handleGetAvailableSubjects(request, response);
                     return;
+                case "getSubjectsByGrade":
+                    handleGetSubjectsByGrade(request, response);
+                    return;
+                case "assignPackage":
+                    assignPackageToStudent(request, response);
+                    break;
                 default:
                     listStudyPackage(request, response);
                     break;
@@ -550,6 +556,38 @@ public class StudyPackageController extends HttpServlet {
         }
     }
 
+    private void handleGetSubjectsByGrade(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int gradeId = Integer.parseInt(request.getParameter("gradeId"));
+            DAOSubject subjectDAO = new DAOSubject();
+            List<Subject> subjects = subjectDAO.findAll();
+
+            StringBuilder json = new StringBuilder("[");
+            boolean first = true;
+            for (Subject subject : subjects) {
+                if (subject.getGrade_id() == gradeId) {
+                    if (!first) {
+                        json.append(",");
+                    }
+                    json.append("{\"id\":").append(subject.getId())
+                            .append(",\"name\":\"").append(escapeJson(subject.getName()))
+                            .append("\"}");
+                    first = false;
+                }
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("[]");
+        }
+    }
+
 // Helper method to escape JSON strings
     private String escapeJson(String input) {
         if (input == null) {
@@ -560,6 +598,103 @@ public class StudyPackageController extends HttpServlet {
                 .replace("\n", "\\n")
                 .replace("\r", "\\r")
                 .replace("\t", "\\t");
+    }
+
+    private void assignPackageToStudent(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        Account account = (Account) session.getAttribute("account");
+
+        if (account != null && RoleConstants.PARENT.equals(account.getRole())) {
+            try {
+                int packageId = Integer.parseInt(request.getParameter("packageId"));
+                String[] studentIds = request.getParameterValues("studentIds");
+
+                if (studentIds == null || studentIds.length == 0) {
+                    request.setAttribute("errorMessage", "Please select at least one student.");
+                    checkoutStudyPackage(request, response);
+                    return;
+                }
+
+                StudyPackage studyPackage = dao.findStudyPackageById(packageId);
+                if (studyPackage == null) {
+                    request.setAttribute("errorMessage", "Study package not found.");
+                    listStudyPackage(request, response);
+                    return;
+                }
+
+                // Check if package has available slots
+                int currentAssignments = studentPackageDAO.countAssignedStudents(packageId);
+                if (currentAssignments + studentIds.length > studyPackage.getMax_students()) {
+                    request.setAttribute("errorMessage",
+                            "Cannot assign package. This would exceed the maximum student limit ("
+                            + studyPackage.getMax_students() + ").");
+                    checkoutStudyPackage(request, response);
+                    return;
+                }
+
+                // Create invoice first
+                InvoiceDAO invoiceDAO = new InvoiceDAO();
+                Invoice invoice = new Invoice();
+                invoice.setTotal_amount(studyPackage.getPrice());
+                invoice.setParent_id(account.getId());
+                invoice.setCreated_at(LocalDate.now());
+                invoice.setStatus("Completed"); // Direct assignment without payment
+                invoice.setPay_at(LocalDate.now());
+
+                int invoiceId = invoiceDAO.insertInvoice(invoice);
+
+                if (invoiceId > 0) {
+                    // Add invoice line
+                    invoiceDAO.insertInvoiceLine(invoiceId, packageId);
+
+                    // Assign package to each selected student
+                    boolean allAssigned = true;
+                    for (String studentIdStr : studentIds) {
+                        try {
+                            int studentId = Integer.parseInt(studentIdStr);
+                            boolean assigned = studentPackageDAO.assignPackageToStudent(
+                                    studentId,
+                                    packageId,
+                                    account.getId(),
+                                    studyPackage.getDuration_days()
+                            );
+
+                            if (!assigned) {
+                                allAssigned = false;
+                                System.err.println("Failed to assign package " + packageId + " to student " + studentId);
+                            } else {
+                                // Update invoice line with student assignment
+                                invoiceDAO.updateInvoiceLineWithStudent(invoiceId, studentId);
+                            }
+                        } catch (NumberFormatException e) {
+                            allAssigned = false;
+                            System.err.println("Invalid student ID: " + studentIdStr);
+                        }
+                    }
+
+                    if (allAssigned) {
+                        request.setAttribute("message",
+                                "Study package successfully assigned to " + studentIds.length + " student(s)!");
+                        showMyPackages(request, response);
+                    } else {
+                        request.setAttribute("errorMessage",
+                                "Some assignments failed. Please check and try again.");
+                        checkoutStudyPackage(request, response);
+                    }
+                } else {
+                    request.setAttribute("errorMessage", "Failed to create invoice.");
+                    checkoutStudyPackage(request, response);
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                request.setAttribute("errorMessage", "Error assigning package: " + e.getMessage());
+                checkoutStudyPackage(request, response);
+            }
+        } else {
+            response.sendRedirect("/error.jsp");
+        }
     }
 
     @Override
