@@ -458,29 +458,30 @@ public class TestController extends HttpServlet {
         try {
             int lessonId = Integer.parseInt(request.getParameter("lessonId"));
             QuestionDAO questionDAO = new QuestionDAO();
-            List<Question> allQuestions = questionDAO.findAllQuestion();
+
+            // Use the method that includes all details
+            List<Question> questions = questionDAO.getQuestionsByLessonWithDetails(lessonId);
 
             StringBuilder json = new StringBuilder("[");
-            boolean first = true;
-            for (Question question : allQuestions) {
-                if (question.getLesson_id() == lessonId) {
-                    if (!first) {
-                        json.append(",");
-                    }
-                    // Ensure all fields have default values if null
-                    String difficulty = question.getDifficulty() != null ? question.getDifficulty() : "medium";
-                    String category = question.getCategory() != null ? question.getCategory() : "conceptual";
-                    String questionType = question.getQuestion_type() != null ? question.getQuestion_type() : "SINGLE";
-
-                    json.append("{\"id\":").append(question.getId())
-                            .append(",\"question\":\"").append(escapeJsonString(question.getQuestion()))
-                            .append("\",\"type\":\"").append(questionType)
-                            .append("\",\"difficulty\":\"").append(difficulty)
-                            .append("\",\"category\":\"").append(category)
-                            .append("\",\"isAI\":").append(question.isAIGenerated())
-                            .append("}");
-                    first = false;
+            for (int i = 0; i < questions.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
                 }
+                Question question = questions.get(i);
+
+                // Ensure all fields have default values if null
+                String difficulty = question.getDifficulty() != null ? question.getDifficulty() : "medium";
+                String category = question.getCategory() != null ? question.getCategory() : "conceptual";
+                String questionType = question.getQuestion_type() != null ? question.getQuestion_type() : "SINGLE";
+                String questionText = question.getQuestion() != null ? question.getQuestion() : "";
+
+                json.append("{\"id\":").append(question.getId())
+                        .append(",\"question\":\"").append(escapeJsonString(questionText))
+                        .append("\",\"type\":\"").append(questionType)
+                        .append("\",\"difficulty\":\"").append(difficulty)
+                        .append("\",\"category\":\"").append(category)
+                        .append("\",\"isAI\":").append(question.isAIGenerated())
+                        .append("}");
             }
             json.append("]");
 

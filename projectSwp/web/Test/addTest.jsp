@@ -602,6 +602,8 @@
                                         let allQuestions = [];
                                         let selectedQuestions = new Set();
 
+                                        console.log('Page loaded, initializing...');
+
                                         // Initialize Select2
                                         function initializeSelect2(selector) {
                                             $(selector).select2({
@@ -619,8 +621,10 @@
 
                                         // Define global functions that are called from HTML onchange events
                                         window.updateManualStats = function () {
+                                            console.log('updateManualStats called');
                                             const total = $('#manualQuestionsList .question-checkbox').length;
                                             const selected = $('#manualQuestionsList .question-checkbox:checked').length;
+                                            console.log('Stats:', {total, selected});
                                             $('#manualStats').html(`<i class="fas fa-chart-bar"></i> Selected: ${selected} / ${total} questions`);
 
                                             // Update visual selection
@@ -651,6 +655,7 @@
                                         // Toggle selection method
                                         window.toggleSelectionMethod = function () {
                                             const method = $('input[name="selectionMethod"]:checked').val();
+                                            console.log('Selection method changed to:', method);
                                             if (method === 'smart') {
                                                 $('#smartGenerationSection').addClass('active');
                                                 $('#manualSelectionAlert').show();
@@ -666,6 +671,7 @@
                                         // Hierarchy selection handlers
                                         $('#gradeSelect').on('change', function () {
                                             const gradeId = $(this).val();
+                                            console.log('Grade selected:', gradeId);
                                             if (gradeId) {
                                                 loadSubjects(gradeId);
                                                 resetSubsequentSelects(['#subjectSelect', '#chapterSelect', '#lessonSelect']);
@@ -675,6 +681,7 @@
 
                                         $('#subjectSelect').on('change', function () {
                                             const subjectId = $(this).val();
+                                            console.log('Subject selected:', subjectId);
                                             if (subjectId) {
                                                 loadChapters(subjectId);
                                                 resetSubsequentSelects(['#chapterSelect', '#lessonSelect']);
@@ -684,6 +691,7 @@
 
                                         $('#chapterSelect').on('change', function () {
                                             const chapterId = $(this).val();
+                                            console.log('Chapter selected:', chapterId);
                                             if (chapterId) {
                                                 loadLessons(chapterId);
                                                 resetSubsequentSelects(['#lessonSelect']);
@@ -693,6 +701,7 @@
 
                                         $('#lessonSelect').on('change', function () {
                                             const lessonId = $(this).val();
+                                            console.log('Lesson selected:', lessonId);
                                             if (lessonId) {
                                                 currentLessonId = lessonId;
                                                 loadQuestions(lessonId);
@@ -709,6 +718,7 @@
                                         }
 
                                         function clearQuestionDisplay() {
+                                            console.log('Clearing question display');
                                             $('#manualQuestionsList').empty();
                                             $('#manualStats, #manualBulkActions').hide();
                                             $('#manualSelectionAlert').show();
@@ -718,40 +728,50 @@
 
                                         // AJAX functions
                                         function loadSubjects(gradeId) {
+                                            console.log('Loading subjects for grade:', gradeId);
                                             $.get('test', {
                                                 action: 'getSubjectsByGrade',
                                                 gradeId: gradeId
                                             }, function (data) {
+                                                console.log('Subjects loaded:', data);
                                                 populateSelect('#subjectSelect', data, '-- Select Subject --');
-                                            }).fail(function () {
-                                                console.error('Failed to load subjects');
+                                            }).fail(function (xhr, status, error) {
+                                                console.error('Failed to load subjects:', error);
                                             });
                                         }
 
                                         function loadChapters(subjectId) {
+                                            console.log('Loading chapters for subject:', subjectId);
                                             $.get('test', {
                                                 action: 'getChaptersBySubject',
                                                 subjectId: subjectId
                                             }, function (data) {
+                                                console.log('Chapters loaded:', data);
                                                 populateSelect('#chapterSelect', data, '-- Select Chapter --');
-                                            }).fail(function () {
-                                                console.error('Failed to load chapters');
+                                            }).fail(function (xhr, status, error) {
+                                                console.error('Failed to load chapters:', error);
                                             });
                                         }
 
                                         function loadLessons(chapterId) {
+                                            console.log('Loading lessons for chapter:', chapterId);
                                             $.get('test', {
                                                 action: 'getLessonsByChapter',
                                                 chapterId: chapterId
                                             }, function (data) {
+                                                console.log('Lessons loaded:', data);
                                                 populateSelect('#lessonSelect', data, '-- Select Lesson --');
-                                            }).fail(function () {
-                                                console.error('Failed to load lessons');
+                                            }).fail(function (xhr, status, error) {
+                                                console.error('Failed to load lessons:', error);
                                             });
                                         }
 
                                         function loadQuestions(lessonId) {
                                             console.log('Loading questions for lesson:', lessonId);
+
+                                            // Show loading state
+                                            $('#manualQuestionsList').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Loading questions...</div>');
+
                                             $.get('test', {
                                                 action: 'getQuestionsByLesson',
                                                 lessonId: lessonId
@@ -765,7 +785,7 @@
                                             }).fail(function (xhr, status, error) {
                                                 console.error('Failed to load questions:', error);
                                                 console.error('Response:', xhr.responseText);
-                                                $('#manualSelectionAlert').show().html('<i class="fas fa-exclamation-triangle"></i> Failed to load questions for this lesson: ' + error);
+                                                $('#manualQuestionsList').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Failed to load questions: ' + error + '</div>');
                                             });
                                         }
 
@@ -780,40 +800,68 @@
                                             initializeSelect2(selector);
                                         }
 
-                                        // Question display functions
+                                        // Fixed question display function
                                         function displayManualQuestions(questions) {
+                                            console.log('displayManualQuestions called with:', questions);
                                             const container = $('#manualQuestionsList');
-                                            container.empty();
+                                            console.log('Container found:', container.length);
 
-                                            if (questions.length === 0) {
+                                            // Clear existing content first
+                                            container.empty();
+                                            console.log('Container cleared');
+
+                                            if (!questions || questions.length === 0) {
                                                 container.html('<div class="alert alert-warning"><i class="fas fa-info-circle"></i> No questions found for this lesson</div>');
                                                 return;
                                             }
 
+                                            console.log('Processing', questions.length, 'questions');
+
                                             questions.forEach(function (question, index) {
+                                                console.log('Processing question', index + 1, ':', question);
+
                                                 // Ensure all properties have default values
                                                 const difficulty = question.difficulty || 'medium';
                                                 const category = question.category || 'conceptual';
                                                 const type = question.type || 'SINGLE';
                                                 const isAI = question.isAI || false;
+                                                const questionText = (question.question || 'No question text').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                                                const questionId = question.id || 0;
 
-                                                const questionHtml = `
-                <div class="question-item" data-question-id="${question.id}" data-difficulty="${difficulty}" data-category="${category}" data-source="${isAI ? 'ai' : 'manual'}">
-                    <input type="checkbox" name="questionIds" value="${question.id}" 
-                           class="question-checkbox" onchange="updateManualStats()">
-                    <div class="question-content">
-                        <div class="question-text">${question.question}</div>
-                        <div class="question-meta">
-                            <span class="meta-badge difficulty-${difficulty}">${difficulty}</span>
-                            <span class="meta-badge category-badge">${category}</span>
-                            <span class="meta-badge">${type}</span>
-            ${isAI ? '<span class="meta-badge ai-badge">AI Generated</span>' : '<span class="meta-badge">Manual</span>'}
-                        </div>
-                    </div>
-                </div>
-            `;
-                                                container.append(questionHtml);
+                                                console.log('Question processed data:', {questionId, questionText: questionText.substring(0, 50), difficulty, category, type, isAI});
+
+                                                // Create question HTML
+                                                const questionDiv = $('<div></div>')
+                                                        .addClass('question-item')
+                                                        .attr('data-question-id', questionId)
+                                                        .attr('data-difficulty', difficulty)
+                                                        .attr('data-category', category)
+                                                        .attr('data-source', isAI ? 'ai' : 'manual');
+
+                                                const checkbox = $('<input>')
+                                                        .attr('type', 'checkbox')
+                                                        .attr('name', 'questionIds')
+                                                        .attr('value', questionId)
+                                                        .addClass('question-checkbox')
+                                                        .on('change', updateManualStats);
+
+                                                const contentDiv = $('<div></div>').addClass('question-content');
+                                                const textDiv = $('<div></div>').addClass('question-text').text(question.question || 'No question text');
+
+                                                const metaDiv = $('<div></div>').addClass('question-meta');
+                                                metaDiv.append($('<span></span>').addClass('meta-badge difficulty-' + difficulty).text(difficulty));
+                                                metaDiv.append($('<span></span>').addClass('meta-badge category-badge').text(category));
+                                                metaDiv.append($('<span></span>').addClass('meta-badge').text(type));
+                                                metaDiv.append($('<span></span>').addClass('meta-badge').text(isAI ? 'AI Generated' : 'Manual'));
+
+                                                contentDiv.append(textDiv).append(metaDiv);
+                                                questionDiv.append(checkbox).append(contentDiv);
+
+                                                container.append(questionDiv);
+                                                console.log('Question', index + 1, 'added to container');
                                             });
+
+                                            console.log('All questions processed. Final container children count:', container.children().length);
                                         }
 
                                         function displayGeneratedQuestions(questions) {
@@ -826,23 +874,37 @@
                                                 const category = question.category || 'conceptual';
                                                 const type = question.type || 'SINGLE';
                                                 const isAI = question.isAI || false;
+                                                const questionText = question.question || 'No question text';
+                                                const questionId = question.id || 0;
 
-                                                const questionHtml = `
-                <div class="question-item selected" data-question-id="${question.id}" data-difficulty="${difficulty}" data-category="${category}" data-source="${isAI ? 'ai' : 'manual'}">
-                    <input type="checkbox" name="questionIds" value="${question.id}" 
-                           class="question-checkbox" checked onchange="updateGeneratedStats()">
-                    <div class="question-content">
-                        <div class="question-text">${question.question}</div>
-                        <div class="question-meta">
-                            <span class="meta-badge difficulty-${difficulty}">${difficulty}</span>
-                            <span class="meta-badge category-badge">${category}</span>
-                            <span class="meta-badge">${type}</span>
-            ${isAI ? '<span class="meta-badge ai-badge">AI Generated</span>' : '<span class="meta-badge">Manual</span>'}
-                        </div>
-                    </div>
-                </div>
-            `;
-                                                container.append(questionHtml);
+                                                const questionDiv = $('<div></div>')
+                                                        .addClass('question-item selected')
+                                                        .attr('data-question-id', questionId)
+                                                        .attr('data-difficulty', difficulty)
+                                                        .attr('data-category', category)
+                                                        .attr('data-source', isAI ? 'ai' : 'manual');
+
+                                                const checkbox = $('<input>')
+                                                        .attr('type', 'checkbox')
+                                                        .attr('name', 'questionIds')
+                                                        .attr('value', questionId)
+                                                        .addClass('question-checkbox')
+                                                        .prop('checked', true)
+                                                        .on('change', updateGeneratedStats);
+
+                                                const contentDiv = $('<div></div>').addClass('question-content');
+                                                const textDiv = $('<div></div>').addClass('question-text').text(questionText);
+
+                                                const metaDiv = $('<div></div>').addClass('question-meta');
+                                                metaDiv.append($('<span></span>').addClass('meta-badge difficulty-' + difficulty).text(difficulty));
+                                                metaDiv.append($('<span></span>').addClass('meta-badge category-badge').text(category));
+                                                metaDiv.append($('<span></span>').addClass('meta-badge').text(type));
+                                                metaDiv.append($('<span></span>').addClass('meta-badge').text(isAI ? 'AI Generated' : 'Manual'));
+
+                                                contentDiv.append(textDiv).append(metaDiv);
+                                                questionDiv.append(checkbox).append(contentDiv);
+
+                                                container.append(questionDiv);
                                             });
 
                                             $('#generatedQuestionsPreview').addClass('active');
@@ -911,8 +973,8 @@
                                             const difficulty = prompt('Enter difficulty level (easy, medium, hard):');
                                             if (difficulty) {
                                                 $('#manualQuestionsList .question-item').each(function () {
-                                                    const questionDifficulty = $(this).find('.difficulty-' + difficulty).length > 0;
-                                                    $(this).find('.question-checkbox').prop('checked', questionDifficulty);
+                                                    const questionDifficulty = $(this).data('difficulty');
+                                                    $(this).find('.question-checkbox').prop('checked', questionDifficulty === difficulty.toLowerCase());
                                                 });
                                                 updateManualStats();
                                             }
@@ -922,13 +984,11 @@
                                         window.applyFilters = function () {
                                             const difficultyFilter = $('#difficultyFilter').val();
                                             const categoryFilter = $('#categoryFilter').val();
-                                            const sourceFilter = $('#sourceFilter').val();
 
                                             $('#manualQuestionsList .question-item').each(function () {
                                                 const $item = $(this);
                                                 const difficulty = $item.data('difficulty');
                                                 const category = $item.data('category');
-                                                const source = $item.data('source');
 
                                                 let show = true;
 
@@ -936,9 +996,6 @@
                                                     show = false;
                                                 }
                                                 if (categoryFilter !== 'all' && category !== categoryFilter) {
-                                                    show = false;
-                                                }
-                                                if (sourceFilter !== 'all' && source !== sourceFilter) {
                                                     show = false;
                                                 }
 
@@ -968,6 +1025,8 @@
 
                                         // Initialize page state
                                         toggleSelectionMethod();
+
+                                        console.log('Initialization complete');
                                     });
         </script>
     </body>
