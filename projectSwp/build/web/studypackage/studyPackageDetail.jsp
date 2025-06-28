@@ -144,6 +144,18 @@
 
             <c:if test="${not empty studyPackageDetail}">
                 <div class="detail-grid">
+                    <c:if test="${studyPackageDetail.type == 'SUBJECT_COMBO'}">
+                        <div class="description-section">
+                            <div class="detail-label">
+                                <i class="fas fa-layer-group"></i> Included Subjects
+                            </div>
+                            <div class="detail-value" style="margin-top: 10px;" id="packageSubjects">
+                                <div class="text-center">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading subjects...
+                                </div>
+                            </div>
+                        </div>
+                    </c:if>
                     <div class="detail-item">
                         <div class="detail-label">Package ID</div>
                         <div class="detail-value">#${studyPackageDetail.id}</div>
@@ -267,5 +279,43 @@
         <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/main.js"></script>
+        <script>
+                               $(document).ready(function () {
+            <c:if test="${studyPackageDetail.type == 'SUBJECT_COMBO'}">
+                                   // Load subjects for this package
+                                   $.ajax({
+                                       url: 'study_package',
+                                       type: 'GET',
+                                       data: {
+                                           service: 'getSubjectsByPackage',
+                                           packageId: ${studyPackageDetail.id}
+                                       },
+                                       dataType: 'json',
+                                       success: function (subjects) {
+                                           let html = '';
+                                           if (subjects && subjects.length > 0) {
+                                               html = '<div class="row">';
+                                               subjects.forEach(function (subject, index) {
+                                                   if (index % 2 === 0 && index > 0) {
+                                                       html += '</div><div class="row">';
+                                                   }
+                                                   html += '<div class="col-md-6 mb-2">' +
+                                                           '<span class="badge badge-primary" style="font-size: 14px; padding: 8px 12px;">' +
+                                                           '<i class="fas fa-book"></i> ' + subject.name +
+                                                           '</span></div>';
+                                               });
+                                               html += '</div>';
+                                           } else {
+                                               html = '<div class="alert alert-info">No subjects configured for this package.</div>';
+                                           }
+                                           $('#packageSubjects').html(html);
+                                       },
+                                       error: function () {
+                                           $('#packageSubjects').html('<div class="alert alert-danger">Error loading subjects.</div>');
+                                       }
+                                   });
+            </c:if>
+                               });
+        </script>
     </body>
 </html>

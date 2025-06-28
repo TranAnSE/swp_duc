@@ -317,7 +317,15 @@
                                 <c:forEach var="sp" items="${listStudyPackage}">
                                     <tr>
                                         <td><c:out value="${sp.id}"/></td>
-                                        <td><c:out value="${sp.name}"/></td>
+                                        <td>
+                                            <c:out value="${sp.name}"/>
+                                            <c:if test="${sp.type == 'SUBJECT_COMBO'}">
+                                                <br><small class="text-muted">
+                                                    <i class="fas fa-info-circle"></i> 
+                                                    <a href="#" onclick="showSubjects(${sp.id})" class="text-info">View Subjects</a>
+                                                </small>
+                                            </c:if>
+                                        </td>
                                         <td>
                                             <span class="package-type-badge ${sp.type == 'GRADE_ALL' ? 'type-grade' : 'type-combo'}">
                                                 <c:choose>
@@ -385,6 +393,27 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Subject Details Modal -->
+            <div class="modal fade" id="subjectModal" tabindex="-1" role="dialog" aria-labelledby="subjectModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="subjectModalLabel">Package Subjects</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body" id="subjectModalBody">
+                            <div class="text-center">
+                                <i class="fas fa-spinner fa-spin"></i> Loading subjects...
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <%@include file="../footer.jsp" %>
@@ -418,5 +447,40 @@
         <script src="${pageContext.request.contextPath}/assets/js/jquery.ajaxchimp.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/plugins.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/main.js"></script>
+
+        <script>
+                                                       function showSubjects(packageId) {
+                                                           $('#subjectModal').modal('show');
+                                                           $('#subjectModalBody').html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading subjects...</div>');
+
+                                                           $.ajax({
+                                                               url: 'study_package',
+                                                               type: 'GET',
+                                                               data: {
+                                                                   service: 'getSubjectsByPackage',
+                                                                   packageId: packageId
+                                                               },
+                                                               dataType: 'json',
+                                                               success: function (subjects) {
+                                                                   let html = '';
+                                                                   if (subjects && subjects.length > 0) {
+                                                                       html = '<ul class="list-group">';
+                                                                       subjects.forEach(function (subject) {
+                                                                           html += '<li class="list-group-item">' +
+                                                                                   '<i class="fas fa-book"></i> ' + subject.name +
+                                                                                   '</li>';
+                                                                       });
+                                                                       html += '</ul>';
+                                                                   } else {
+                                                                       html = '<div class="alert alert-info">No subjects found for this package.</div>';
+                                                                   }
+                                                                   $('#subjectModalBody').html(html);
+                                                               },
+                                                               error: function () {
+                                                                   $('#subjectModalBody').html('<div class="alert alert-danger">Error loading subjects.</div>');
+                                                               }
+                                                           });
+                                                       }
+        </script>
     </body>
 </html>

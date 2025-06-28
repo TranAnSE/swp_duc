@@ -218,12 +218,59 @@ public class VideoViewerController extends HttpServlet {
             return pkg.getGrade_id() != null && pkg.getGrade_id().equals(subject.getGrade_id());
         } else if ("SUBJECT_COMBO".equals(pkg.getType())) {
             // Check if subject is included in package subjects
-            // This would require checking package_subject table
             PackageSubjectDAO packageSubjectDAO = new PackageSubjectDAO();
-            // Implementation would depend on your package_subject structure
-            return true; // Simplified for now
+            return packageSubjectDAO.packageIncludesSubject(pkg.getId(), subject.getId());
         }
         return false;
+    }
+
+    private List<Lesson> getAccessibleLessons(int studentId) {
+        List<Lesson> accessibleLessons = new ArrayList<>();
+
+        try {
+            // Get student's accessible packages
+            List<StudyPackage> accessiblePackages = studyPackageDAO.getStudentAccessiblePackages(studentId);
+
+            for (StudyPackage pkg : accessiblePackages) {
+                if ("GRADE_ALL".equals(pkg.getType())) {
+                    // Get all lessons for the grade
+                    List<Subject> subjects = subjectDAO.findAll();
+                    for (Subject subject : subjects) {
+                        if (subject.getGrade_id() == pkg.getGrade_id()) {
+                            List<Chapter> chapters = chapterDAO.findChapterBySubjectId(subject.getId());
+                            for (Chapter chapter : chapters) {
+                                List<Lesson> lessons = lessonDAO.getAllLessons();
+                                for (Lesson lesson : lessons) {
+                                    if (lesson.getChapter_id() == chapter.getId()) {
+                                        accessibleLessons.add(lesson);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if ("SUBJECT_COMBO".equals(pkg.getType())) {
+                    // Get lessons for specific subjects in the combo
+                    PackageSubjectDAO packageSubjectDAO = new PackageSubjectDAO();
+                    List<Integer> subjectIds = packageSubjectDAO.getPackageSubjects(pkg.getId());
+
+                    for (Integer subjectId : subjectIds) {
+                        List<Chapter> chapters = chapterDAO.findChapterBySubjectId(subjectId);
+                        for (Chapter chapter : chapters) {
+                            List<Lesson> lessons = lessonDAO.getAllLessons();
+                            for (Lesson lesson : lessons) {
+                                if (lesson.getChapter_id() == chapter.getId()) {
+                                    accessibleLessons.add(lesson);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return accessibleLessons;
     }
 
     private Map<String, Object> buildCourseStructureByRole(HttpServletRequest request) throws SQLException {

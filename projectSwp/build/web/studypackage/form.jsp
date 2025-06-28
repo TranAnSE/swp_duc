@@ -28,7 +28,8 @@
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/fontawesome-all.min.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/themify-icons.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/slick.css">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/nice-select.css">
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
         <style>
             .text-danger {
@@ -83,7 +84,6 @@
                 color: #333;
             }
             .form-group input,
-            .form-group select,
             .form-group textarea {
                 width: 100%;
                 padding: 10px 15px;
@@ -95,7 +95,6 @@
                 transition: border-color 0.3s ease;
             }
             .form-group input:focus,
-            .form-group select:focus,
             .form-group textarea:focus {
                 border-color: #007bff;
                 outline: none;
@@ -144,6 +143,60 @@
                 margin-top: 10px;
                 font-size: 13px;
                 color: #495057;
+            }
+
+            /* Hide nice-select completely */
+            .nice-select {
+                display: none !important;
+            }
+
+            /* Select2 custom styling */
+            .select2-container--default .select2-selection--single {
+                height: 42px;
+                border: 1px solid #ced4da;
+                border-radius: 6px;
+                background-color: #fdfdfd;
+            }
+            .select2-container--default .select2-selection--single .select2-selection__rendered {
+                line-height: 40px;
+                padding-left: 15px;
+                color: #495057;
+            }
+            .select2-container--default .select2-selection--single .select2-selection__arrow {
+                height: 40px;
+                right: 10px;
+            }
+            .select2-container--default .select2-selection--multiple {
+                border: 1px solid #ced4da;
+                border-radius: 6px;
+                min-height: 42px;
+                background-color: #fdfdfd;
+            }
+            .select2-container {
+                width: 100% !important;
+            }
+            .select2-container--default .select2-selection--single:focus,
+            .select2-container--default .select2-selection--multiple:focus {
+                border-color: #007bff;
+                outline: none;
+            }
+            .select2-container--default .select2-selection--single .select2-selection__placeholder {
+                color: #6c757d;
+            }
+            .select2-container--default .select2-selection--multiple .select2-selection__placeholder {
+                color: #6c757d;
+            }
+
+            #subject-selection {
+                display: none;
+                margin-top: 20px;
+                padding: 20px;
+                background-color: #f8f9fa;
+                border-radius: 6px;
+                border: 1px solid #dee2e6;
+            }
+            #subject-selection.show {
+                display: block;
             }
         </style>
     </head>
@@ -207,7 +260,7 @@
                         </div>
                         <div class="form-group">
                             <label for="type">Package Type *</label>
-                            <select name="type" id="type" required onchange="toggleGradeSelection()">
+                            <select name="type" id="type" required class="select2-no-nice">
                                 <option value="">-- Select Package Type --</option>
                                 <option value="SUBJECT_COMBO" ${studyPackageToEdit != null && studyPackageToEdit.type == 'SUBJECT_COMBO' ? 'selected' : ''}>
                                     Subject Combo
@@ -230,7 +283,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="grade_id">Target Grade</label>
-                            <select name="grade_id" id="grade_id">
+                            <select name="grade_id" id="grade_id" class="select2-no-nice">
                                 <option value="">-- Select Grade (Optional for Subject Combo) --</option>
                                 <c:forEach items="${grades}" var="grade">
                                     <option value="${grade.id}" 
@@ -254,6 +307,28 @@
                             <input type="number" name="duration_days" id="duration_days" 
                                    value="${studyPackageToEdit != null ? studyPackageToEdit.duration_days : '365'}" 
                                    required placeholder="Package duration in days" min="1" max="3650" />
+                        </div>
+                    </div>
+
+                    <!-- Subject Selection for SUBJECT_COMBO -->
+                    <div id="subject-selection">
+                        <div class="form-group">
+                            <label for="subject_ids">Select Subjects for Combo *</label>
+                            <select name="subject_ids" id="subject_ids" multiple="multiple" class="select2-no-nice">
+                                <c:forEach items="${allSubjects}" var="subject">
+                                    <option value="${subject.id}"
+                                            <c:if test="${not empty selectedSubjectIds}">
+                                                <c:forEach items="${selectedSubjectIds}" var="selectedId">
+                                                    <c:if test="${selectedId == subject.id}">selected</c:if>
+                                                </c:forEach>
+                                            </c:if>>
+                                        ${subject.name}
+                                    </option>
+                                </c:forEach>
+                            </select>
+                            <small class="form-text text-muted">
+                                Select multiple subjects to include in this combo package.
+                            </small>
                         </div>
                     </div>
 
@@ -290,7 +365,6 @@
         <script src="${pageContext.request.contextPath}/assets/js/animated.headline.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/jquery.magnific-popup.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/gijgo.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.nice-select.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/jquery.sticky.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/jquery.barfiller.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/jquery.counterup.min.js"></script>
@@ -303,61 +377,113 @@
         <script src="${pageContext.request.contextPath}/assets/js/mail-script.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/jquery.ajaxchimp.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/plugins.js"></script>
+
+        <!-- Select2 JS - Load BEFORE main.js -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+        <!-- Load main.js AFTER Select2 -->
         <script src="${pageContext.request.contextPath}/assets/js/main.js"></script>
 
         <script>
-                                function toggleGradeSelection() {
-                                    const typeSelect = document.getElementById('type');
-                                    const gradeSelect = document.getElementById('grade_id');
-                                    const comboInfo = document.getElementById('combo-info');
-                                    const gradeInfo = document.getElementById('grade-info');
+            $(document).ready(function () {
+                // Destroy any existing nice-select instances first
+                $('.select2-no-nice').each(function () {
+                    if ($(this).next('.nice-select').length) {
+                        $(this).next('.nice-select').remove();
+                    }
+                    $(this).show();
+                });
 
-                                    // Hide all info divs first
-                                    comboInfo.style.display = 'none';
-                                    gradeInfo.style.display = 'none';
+                // Initialize Select2 for all select elements with custom class
+                $('#type').select2({
+                    placeholder: "-- Select Package Type --",
+                    allowClear: true,
+                    width: '100%'
+                });
 
-                                    if (typeSelect.value === 'GRADE_ALL') {
-                                        gradeSelect.required = true;
-                                        gradeInfo.style.display = 'block';
-                                    } else if (typeSelect.value === 'SUBJECT_COMBO') {
-                                        gradeSelect.required = false;
-                                        comboInfo.style.display = 'block';
-                                    } else {
-                                        gradeSelect.required = false;
-                                    }
-                                }
+                $('#grade_id').select2({
+                    placeholder: "-- Select Grade (Optional for Subject Combo) --",
+                    allowClear: true,
+                    width: '100%'
+                });
 
-                                // Initialize on page load
-                                document.addEventListener('DOMContentLoaded', function () {
-                                    toggleGradeSelection();
-                                    $('select').niceSelect();
-                                });
+                $('#subject_ids').select2({
+                    placeholder: "Select subjects for this combo package",
+                    allowClear: true,
+                    width: '100%'
+                });
 
-                                // Form validation
-                                document.getElementById('packageForm').addEventListener('submit', function (e) {
-                                    const type = document.getElementById('type').value;
-                                    const gradeId = document.getElementById('grade_id').value;
+                // Handle package type change
+                $('#type').on('change', function () {
+                    toggleGradeSelection();
+                });
 
-                                    if (type === 'GRADE_ALL' && !gradeId) {
-                                        e.preventDefault();
-                                        alert('Please select a grade for "All Subjects in Grade" package type.');
-                                        return false;
-                                    }
+                // Initialize on page load
+                toggleGradeSelection();
+            });
 
-                                    const maxStudents = parseInt(document.getElementById('max_students').value);
-                                    if (maxStudents < 1 || maxStudents > 100) {
-                                        e.preventDefault();
-                                        alert('Maximum students must be between 1 and 100.');
-                                        return false;
-                                    }
+            function toggleGradeSelection() {
+                const typeSelect = $('#type');
+                const gradeSelect = $('#grade_id');
+                const subjectSelection = $('#subject-selection');
+                const comboInfo = $('#combo-info');
+                const gradeInfo = $('#grade-info');
 
-                                    const durationDays = parseInt(document.getElementById('duration_days').value);
-                                    if (durationDays < 1 || durationDays > 3650) {
-                                        e.preventDefault();
-                                        alert('Duration must be between 1 and 3650 days (10 years).');
-                                        return false;
-                                    }
-                                });
+                // Hide all info divs first
+                comboInfo.hide();
+                gradeInfo.hide();
+                subjectSelection.removeClass('show');
+
+                const selectedType = typeSelect.val();
+
+                if (selectedType === 'GRADE_ALL') {
+                    gradeSelect.prop('required', true);
+                    gradeInfo.show();
+                    subjectSelection.removeClass('show');
+                    $('#subject_ids').prop('required', false);
+                } else if (selectedType === 'SUBJECT_COMBO') {
+                    gradeSelect.prop('required', false);
+                    comboInfo.show();
+                    subjectSelection.addClass('show');
+                    $('#subject_ids').prop('required', true);
+                } else {
+                    gradeSelect.prop('required', false);
+                    $('#subject_ids').prop('required', false);
+                }
+            }
+
+            // Form validation
+            $('#packageForm').on('submit', function (e) {
+                const type = $('#type').val();
+                const gradeId = $('#grade_id').val();
+                const subjectIds = $('#subject_ids').val();
+
+                if (type === 'GRADE_ALL' && !gradeId) {
+                    e.preventDefault();
+                    alert('Please select a grade for "All Subjects in Grade" package type.');
+                    return false;
+                }
+
+                if (type === 'SUBJECT_COMBO' && (!subjectIds || subjectIds.length === 0)) {
+                    e.preventDefault();
+                    alert('Please select at least one subject for "Subject Combo" package type.');
+                    return false;
+                }
+
+                const maxStudents = parseInt($('#max_students').val());
+                if (maxStudents < 1 || maxStudents > 100) {
+                    e.preventDefault();
+                    alert('Maximum students must be between 1 and 100.');
+                    return false;
+                }
+
+                const durationDays = parseInt($('#duration_days').val());
+                if (durationDays < 1 || durationDays > 3650) {
+                    e.preventDefault();
+                    alert('Duration must be between 1 and 3650 days (10 years).');
+                    return false;
+                }
+            });
         </script>
     </body>
 </html>
