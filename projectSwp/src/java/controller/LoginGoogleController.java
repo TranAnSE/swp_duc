@@ -86,13 +86,13 @@ public class LoginGoogleController extends HttpServlet {
     private void redirectBasedOnRole(HttpServletResponse response, HttpServletRequest request, String role) throws IOException {
         switch (role) {
             case "admin":
-                redirectToPage(response, request, "/admin?action=dashboard");
+                redirectToPage(response, request, "/dashboard");
                 break;
             case "teacher":
-                redirectToPage(response, request, "/teacher/home.jsp");
+                redirectToPage(response, request, "/dashboard");
                 break;
             case "parent":
-                redirectToPage(response, request, "/admin?action=parentDashboard");
+                redirectToPage(response, request, "/dashboard");
                 break;
 //            case "student":
 //                redirectToPage(response, request, "/student/home.jsp");

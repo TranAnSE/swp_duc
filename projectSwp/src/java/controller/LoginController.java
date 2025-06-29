@@ -155,16 +155,16 @@ public class LoginController extends HttpServlet {
     private void redirectBasedOnRole(HttpServletResponse response, HttpServletRequest request, String role) throws IOException {
         switch (role) {
             case "admin":
-                redirectToPage(response, request, "/admin?action=dashboard");
+                redirectToPage(response, request, "/dashboard");
                 break;
             case "teacher":
-                redirectToPage(response, request, "/admin?action=teacherDashboard");
+                redirectToPage(response, request, "/dashboard");
                 break;
             case "parent":
-                redirectToPage(response, request, "/admin?action=parentDashboard");
+                redirectToPage(response, request, "/dashboard");
                 break;
             case "student":
-                redirectToPage(response, request, "/admin?action=studentDashboard");
+                redirectToPage(response, request, "/dashboard");
                 break;
             default:
                 redirectToPage(response, request, "error-403");
