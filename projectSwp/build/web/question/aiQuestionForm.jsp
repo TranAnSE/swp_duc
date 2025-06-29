@@ -303,7 +303,7 @@
                 color: var(--primary-color);
             }
 
-            /* Enhanced form controls */
+            /* form controls */
             .form-control, .form-select {
                 border: 2px solid var(--border-color);
                 border-radius: 12px;
@@ -319,7 +319,7 @@
                 outline: none;
             }
 
-            /* Enhanced Select2 Custom Styling */
+            /* Select2 Custom Styling */
             .select2-container--bootstrap-5 .select2-selection {
                 border: 2px solid var(--border-color) !important;
                 border-radius: 12px !important;
@@ -1054,7 +1054,7 @@
                 let selectedContent = null;
                 let select2Initialized = new Set(); // Track initialized Select2 instances
 
-                // Enhanced Select2 initialization function
+                // Select2 initialization function
                 function initializeSelect2(selector) {
                     const $element = $(selector);
 

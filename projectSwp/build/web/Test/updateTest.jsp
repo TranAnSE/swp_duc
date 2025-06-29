@@ -539,7 +539,7 @@
                     grid-template-columns: 1fr;
                 }
             }
-            /* Enhanced Question Item Styles */
+            /* Question Item Styles */
             .question-item[style*="display: none"] {
                 display: none !important;
             }
@@ -578,7 +578,7 @@
                 box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
             }
 
-            /* Enhanced Stats Display */
+            /* Stats Display */
             .selection-stats {
                 background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
                 border: 1px solid #2196f3;
@@ -785,7 +785,7 @@
             .hierarchy-steps.auto-hidden {
                 display: none;
             }
-            /* Enhanced scope selection styles */
+            /* scope selection styles */
             #scopeSelection, #scopeSelectionUpdate {
                 background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
                 border: 2px solid #0ea5e9;
@@ -824,7 +824,7 @@
                 accent-color: #0ea5e9;
             }
 
-            /* Enhanced hierarchy steps for different scopes */
+            /* hierarchy steps for different scopes */
             .hierarchy-steps .step-item.scope-disabled {
                 opacity: 0.5;
                 pointer-events: none;
@@ -861,7 +861,7 @@
                 background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             }
 
-            /* Enhanced question item with scope information */
+            /* question item with scope information */
             .question-item .question-scope {
                 font-size: 0.75rem;
                 color: #6b7280;
@@ -891,7 +891,7 @@
                 margin-bottom: 10px;
             }
 
-            /* Enhanced stats display for different scopes */
+            /* stats display for different scopes */
             .selection-stats.scope-enhanced {
                 background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
                 border: 1px solid #f59e0b;
@@ -965,7 +965,7 @@
 
             <main>
                 <div class="form-container">
-                    <h3><i class="fas fa-edit"></i> Enhanced Test Update</h3>
+                    <h3><i class="fas fa-edit"></i> Test Update</h3>
 
                     <form action="${pageContext.request.contextPath}/test" method="post" id="updateTestForm">
                         <input type="hidden" name="action" value="update"/>
