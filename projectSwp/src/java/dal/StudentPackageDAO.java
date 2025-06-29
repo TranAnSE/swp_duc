@@ -520,4 +520,90 @@ public class StudentPackageDAO extends DBContext {
         return 0;
     }
 
+    /**
+     * Get parent's package statistics for a specific package
+     */
+    public Map<String, Object> getParentPackageStats(int parentId, int packageId) {
+        Map<String, Object> stats = new HashMap<>();
+        String sql = """
+        SELECT 
+            pkg.max_students as max_per_parent,
+            pkg.name as package_name,
+            pkg.price,
+            COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as active_assignments,
+            COUNT(*) as total_assignments
+        FROM study_package pkg
+        LEFT JOIN student_package sp ON pkg.id = sp.package_id AND sp.parent_id = ?
+        WHERE pkg.id = ?
+        GROUP BY pkg.id, pkg.max_students, pkg.name, pkg.price
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int maxPerParent = rs.getInt("max_per_parent");
+                int activeAssignments = rs.getInt("active_assignments");
+
+                stats.put("maxPerParent", maxPerParent);
+                stats.put("packageName", rs.getString("package_name"));
+                stats.put("price", rs.getString("price"));
+                stats.put("activeAssignments", activeAssignments);
+                stats.put("totalAssignments", rs.getInt("total_assignments"));
+                stats.put("availableSlots", Math.max(0, maxPerParent - activeAssignments));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return stats;
+    }
+
+    /**
+     * Get parent's assignment history
+     */
+    public List<Map<String, Object>> getParentAssignmentHistory(int parentId, int limit) {
+        List<Map<String, Object>> history = new ArrayList<>();
+        String sql = """
+        SELECT 
+            sp.id as assignment_id,
+            pkg.name as package_name,
+            s.full_name as student_name,
+            sp.purchased_at as assignment_date,
+            CASE 
+                WHEN sp.expires_at > NOW() AND sp.is_active = 1 THEN 'ACTIVE'
+                WHEN sp.expires_at <= NOW() THEN 'EXPIRED'
+                ELSE 'INACTIVE'
+            END as status
+        FROM student_package sp
+        JOIN study_package pkg ON sp.package_id = pkg.id
+        JOIN student s ON sp.student_id = s.id
+        WHERE sp.parent_id = ?
+        ORDER BY sp.purchased_at DESC
+        LIMIT ?
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, limit);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("assignmentId", rs.getInt("assignment_id"));
+                item.put("packageName", rs.getString("package_name"));
+                item.put("studentName", rs.getString("student_name"));
+                item.put("assignmentDate", rs.getTimestamp("assignment_date").toString());
+                item.put("status", rs.getString("status"));
+                history.add(item);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return history;
+    }
+
 }

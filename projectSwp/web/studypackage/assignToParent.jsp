@@ -305,6 +305,64 @@
                 padding-top: 20px;
                 border-top: 1px solid #e9ecef;
             }
+            .student-card.unavailable {
+                border-color: #dc3545;
+                background-color: #f8d7da;
+                opacity: 0.7;
+                cursor: not-allowed;
+            }
+
+            .student-card.unavailable .student-info h6 {
+                color: #721c24;
+            }
+
+            .student-card.unavailable .student-info p {
+                color: #856404;
+            }
+
+            .badge {
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 0.8em;
+                font-weight: bold;
+            }
+
+            .badge-success {
+                background-color: #d4edda;
+                color: #155724;
+            }
+
+            .badge-danger {
+                background-color: #f8d7da;
+                color: #721c24;
+            }
+
+            .alert {
+                margin: 15px 0;
+                padding: 12px 15px;
+                border-radius: 8px;
+                border: 1px solid transparent;
+            }
+
+            .alert-info {
+                color: #0c5460;
+                background-color: #d1ecf1;
+                border-color: #bee5eb;
+            }
+
+            .alert-warning {
+                color: #856404;
+                background-color: #fff3cd;
+                border-color: #ffeaa7;
+            }
+
+            .text-success {
+                color: #28a745 !important;
+            }
+
+            .text-danger {
+                color: #dc3545 !important;
+            }
         </style>
     </head>
     <body>
@@ -358,8 +416,15 @@
                         <p><strong>Name:</strong> <span id="pkgName">-</span></p>
                         <p><strong>Type:</strong> <span id="pkgType">-</span></p>
                         <p><strong>Price:</strong> <span id="pkgPrice">-</span> VND</p>
-                        <p><strong>Max Students:</strong> <span id="pkgMax">-</span></p>
+                        <p><strong>Max Students Per Parent:</strong> <span id="pkgMax">-</span></p>
                         <p><strong>Duration:</strong> <span id="pkgDuration">-</span> days</p>
+                    </div>
+                    <div id="parentSpecificInfo" style="display: none;">
+                        <hr>
+                        <h6><i class="fas fa-user-check"></i> Parent Assignment Status:</h6>
+                        <div id="parentStats">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
                     </div>
                 </div>
 
@@ -386,6 +451,13 @@
                     </div>
                 </div>
 
+                <div id="assignmentHistory" style="display: none;" class="section-card">
+                    <h5><i class="fas fa-history text-info"></i> Recent Assignments for Selected Parent</h5>
+                    <div id="historyContent">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+
                 <!-- Submit Buttons -->
                 <div class="btn-container">
                     <button type="submit" class="btn btn-success" id="assignBtn" disabled>
@@ -408,6 +480,9 @@
         <script>
             let selectedStudents = [];
             let maxStudents = 0;
+            let currentPackageId = null;
+            let currentParentId = null;
+            let parentPackageStats = null;
 
             $(document).ready(function () {
                 // Initialize Select2 for all select elements
@@ -425,15 +500,34 @@
 
                 // Package selection handler
                 $('#packageId').on('change', function () {
+                    currentPackageId = $(this).val();
                     showPackageInfo();
                     resetStudentSelection();
-                    hideStudentsContainer(); // Hide students when package changes
+                    hideStudentsContainer();
+
+                    // If both package and parent are selected, reload students
+                    if (currentPackageId && currentParentId) {
+                        loadStudents();
+                    }
                 });
 
                 // Parent selection handler
                 $('#parentId').on('change', function () {
-                    loadStudents();
+                    currentParentId = $(this).val();
                     resetStudentSelection();
+
+                    if (currentParentId) {
+                        loadAssignmentHistory(currentParentId);
+                    } else {
+                        document.getElementById('assignmentHistory').style.display = 'none';
+                    }
+
+                    // If both package and parent are selected, load students
+                    if (currentPackageId && currentParentId) {
+                        loadStudents();
+                    } else {
+                        hideStudentsContainer();
+                    }
                 });
 
                 // Form validation
@@ -445,7 +539,8 @@
 
                     var confirmMessage = 'Are you sure you want to assign "' + $('#pkgName').text() +
                             '" to ' + selectedStudents.length + ' student(s) of parent "' +
-                            $('#parentId option:selected').text() + '"?';
+                            $('#parentId option:selected').text() + '"?\n\n' +
+                            'This will create an invoice and immediately activate the package for the selected students.';
                     if (!confirm(confirmMessage)) {
                         e.preventDefault();
                         return false;
@@ -487,40 +582,110 @@
             }
 
             function loadStudents() {
-                const parentId = $('#parentId').val();
-                const studentsContainer = document.getElementById('studentsContainer');
-                const studentsList = document.getElementById('studentsList');
-
-                if (!parentId) {
-                    studentsContainer.classList.remove('show');
-                    updateAssignButton();
+                if (!currentParentId || !currentPackageId) {
+                    hideStudentsContainer();
                     return;
                 }
 
+                const studentsContainer = document.getElementById('studentsContainer');
+                const studentsList = document.getElementById('studentsList');
+
                 // Show loading
-                studentsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading students...</div>';
+                studentsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading students and checking package assignments...</div>';
                 studentsContainer.classList.add('show');
 
-                // AJAX call to get students
+                // AJAX call to get students with package status
                 $.ajax({
                     url: 'study_package',
                     method: 'GET',
                     data: {
                         service: 'getStudentsByParent',
-                        parentId: parentId
+                        parentId: currentParentId,
+                        packageId: currentPackageId
                     },
-                    dataType: 'json',
                     success: function (students) {
                         console.log('DEBUG: Received students data:', students);
-                        displayStudents(students);
+                        try {
+                            // Parse JSON if it's a string
+                            if (typeof students === 'string') {
+                                students = JSON.parse(students);
+                            }
+                            displayStudents(students);
+
+                            // Also load parent's package statistics
+                            loadParentPackageStats();
+                        } catch (parseError) {
+                            console.error('JSON Parse Error:', parseError);
+                            console.error('Raw response:', students);
+                            studentsList.innerHTML = '<div class="alert alert-danger">Error parsing student data. Please check the server response.</div>';
+                            updateAssignButton();
+                        }
                     },
                     error: function (xhr, status, error) {
-                        console.error('Error loading students:', error);
+                        console.error('AJAX Error:', error);
+                        console.error('Status:', status);
                         console.error('Response:', xhr.responseText);
-                        studentsList.innerHTML = '<div class="alert alert-danger">Error loading students. Please try again.</div>';
+                        studentsList.innerHTML = '<div class="alert alert-danger">Error loading students: ' + error + '</div>';
                         updateAssignButton();
                     }
                 });
+            }
+
+            function loadParentPackageStats() {
+                if (!currentParentId || !currentPackageId)
+                    return;
+
+                $.ajax({
+                    url: 'study_package',
+                    method: 'GET',
+                    data: {
+                        service: 'getParentPackageStats',
+                        parentId: currentParentId,
+                        packageId: currentPackageId
+                    },
+                    success: function (stats) {
+                        try {
+                            if (typeof stats === 'string') {
+                                stats = JSON.parse(stats);
+                            }
+                            parentPackageStats = stats;
+                            updatePackageStatsDisplay();
+                        } catch (parseError) {
+                            console.error('Error parsing parent package stats:', parseError);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error loading parent package stats:', error);
+                    }
+                });
+            }
+
+            function updatePackageStatsDisplay() {
+                if (!parentPackageStats)
+                    return;
+
+                // Update package info with parent-specific stats
+                const packageInfo = document.getElementById('packageInfo');
+                let statsHtml = '<h6><i class="fas fa-info-circle"></i> Package Information:</h6>';
+                statsHtml += '<div id="packageDetails">';
+                statsHtml += '<p><strong>Name:</strong> <span id="pkgName">' + (parentPackageStats.packageName || '-') + '</span></p>';
+                statsHtml += '<p><strong>Price:</strong> <span id="pkgPrice">' + (parentPackageStats.price ? new Intl.NumberFormat().format(parentPackageStats.price) : '-') + '</span> VND</p>';
+                statsHtml += '<p><strong>Max Students Per Parent:</strong> <span id="pkgMax">' + (parentPackageStats.maxPerParent || '-') + '</span></p>';
+                statsHtml += '<p><strong>Parent\'s Current Assignments:</strong> <span class="text-info">' + (parentPackageStats.activeAssignments || 0) + '</span></p>';
+                statsHtml += '<p><strong>Parent\'s Available Slots:</strong> <span class="text-success">' + (parentPackageStats.availableSlots || 0) + '</span></p>';
+                statsHtml += '</div>';
+
+                if (parentPackageStats.availableSlots <= 0) {
+                    statsHtml += '<div class="alert alert-warning mt-2">';
+                    statsHtml += '<i class="fas fa-exclamation-triangle"></i> ';
+                    statsHtml += 'This parent has reached the maximum limit for this package (' + (parentPackageStats.maxPerParent || 0) + ' students).';
+                    statsHtml += '</div>';
+                }
+
+                packageInfo.innerHTML = statsHtml;
+
+                // Update max students for validation
+                maxStudents = parentPackageStats.availableSlots || 0;
             }
 
             function displayStudents(students) {
@@ -532,26 +697,138 @@
                     return;
                 }
 
+                // Separate available and unavailable students
+                const availableStudents = students.filter(s => s.status === 'available');
+                const unavailableStudents = students.filter(s => s.status === 'unavailable');
+
                 var html = '';
-                for (var i = 0; i < students.length; i++) {
-                    var student = students[i];
-                    html += '<div class="student-card" data-student-id="' + student.id + '" onclick="toggleStudentSelection(' + student.id + ')">';
-                    html += '<div class="student-info">';
-                    html += '<h6><i class="fas fa-user"></i> ' + student.full_name + '</h6>';
-                    html += '<p><i class="fas fa-id-card"></i> Username: ' + student.username + '</p>';
-                    html += '<p><i class="fas fa-graduation-cap"></i> Grade: ' + student.grade_name + '</p>';
+
+                // Show parent's available slots info
+                if (parentPackageStats && parentPackageStats.availableSlots <= 0) {
+                    html += '<div class="alert alert-warning">';
+                    html += '<i class="fas fa-exclamation-triangle"></i> ';
+                    html += 'This parent has no available slots for this package. ';
+                    html += 'Current assignments: ' + (parentPackageStats.activeAssignments || 0) + '/' + (parentPackageStats.maxPerParent || 0);
                     html += '</div>';
-                    html += '<input type="checkbox" name="studentIds" value="' + student.id + '" style="display: none;">';
+                } else if (parentPackageStats) {
+                    html += '<div class="alert alert-info">';
+                    html += '<i class="fas fa-info-circle"></i> ';
+                    html += 'Available slots for this parent: ' + (parentPackageStats.availableSlots || 0) + ' out of ' + (parentPackageStats.maxPerParent || 0);
                     html += '</div>';
+                }
+
+                // Available students section
+                if (availableStudents.length > 0) {
+                    html += '<h6 class="mt-3 mb-3 text-success">Available Students (' + availableStudents.length + '):</h6>';
+                    for (var i = 0; i < availableStudents.length; i++) {
+                        var student = availableStudents[i];
+                        html += '<div class="student-card" data-student-id="' + student.id + '" onclick="toggleStudentSelection(' + student.id + ')">';
+                        html += '<div class="student-info">';
+                        html += '<h6><i class="fas fa-user text-success"></i> ' + student.full_name + '</h6>';
+                        html += '<p><i class="fas fa-id-card"></i> Username: ' + student.username + '</p>';
+                        html += '<p><i class="fas fa-graduation-cap"></i> Grade: ' + student.grade_name + '</p>';
+                        html += '<p><span class="badge badge-success">Available for Assignment</span></p>';
+                        html += '</div>';
+                        html += '<input type="checkbox" name="studentIds" value="' + student.id + '" style="display: none;">';
+                        html += '</div>';
+                    }
+                }
+
+                // Unavailable students section
+                if (unavailableStudents.length > 0) {
+                    html += '<h6 class="mt-4 mb-3 text-danger">Students Already Have This Package (' + unavailableStudents.length + '):</h6>';
+                    for (var i = 0; i < unavailableStudents.length; i++) {
+                        var student = unavailableStudents[i];
+                        html += '<div class="student-card unavailable">';
+                        html += '<div class="student-info">';
+                        html += '<h6><i class="fas fa-user text-danger"></i> ' + student.full_name + '</h6>';
+                        html += '<p><i class="fas fa-id-card"></i> Username: ' + student.username + '</p>';
+                        html += '<p><i class="fas fa-graduation-cap"></i> Grade: ' + student.grade_name + '</p>';
+                        html += '<p><span class="badge badge-danger">Already Assigned</span></p>';
+                        html += '</div>';
+                        html += '</div>';
+                    }
+                }
+
+                if (availableStudents.length === 0 && unavailableStudents.length === 0) {
+                    html += '<div class="no-students"><i class="fas fa-user-slash"></i><br>No students found for this parent.</div>';
                 }
 
                 studentsList.innerHTML = html;
                 updateAssignButton();
             }
 
+            function loadAssignmentHistory(parentId) {
+                if (!parentId)
+                    return;
+
+                $.ajax({
+                    url: 'study_package',
+                    method: 'GET',
+                    data: {
+                        service: 'getParentAssignmentHistory',
+                        parentId: parentId,
+                        limit: 5
+                    },
+                    success: function (history) {
+                        try {
+                            if (typeof history === 'string') {
+                                history = JSON.parse(history);
+                            }
+                            displayAssignmentHistory(history);
+                        } catch (parseError) {
+                            console.error('Error parsing assignment history:', parseError);
+                        }
+                    },
+                    error: function () {
+                        console.log('Could not load assignment history');
+                    }
+                });
+            }
+
+            function displayAssignmentHistory(history) {
+                const historyDiv = document.getElementById('assignmentHistory');
+                const historyContent = document.getElementById('historyContent');
+
+                if (!history || history.length === 0) {
+                    historyDiv.style.display = 'none';
+                    return;
+                }
+
+                let html = '<div class="table-responsive"><table class="table table-sm">';
+                html += '<thead><tr><th>Package</th><th>Student</th><th>Date</th><th>Status</th></tr></thead><tbody>';
+
+                history.forEach(function (item) {
+                    html += '<tr>';
+                    html += '<td>' + (item.packageName || '-') + '</td>';
+                    html += '<td>' + (item.studentName || '-') + '</td>';
+                    html += '<td>' + (item.assignmentDate ? new Date(item.assignmentDate).toLocaleDateString() : '-') + '</td>';
+                    html += '<td><span class="badge badge-' + (item.status === 'ACTIVE' ? 'success' : 'secondary') + '">' + (item.status || '-') + '</span></td>';
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table></div>';
+                historyContent.innerHTML = html;
+                historyDiv.style.display = 'block';
+            }
+
+            // Rest of the JavaScript functions remain the same...
+            // (toggleStudentSelection, resetStudentSelection, updateAssignButton, validateForm, showAlert)
+
             function toggleStudentSelection(studentId) {
                 const card = document.querySelector('[data-student-id="' + studentId + '"]');
                 const checkbox = card.querySelector('input[type="checkbox"]');
+
+                // Check if card is unavailable
+                if (card.classList.contains('unavailable')) {
+                    return;
+                }
+
+                // Check parent's available slots
+                if (parentPackageStats && parentPackageStats.availableSlots <= 0) {
+                    showAlert('This parent has no available slots for this package.', 'warning');
+                    return;
+                }
 
                 if (selectedStudents.includes(studentId)) {
                     // Deselect
@@ -561,9 +838,10 @@
                     card.classList.remove('selected');
                     checkbox.checked = false;
                 } else {
-                    // Check max limit
-                    if (maxStudents > 0 && selectedStudents.length >= maxStudents) {
-                        showAlert('You can only select up to ' + maxStudents + ' student(s) for this package.', 'warning');
+                    // Check max limit (use parent's available slots)
+                    const maxAllowed = parentPackageStats ? parentPackageStats.availableSlots : maxStudents;
+                    if (maxAllowed > 0 && selectedStudents.length >= maxAllowed) {
+                        showAlert('This parent can only assign up to ' + maxAllowed + ' more student(s) for this package.', 'warning');
                         return;
                     }
 
@@ -596,9 +874,16 @@
                 console.log('DEBUG: Package:', packageSelected, 'Parent:', parentSelected, 'Students:', selectedStudents.length);
 
                 if (packageSelected && parentSelected && studentsSelected) {
-                    assignBtn.disabled = false;
-                    assignBtn.innerHTML = '<i class="fas fa-user-plus"></i> Assign to ' + selectedStudents.length + ' Student(s)';
-                    assignBtn.className = 'btn btn-success';
+                    // Check if parent has available slots
+                    if (parentPackageStats && parentPackageStats.availableSlots <= 0) {
+                        assignBtn.disabled = true;
+                        assignBtn.innerHTML = '<i class="fas fa-ban"></i> Parent Has No Available Slots';
+                        assignBtn.className = 'btn btn-warning';
+                    } else {
+                        assignBtn.disabled = false;
+                        assignBtn.innerHTML = '<i class="fas fa-user-plus"></i> Assign to ' + selectedStudents.length + ' Student(s)';
+                        assignBtn.className = 'btn btn-success';
+                    }
                 } else {
                     assignBtn.disabled = true;
                     if (!packageSelected) {
@@ -634,9 +919,17 @@
                     return false;
                 }
 
-                if (maxStudents > 0 && selectedStudents.length > maxStudents) {
-                    showAlert('You can only assign up to ' + maxStudents + ' student(s) for this package.', 'warning');
-                    return false;
+                // Check parent's available slots
+                if (parentPackageStats) {
+                    if (parentPackageStats.availableSlots <= 0) {
+                        showAlert('This parent has no available slots for this package.', 'warning');
+                        return false;
+                    }
+
+                    if (selectedStudents.length > parentPackageStats.availableSlots) {
+                        showAlert('You can only assign up to ' + parentPackageStats.availableSlots + ' student(s) for this parent.', 'warning');
+                        return false;
+                    }
                 }
 
                 return true;

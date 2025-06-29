@@ -158,6 +158,12 @@ public class StudyPackageController extends HttpServlet {
                 case "getUnassignedChildren":
                     handleGetUnassignedChildren(request, response);
                     return;
+                case "getParentPackageStats":
+                    handleGetParentPackageStats(request, response);
+                    return;
+                case "getParentAssignmentHistory":
+                    handleGetParentAssignmentHistory(request, response);
+                    return;
                 default:
                     listStudyPackage(request, response);
                     break;
@@ -733,7 +739,7 @@ public class StudyPackageController extends HttpServlet {
             List<StudyPackage> packages = dao.getActivePackages();
             request.setAttribute("packages", packages);
 
-            // Get all parents - FIX: Use correct method name
+            // Get all parents
             AccountDAO accountDAO = new AccountDAO();
             List<Account> parents = accountDAO.getAccountsByRole("parent");
             request.setAttribute("parents", parents);
@@ -741,6 +747,10 @@ public class StudyPackageController extends HttpServlet {
             // Debug logging
             System.out.println("DEBUG: Found " + packages.size() + " packages");
             System.out.println("DEBUG: Found " + parents.size() + " parents");
+
+            // Add additional attributes for better form handling
+            request.setAttribute("pageTitle", "Assign Study Package to Parent");
+            request.setAttribute("formAction", "assignToParent");
 
             request.getRequestDispatcher("/studypackage/assignToParent.jsp").forward(request, response);
 
@@ -753,14 +763,24 @@ public class StudyPackageController extends HttpServlet {
 
     private void processAssignToParent(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        // Check if user has admin or teacher role
+        HttpSession session = request.getSession();
+        Account currentUser = (Account) session.getAttribute("account");
+        if (currentUser == null
+                || (!RoleConstants.ADMIN.equals(currentUser.getRole())
+                && !RoleConstants.TEACHER.equals(currentUser.getRole()))) {
+            response.sendRedirect("/error.jsp");
+            return;
+        }
         try {
             int packageId = Integer.parseInt(request.getParameter("packageId"));
             int parentId = Integer.parseInt(request.getParameter("parentId"));
             String[] studentIds = request.getParameterValues("studentIds");
 
-            System.out.println("DEBUG: Processing assignment - Package: " + packageId
+            System.out.println("DEBUG: Admin assignment - Package: " + packageId
                     + ", Parent: " + parentId + ", Students: "
-                    + (studentIds != null ? studentIds.length : 0));
+                    + (studentIds != null ? studentIds.length : 0)
+                    + ", Assigned by: " + currentUser.getFull_name());
 
             // Validation
             if (studentIds == null || studentIds.length == 0) {
@@ -769,32 +789,60 @@ public class StudyPackageController extends HttpServlet {
                 return;
             }
 
+            // Verify parent exists and is active
+            AccountDAO accountDAO = new AccountDAO();
+            Account parent = accountDAO.findById(parentId);
+            if (parent == null || !RoleConstants.PARENT.equals(parent.getRole())
+                    || !"active".equalsIgnoreCase(parent.getStatus())) {
+                request.setAttribute("errorMessage", "Invalid or inactive parent account.");
+                showAssignToParentForm(request, response);
+                return;
+            }
+
             StudyPackage studyPackage = dao.findStudyPackageById(packageId);
-            if (studyPackage == null) {
-                request.setAttribute("errorMessage", "Study package not found.");
+            if (studyPackage == null || !studyPackage.isIs_active()) {
+                request.setAttribute("errorMessage", "Study package not found or inactive.");
                 showAssignToParentForm(request, response);
                 return;
             }
 
-            // Check if package has available slots
-            int currentAssignments = studentPackageDAO.countAssignedStudents(packageId);
-            if (currentAssignments + studentIds.length > studyPackage.getMax_students()) {
+            // Check current parent assignments for this package
+            int currentParentAssignments = studentPackageDAO.countParentAssignedStudents(parentId, packageId);
+            int maxPerParent = studyPackage.getMax_students();
+            int availableSlots = maxPerParent - currentParentAssignments;
+
+            System.out.println("DEBUG: Parent " + parentId + " has " + currentParentAssignments
+                    + " assignments, max " + maxPerParent + ", available " + availableSlots);
+
+            // Check if parent has enough available slots
+            if (studentIds.length > availableSlots) {
                 request.setAttribute("errorMessage",
-                        "Cannot assign package. This would exceed the maximum student limit ("
-                        + studyPackage.getMax_students() + "). Current assignments: " + currentAssignments);
+                        "Cannot assign " + studentIds.length + " student(s). Parent has only " + availableSlots
+                        + " available slot(s) for this package. (Current: " + currentParentAssignments
+                        + "/" + maxPerParent + ")");
                 showAssignToParentForm(request, response);
                 return;
             }
 
-            // Verify all students belong to the selected parent
+            // Verify all students belong to the selected parent and don't already have the package
             StudentDAO studentDAO = new StudentDAO();
+            List<Integer> studentsWithPackage = studentPackageDAO.getStudentsWithActivePackage(packageId);
+
             for (String studentIdStr : studentIds) {
                 try {
                     int studentId = Integer.parseInt(studentIdStr);
                     Student student = studentDAO.findById(studentId);
+
                     if (student == null || student.getParent_id() != parentId) {
                         request.setAttribute("errorMessage",
                                 "Invalid student selection. Student does not belong to selected parent.");
+                        showAssignToParentForm(request, response);
+                        return;
+                    }
+
+                    if (studentsWithPackage.contains(studentId)) {
+                        request.setAttribute("errorMessage",
+                                "Student '" + student.getFull_name() + "' already has this package.");
                         showAssignToParentForm(request, response);
                         return;
                     }
@@ -805,55 +853,76 @@ public class StudyPackageController extends HttpServlet {
                 }
             }
 
-            // Assign package to each selected student
-            boolean allAssigned = true;
-            int successCount = 0;
-            List<String> failedStudents = new ArrayList<>();
+            // Create invoice for the assignment
+            InvoiceDAO invoiceDAO = new InvoiceDAO();
+            Invoice invoice = new Invoice();
+            invoice.setTotal_amount(studyPackage.getPrice());
+            invoice.setParent_id(parentId);
+            invoice.setCreated_at(LocalDate.now());
+            invoice.setStatus("Completed"); // Admin assignment is automatically completed
+            invoice.setPay_at(LocalDate.now());
 
-            for (String studentIdStr : studentIds) {
-                try {
-                    int studentId = Integer.parseInt(studentIdStr);
-                    boolean assigned = studentPackageDAO.assignPackageToStudent(
-                            studentId, packageId, parentId, studyPackage.getDuration_days()
-                    );
+            int invoiceId = invoiceDAO.insertInvoice(invoice);
 
-                    if (assigned) {
-                        successCount++;
-                        System.out.println("DEBUG: Successfully assigned package " + packageId
-                                + " to student " + studentId);
-                    } else {
+            if (invoiceId > 0) {
+                // Add invoice line
+                invoiceDAO.insertInvoiceLine(invoiceId, packageId);
+
+                // Assign package to each selected student
+                boolean allAssigned = true;
+                int successCount = 0;
+                List<String> failedStudents = new ArrayList<>();
+
+                for (String studentIdStr : studentIds) {
+                    try {
+                        int studentId = Integer.parseInt(studentIdStr);
+                        boolean assigned = studentPackageDAO.assignPackageToStudent(
+                                studentId, packageId, parentId, studyPackage.getDuration_days()
+                        );
+
+                        if (assigned) {
+                            successCount++;
+                            // Update invoice line with student assignment
+                            invoiceDAO.updateInvoiceLineWithStudent(invoiceId, studentId);
+                            System.out.println("DEBUG: Successfully assigned package " + packageId
+                                    + " to student " + studentId);
+                        } else {
+                            allAssigned = false;
+                            Student student = studentDAO.findById(studentId);
+                            failedStudents.add(student != null ? student.getFull_name() : "ID:" + studentId);
+                            System.out.println("DEBUG: Failed to assign package " + packageId
+                                    + " to student " + studentId);
+                        }
+                    } catch (NumberFormatException e) {
                         allAssigned = false;
-                        Student student = studentDAO.findById(studentId);
-                        failedStudents.add(student != null ? student.getFull_name() : "ID:" + studentId);
-                        System.out.println("DEBUG: Failed to assign package " + packageId
-                                + " to student " + studentId);
+                        failedStudents.add("Invalid ID: " + studentIdStr);
+                    } catch (Exception e) {
+                        allAssigned = false;
+                        failedStudents.add("Error with student: " + studentIdStr);
+                        e.printStackTrace();
                     }
-                } catch (NumberFormatException e) {
-                    allAssigned = false;
-                    failedStudents.add("Invalid ID: " + studentIdStr);
-                } catch (Exception e) {
-                    allAssigned = false;
-                    failedStudents.add("Error with student: " + studentIdStr);
-                    e.printStackTrace();
                 }
-            }
 
-            // Set result messages
-            if (successCount > 0) {
-                String successMessage = "Successfully assigned package \"" + studyPackage.getName()
-                        + "\" to " + successCount + " student(s)!";
-                request.setAttribute("message", successMessage);
-                System.out.println("DEBUG: " + successMessage);
-            }
+                // Set result messages
+                if (successCount > 0) {
+                    String successMessage = "Successfully assigned package \"" + studyPackage.getName()
+                            + "\" to " + successCount + " student(s)!";
+                    request.setAttribute("message", successMessage);
+                    System.out.println("DEBUG: " + successMessage);
+                }
 
-            if (!allAssigned && !failedStudents.isEmpty()) {
-                String errorMessage = "Some assignments failed for: " + String.join(", ", failedStudents);
-                request.setAttribute("errorMessage", errorMessage);
-                System.out.println("DEBUG: " + errorMessage);
-            }
+                if (!allAssigned && !failedStudents.isEmpty()) {
+                    String errorMessage = "Some assignments failed for: " + String.join(", ", failedStudents);
+                    request.setAttribute("errorMessage", errorMessage);
+                    System.out.println("DEBUG: " + errorMessage);
+                }
 
-            // Redirect to manage assignments to see results
-            showManageAssignments(request, response);
+                // Redirect to manage assignments to see results
+                showManageAssignments(request, response);
+            } else {
+                request.setAttribute("errorMessage", "Failed to create invoice for assignment.");
+                showAssignToParentForm(request, response);
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -919,10 +988,11 @@ public class StudyPackageController extends HttpServlet {
 
         try {
             int parentId = Integer.parseInt(request.getParameter("parentId"));
+            String packageIdParam = request.getParameter("packageId");
 
             // Get students by parent ID
             StudentDAO studentDAO = new StudentDAO();
-            List<Student> students = studentDAO.getStudentsByParentId(parentId);
+            List<Student> allStudents = studentDAO.getStudentsByParentId(parentId);
 
             // Get grades for display
             GradeDAO gradeDAO = new GradeDAO();
@@ -934,25 +1004,41 @@ public class StudyPackageController extends HttpServlet {
                 gradeMap.put(grade.getId(), grade.getName());
             }
 
-            // Build JSON response
+            // Check which students already have this package (if packageId is provided)
+            List<Integer> studentsWithPackage = new ArrayList<>();
+            if (packageIdParam != null && !packageIdParam.isEmpty()) {
+                try {
+                    int packageId = Integer.parseInt(packageIdParam);
+                    studentsWithPackage = studentPackageDAO.getStudentsWithActivePackage(packageId);
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid package ID: " + packageIdParam);
+                }
+            }
+
+            // Build JSON response with availability status
             StringBuilder json = new StringBuilder("[");
-            for (int i = 0; i < students.size(); i++) {
+            for (int i = 0; i < allStudents.size(); i++) {
                 if (i > 0) {
                     json.append(",");
                 }
-                Student student = students.get(i);
+                Student student = allStudents.get(i);
                 String gradeName = gradeMap.getOrDefault(student.getGrade_id(), "Unknown");
+                boolean hasPackage = studentsWithPackage.contains(student.getId());
 
                 json.append("{")
                         .append("\"id\":").append(student.getId())
                         .append(",\"full_name\":\"").append(escapeJson(student.getFull_name()))
                         .append("\",\"username\":\"").append(escapeJson(student.getUsername()))
-                        .append("\",\"grade_name\":\"").append(escapeJson(gradeName))
+                        .append("\",\"grade_name\":\"").append(escapeJson(gradeName)) // Fix: Added closing quote
+                        .append("\",\"has_package\":").append(hasPackage)
+                        .append(",\"status\":\"").append(hasPackage ? "unavailable" : "available")
                         .append("\"}");
             }
             json.append("]");
 
-            System.out.println("DEBUG: Returning JSON for parent " + parentId + ": " + json.toString());
+            System.out.println("DEBUG: Returning JSON for parent " + parentId
+                    + (packageIdParam != null ? " and package " + packageIdParam : "")
+                    + ": " + json.toString());
             response.getWriter().write(json.toString());
 
         } catch (Exception e) {
@@ -1240,6 +1326,79 @@ public class StudyPackageController extends HttpServlet {
             json.append("]");
 
             response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("[]");
+        }
+    }
+
+    private void handleGetParentPackageStats(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int parentId = Integer.parseInt(request.getParameter("parentId"));
+            int packageId = Integer.parseInt(request.getParameter("packageId"));
+
+            Map<String, Object> stats = studentPackageDAO.getParentPackageStats(parentId, packageId);
+
+            // Convert to JSON manually
+            StringBuilder json = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : stats.entrySet()) {
+                if (!first) {
+                    json.append(",");
+                }
+                json.append("\"").append(entry.getKey()).append("\":");
+
+                Object value = entry.getValue();
+                if (value instanceof String) {
+                    json.append("\"").append(escapeJson(value.toString())).append("\"");
+                } else {
+                    json.append(value);
+                }
+                first = false;
+            }
+            json.append("}");
+
+            response.getWriter().write(json.toString());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{}");
+        }
+    }
+
+    private void handleGetParentAssignmentHistory(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int parentId = Integer.parseInt(request.getParameter("parentId"));
+            int limit = Integer.parseInt(request.getParameter("limit"));
+
+            List<Map<String, Object>> history = studentPackageDAO.getParentAssignmentHistory(parentId, limit);
+
+            // Convert to JSON
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < history.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Map<String, Object> item = history.get(i);
+                json.append("{")
+                        .append("\"packageName\":\"").append(escapeJson(item.get("packageName").toString())).append("\"")
+                        .append(",\"studentName\":\"").append(escapeJson(item.get("studentName").toString())).append("\"")
+                        .append(",\"assignmentDate\":\"").append(escapeJson(item.get("assignmentDate").toString())).append("\"")
+                        .append(",\"status\":\"").append(escapeJson(item.get("status").toString())).append("\"")
+                        .append("}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+
         } catch (Exception e) {
             e.printStackTrace();
             response.getWriter().write("[]");

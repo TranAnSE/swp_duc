@@ -286,7 +286,7 @@
                         <i class="fas fa-plus"></i> Add New Package
                     </a>
                     <a href="study_package?service=manageAssignments" class="add-btn" style="background-color: #17a2b8;">
-                        <i class="fas fa-users-cog"></i> Manage Assignments
+                        <i class="fas fa-users"></i> Manage Assignments
                     </a>
                     <a href="study_package?service=assignToParent" class="add-btn" style="background-color: #6f42c1;">
                         <i class="fas fa-user-plus"></i> Assign to Parent
