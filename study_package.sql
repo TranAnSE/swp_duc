@@ -90,16 +90,103 @@ CREATE TABLE package_subject (
 );
 
 -- Update student_package table to support better package management
-ALTER TABLE student_package 
-DROP INDEX unique_student_package,
-ADD INDEX idx_student_package_active (student_id, package_id, is_active),
-ADD INDEX idx_package_assignments (package_id, is_active, expires_at);
+-- Check if index exists before dropping
+SET @idx_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = 'db-script'
+    AND TABLE_NAME = 'student_package'
+    AND INDEX_NAME = 'unique_student_package'
+);
 
--- Add assignment tracking columns
-ALTER TABLE student_package 
-ADD COLUMN assigned_by INT NULL COMMENT 'Who assigned this package',
-ADD COLUMN assignment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-ADD CONSTRAINT student_package_assigned_by_fk FOREIGN KEY (assigned_by) REFERENCES account(id);
+SET @sql := IF(@idx_exists > 0, 'ALTER TABLE student_package DROP INDEX unique_student_package;', 'SELECT "Index unique_student_package does not exist" as message;');
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add new indexes (check if they exist first)
+SET @idx_student_package_active := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = 'db-script'
+    AND TABLE_NAME = 'student_package'
+    AND INDEX_NAME = 'idx_student_package_active'
+);
+
+SET @idx_package_assignments := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = 'db-script'
+    AND TABLE_NAME = 'student_package'
+    AND INDEX_NAME = 'idx_package_assignments'
+);
+
+SET @sql := CASE 
+  WHEN @idx_student_package_active = 0 AND @idx_package_assignments = 0 THEN 
+    'ALTER TABLE student_package ADD INDEX idx_student_package_active (student_id, package_id, is_active), ADD INDEX idx_package_assignments (package_id, is_active, expires_at);'
+  WHEN @idx_student_package_active = 0 THEN 
+    'ALTER TABLE student_package ADD INDEX idx_student_package_active (student_id, package_id, is_active);'
+  WHEN @idx_package_assignments = 0 THEN 
+    'ALTER TABLE student_package ADD INDEX idx_package_assignments (package_id, is_active, expires_at);'
+  ELSE 
+    'SELECT "Both indexes already exist" as message;'
+END;
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add assignment tracking columns (check if columns exist first)
+SET @col_assigned_by := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = 'db-script'
+    AND TABLE_NAME = 'student_package'
+    AND COLUMN_NAME = 'assigned_by'
+);
+
+SET @col_assignment_date := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = 'db-script'
+    AND TABLE_NAME = 'student_package'
+    AND COLUMN_NAME = 'assignment_date'
+);
+
+-- Add columns that don't exist
+SET @sql := CASE 
+  WHEN @col_assigned_by = 0 AND @col_assignment_date = 0 THEN 
+    'ALTER TABLE student_package ADD COLUMN assigned_by INT NULL COMMENT "Who assigned this package", ADD COLUMN assignment_date DATETIME DEFAULT CURRENT_TIMESTAMP;'
+  WHEN @col_assigned_by = 0 THEN 
+    'ALTER TABLE student_package ADD COLUMN assigned_by INT NULL COMMENT "Who assigned this package";'
+  WHEN @col_assignment_date = 0 THEN 
+    'ALTER TABLE student_package ADD COLUMN assignment_date DATETIME DEFAULT CURRENT_TIMESTAMP;'
+  ELSE 
+    'SELECT "Both columns already exist" as message;'
+END;
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add foreign key constraint if column exists and constraint doesn't exist
+SET @fk_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+  WHERE TABLE_SCHEMA = 'db-script'
+    AND TABLE_NAME = 'student_package'
+    AND CONSTRAINT_NAME = 'student_package_assigned_by_fk'
+);
+
+SET @sql := IF(@col_assigned_by > 0 AND @fk_exists = 0, 
+  'ALTER TABLE student_package ADD CONSTRAINT student_package_assigned_by_fk FOREIGN KEY (assigned_by) REFERENCES account(id);',
+  'SELECT "Foreign key constraint already exists or column does not exist" as message;'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Create package assignment summary view
 CREATE OR REPLACE VIEW package_assignment_summary AS
@@ -148,9 +235,37 @@ ALTER TABLE study_package
 MODIFY COLUMN max_students INT DEFAULT 1 COMMENT 'Maximum students per parent for this package';
 
 -- Update student_package table to better support per-parent assignment tracking
-ALTER TABLE student_package 
-ADD COLUMN package_slots_purchased INT DEFAULT 1 COMMENT 'Number of slots this parent purchased for this package',
-ADD INDEX idx_parent_package_active (parent_id, package_id, is_active);
+-- Check if package_slots_purchased column and idx_parent_package_active exist before adding
+SET @col_package_slots := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = 'db-script'
+    AND TABLE_NAME = 'student_package'
+    AND COLUMN_NAME = 'package_slots_purchased'
+);
+
+SET @idx_parent_package_active := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = 'db-script'
+    AND TABLE_NAME = 'student_package'
+    AND INDEX_NAME = 'idx_parent_package_active'
+);
+
+SET @sql := CASE 
+  WHEN @col_package_slots = 0 AND @idx_parent_package_active = 0 THEN 
+    'ALTER TABLE student_package ADD COLUMN package_slots_purchased INT DEFAULT 1 COMMENT "Number of slots this parent purchased for this package", ADD INDEX idx_parent_package_active (parent_id, package_id, is_active);'
+  WHEN @col_package_slots = 0 THEN 
+    'ALTER TABLE student_package ADD COLUMN package_slots_purchased INT DEFAULT 1 COMMENT "Number of slots this parent purchased for this package";'
+  WHEN @idx_parent_package_active = 0 THEN 
+    'ALTER TABLE student_package ADD INDEX idx_parent_package_active (parent_id, package_id, is_active);'
+  ELSE 
+    'SELECT "Column and index already exist" as message;'
+END;
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Create view for parent package slot management
 CREATE OR REPLACE VIEW parent_package_slots AS
@@ -166,8 +281,11 @@ LEFT JOIN student_package sp ON pkg.id = sp.package_id
 WHERE pkg.is_active = 1
 GROUP BY sp.parent_id, sp.package_id, pkg.name, pkg.max_students;
 
--- Update student_package table to support per-parent limits properly
-SET @idx := (
+-- Remove the problematic section that tries to drop unique_student_package again
+-- This section was causing the error because it was trying to drop an index that doesn't exist
+
+-- Add proper indexes for per-parent package management (check if they exist first)
+SET @idx_parent_package_active2 := (
   SELECT COUNT(1)
   FROM INFORMATION_SCHEMA.STATISTICS
   WHERE TABLE_SCHEMA = 'db-script'
@@ -175,16 +293,28 @@ SET @idx := (
     AND INDEX_NAME = 'idx_parent_package_active'
 );
 
-SET @sql := IF(@idx > 0, 'ALTER TABLE student_package DROP INDEX unique_student_package;', 'SELECT "Index does not exist"');
+SET @idx_student_active_package := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.STATISTICS
+  WHERE TABLE_SCHEMA = 'db-script'
+    AND TABLE_NAME = 'student_package'
+    AND INDEX_NAME = 'idx_student_active_package'
+);
+
+SET @sql := CASE 
+  WHEN @idx_parent_package_active2 = 0 AND @idx_student_active_package = 0 THEN 
+    'ALTER TABLE student_package ADD INDEX idx_parent_package_active (parent_id, package_id, is_active, expires_at), ADD INDEX idx_student_active_package (student_id, package_id, is_active, expires_at);'
+  WHEN @idx_parent_package_active2 = 0 THEN 
+    'ALTER TABLE student_package ADD INDEX idx_parent_package_active (parent_id, package_id, is_active, expires_at);'
+  WHEN @idx_student_active_package = 0 THEN 
+    'ALTER TABLE student_package ADD INDEX idx_student_active_package (student_id, package_id, is_active, expires_at);'
+  ELSE 
+    'SELECT "Both indexes already exist" as message;'
+END;
 
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
-
--- Add proper indexes for per-parent package management
-ALTER TABLE student_package 
-ADD INDEX idx_parent_package_active (parent_id, package_id, is_active, expires_at),
-ADD INDEX idx_student_active_package (student_id, package_id, is_active, expires_at);
 
 -- Create view for parent package statistics
 CREATE OR REPLACE VIEW parent_package_stats AS
@@ -222,10 +352,37 @@ CREATE TABLE IF NOT EXISTS package_purchase (
     CONSTRAINT package_purchase_invoice_id_fk FOREIGN KEY (invoice_id) REFERENCES invoice(id)
 );
 
--- Update student_package to link to purchase
-ALTER TABLE student_package 
-ADD COLUMN purchase_id INT NULL COMMENT 'Link to the purchase that enabled this assignment',
-ADD CONSTRAINT student_package_purchase_id_fk FOREIGN KEY (purchase_id) REFERENCES package_purchase(id);
+-- Update student_package to link to purchase (check if column exists first)
+SET @col_purchase_id := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = 'db-script'
+    AND TABLE_NAME = 'student_package'
+    AND COLUMN_NAME = 'purchase_id'
+);
+
+SET @fk_purchase_exists := (
+  SELECT COUNT(1)
+  FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+  WHERE TABLE_SCHEMA = 'db-script'
+    AND TABLE_NAME = 'student_package'
+    AND CONSTRAINT_NAME = 'student_package_purchase_id_fk'
+);
+
+SET @sql := CASE 
+  WHEN @col_purchase_id = 0 AND @fk_purchase_exists = 0 THEN 
+    'ALTER TABLE student_package ADD COLUMN purchase_id INT NULL COMMENT "Link to the purchase that enabled this assignment", ADD CONSTRAINT student_package_purchase_id_fk FOREIGN KEY (purchase_id) REFERENCES package_purchase(id);'
+  WHEN @col_purchase_id = 0 THEN 
+    'ALTER TABLE student_package ADD COLUMN purchase_id INT NULL COMMENT "Link to the purchase that enabled this assignment";'
+  WHEN @fk_purchase_exists = 0 THEN 
+    'ALTER TABLE student_package ADD CONSTRAINT student_package_purchase_id_fk FOREIGN KEY (purchase_id) REFERENCES package_purchase(id);'
+  ELSE 
+    'SELECT "Column and constraint already exist" as message;'
+END;
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Create view to track parent's available slots across all purchases
 CREATE OR REPLACE VIEW parent_package_available_slots AS
