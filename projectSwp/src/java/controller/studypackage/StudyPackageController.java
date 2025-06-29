@@ -407,59 +407,66 @@ public class StudyPackageController extends HttpServlet {
                 Account account = (Account) session.getAttribute("account");
 
                 if (account != null && RoleConstants.PARENT.equals(account.getRole())) {
-                    // Get current parent's assignments for this package
+                    // Check parent's current assignments for this specific package
                     int currentParentAssignments = studentPackageDAO.countParentAssignedStudents(account.getId(), id);
                     int maxStudentsPerParent = sp.getMax_students();
                     int availableSlots = maxStudentsPerParent - currentParentAssignments;
 
-                    // Check if parent has available slots
-                    if (availableSlots <= 0) {
-                        request.setAttribute("errorMessage",
-                                "You have reached the maximum limit for this package (" + maxStudentsPerParent + " students per parent). "
-                                + "You currently have " + currentParentAssignments + " students assigned to this package.");
-                        listStudyPackage(request, response);
-                        return;
-                    }
+                    // Always allow purchase if parent has available slots
+                    if (availableSlots > 0) {
+                        request.setAttribute("packageId", id);
+                        request.setAttribute("packageName", sp.getName());
+                        request.setAttribute("amount", Double.parseDouble(sp.getPrice()));
+                        request.setAttribute("userId", account.getId());
+                        request.setAttribute("studyPackage", sp);
 
-                    request.setAttribute("packageId", id);
-                    request.setAttribute("packageName", sp.getName());
-                    // Fixed price - no multiplication by student count
-                    request.setAttribute("amount", Double.parseDouble(sp.getPrice()));
-                    request.setAttribute("userId", account.getId());
-                    request.setAttribute("studyPackage", sp);
+                        // Add parent-specific package statistics
+                        request.setAttribute("currentParentAssignments", currentParentAssignments);
+                        request.setAttribute("availableSlots", availableSlots);
+                        request.setAttribute("maxStudentsPerParent", maxStudentsPerParent);
 
-                    // Add parent-specific package statistics
-                    request.setAttribute("currentParentAssignments", currentParentAssignments);
-                    request.setAttribute("availableSlots", availableSlots);
-                    request.setAttribute("maxStudentsPerParent", maxStudentsPerParent);
+                        // Get parent's children and separate available vs unavailable
+                        try {
+                            List<Student> allChildren = studentDAO.getStudentsByParentId(account.getId());
+                            List<Integer> studentsWithPackage = studentPackageDAO.getStudentsWithActivePackage(id);
 
-                    // Get parent's children for assignment
-                    try {
-                        List<Student> children = studentDAO.getStudentsByParentId(account.getId());
+                            List<Student> availableChildren = new ArrayList<>();
+                            List<Student> unavailableChildren = new ArrayList<>();
 
-                        // Filter out students who already have this package
-                        List<Student> availableChildren = new ArrayList<>();
-                        List<Student> unavailableChildren = new ArrayList<>();
-
-                        for (Student child : children) {
-                            if (studentPackageDAO.hasStudentActivePackage(child.getId(), id)) {
-                                unavailableChildren.add(child);
-                            } else {
-                                availableChildren.add(child);
+                            for (Student child : allChildren) {
+                                if (studentsWithPackage.contains(child.getId())) {
+                                    unavailableChildren.add(child);
+                                } else {
+                                    availableChildren.add(child);
+                                }
                             }
+
+                            request.setAttribute("children", availableChildren);
+                            request.setAttribute("unavailableChildren", unavailableChildren);
+
+                            // Also get grades for display
+                            List<Grade> grades = gradeDAO.findAllFromGrade();
+                            request.setAttribute("gradeList", grades);
+
+                            // Add informational message if some children already have the package
+                            if (!unavailableChildren.isEmpty()) {
+                                request.setAttribute("infoMessage",
+                                        unavailableChildren.size() + " of your children already have this package and cannot be selected again.");
+                            }
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
 
-                        request.setAttribute("children", availableChildren);
-                        request.setAttribute("unavailableChildren", unavailableChildren);
-
-                        // Also get grades for display
-                        List<Grade> grades = gradeDAO.findAllFromGrade();
-                        request.setAttribute("gradeList", grades);
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                        request.getRequestDispatcher("/studypackage/purchase.jsp").forward(request, response);
+                    } else {
+                        // Parent has reached maximum limit for this package
+                        request.setAttribute("errorMessage",
+                                "You have reached the maximum limit for this package (" + maxStudentsPerParent + " students per parent). "
+                                + "You currently have " + currentParentAssignments + " students assigned to this package. "
+                                + "To assign more students, you would need to remove existing assignments first.");
+                        listStudyPackage(request, response);
                     }
-
-                    request.getRequestDispatcher("/studypackage/purchase.jsp").forward(request, response);
                 } else {
                     request.setAttribute("errorMessage", "Only parents can purchase study packages.");
                     listStudyPackage(request, response);
@@ -1103,23 +1110,47 @@ public class StudyPackageController extends HttpServlet {
                     return;
                 }
 
-                // Check if package has available slots
-                int currentAssignments = studentPackageDAO.countAssignedStudents(packageId);
-                if (currentAssignments + studentIds.length > studyPackage.getMax_students()) {
+                // Check parent's available slots (per-parent limit)
+                int currentParentAssignments = studentPackageDAO.countParentAssignedStudents(account.getId(), packageId);
+                int maxPerParent = studyPackage.getMax_students();
+                int availableSlots = maxPerParent - currentParentAssignments;
+
+                if (studentIds.length > availableSlots) {
                     request.setAttribute("errorMessage",
-                            "Cannot assign package. This would exceed the maximum student limit ("
-                            + studyPackage.getMax_students() + ").");
+                            "Cannot assign " + studentIds.length + " student(s). You have only " + availableSlots
+                            + " available slot(s) for this package. (Current: " + currentParentAssignments
+                            + "/" + maxPerParent + ")");
                     checkoutStudyPackage(request, response);
                     return;
                 }
 
-                // Create invoice first with fixed package price
+                // Verify students don't already have the package
+                List<Integer> studentsWithPackage = studentPackageDAO.getStudentsWithActivePackage(packageId);
+                for (String studentIdStr : studentIds) {
+                    try {
+                        int studentId = Integer.parseInt(studentIdStr);
+                        if (studentsWithPackage.contains(studentId)) {
+                            Student student = studentDAO.findById(studentId);
+                            request.setAttribute("errorMessage",
+                                    "Student '" + (student != null ? student.getFull_name() : "ID:" + studentId)
+                                    + "' already has this package.");
+                            checkoutStudyPackage(request, response);
+                            return;
+                        }
+                    } catch (NumberFormatException e) {
+                        request.setAttribute("errorMessage", "Invalid student ID: " + studentIdStr);
+                        checkoutStudyPackage(request, response);
+                        return;
+                    }
+                }
+
+                // Create invoice with fixed package price
                 InvoiceDAO invoiceDAO = new InvoiceDAO();
                 Invoice invoice = new Invoice();
-                invoice.setTotal_amount(studyPackage.getPrice()); // Fixed price, not multiplied
+                invoice.setTotal_amount(studyPackage.getPrice()); // Fixed price regardless of student count
                 invoice.setParent_id(account.getId());
                 invoice.setCreated_at(LocalDate.now());
-                invoice.setStatus("Completed"); // Direct assignment without payment
+                invoice.setStatus("Completed"); // Direct assignment without payment gateway
                 invoice.setPay_at(LocalDate.now());
 
                 int invoiceId = invoiceDAO.insertInvoice(invoice);
@@ -1130,6 +1161,7 @@ public class StudyPackageController extends HttpServlet {
 
                     // Assign package to each selected student
                     boolean allAssigned = true;
+                    int successCount = 0;
                     for (String studentIdStr : studentIds) {
                         try {
                             int studentId = Integer.parseInt(studentIdStr);
@@ -1140,12 +1172,13 @@ public class StudyPackageController extends HttpServlet {
                                     studyPackage.getDuration_days()
                             );
 
-                            if (!assigned) {
-                                allAssigned = false;
-                                System.err.println("Failed to assign package " + packageId + " to student " + studentId);
-                            } else {
+                            if (assigned) {
+                                successCount++;
                                 // Update invoice line with student assignment
                                 invoiceDAO.updateInvoiceLineWithStudent(invoiceId, studentId);
+                            } else {
+                                allAssigned = false;
+                                System.err.println("Failed to assign package " + packageId + " to student " + studentId);
                             }
                         } catch (NumberFormatException e) {
                             allAssigned = false;
@@ -1153,13 +1186,15 @@ public class StudyPackageController extends HttpServlet {
                         }
                     }
 
-                    if (allAssigned) {
+                    if (successCount > 0) {
                         request.setAttribute("message",
-                                "Study package successfully assigned to " + studentIds.length + " student(s)!");
+                                "Study package successfully assigned to " + successCount + " student(s)! "
+                                + "You now have " + (currentParentAssignments + successCount) + "/" + maxPerParent
+                                + " students assigned to this package.");
                         showMyPackages(request, response);
                     } else {
                         request.setAttribute("errorMessage",
-                                "Some assignments failed. Please check and try again.");
+                                "Assignment failed. Please check and try again.");
                         checkoutStudyPackage(request, response);
                     }
                 } else {

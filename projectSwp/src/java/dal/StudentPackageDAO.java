@@ -344,7 +344,7 @@ public class StudentPackageDAO extends DBContext {
     }
 
     /**
-     * Check if student already has an active package
+     * Check if specific student already has this package
      */
     public boolean hasStudentActivePackage(int studentId, int packageId) {
         String sql = "SELECT COUNT(*) FROM student_package WHERE student_id = ? AND package_id = ? AND is_active = 1 AND expires_at > NOW()";
@@ -362,7 +362,52 @@ public class StudentPackageDAO extends DBContext {
     }
 
     /**
-     * Get all students with active packages for a specific package
+     * Get available children for parent that don't have this package
+     */
+    public List<Map<String, Object>> getAvailableChildrenForPackage(int parentId, int packageId) {
+        List<Map<String, Object>> children = new ArrayList<>();
+
+        String sql = """
+        SELECT 
+            s.id,
+            s.full_name,
+            s.username,
+            g.name as grade_name
+        FROM student s
+        JOIN grade g ON s.grade_id = g.id
+        WHERE s.parent_id = ?
+        AND s.id NOT IN (
+            SELECT sp.student_id 
+            FROM student_package sp 
+            WHERE sp.package_id = ? 
+            AND sp.is_active = 1 
+            AND sp.expires_at > NOW()
+        )
+        ORDER BY s.full_name
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> child = new HashMap<>();
+                child.put("id", rs.getInt("id"));
+                child.put("fullName", rs.getString("full_name"));
+                child.put("username", rs.getString("username"));
+                child.put("gradeName", rs.getString("grade_name"));
+                children.add(child);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return children;
+    }
+
+    /**
+     * Get students that already have active package (to exclude from selection)
      */
     public List<Integer> getStudentsWithActivePackage(int packageId) {
         List<Integer> studentIds = new ArrayList<>();
@@ -475,7 +520,8 @@ public class StudentPackageDAO extends DBContext {
     }
 
     /**
-     * Check if parent has available slots for a package (per-parent limit)
+     * Check if parent has available slots for a specific package (per-parent
+     * limit)
      */
     public boolean hasParentAvailableSlots(int parentId, int packageId) {
         String sql = """

@@ -198,6 +198,31 @@
 
             <!-- Package Statistics -->
             <div class="package-stats">
+                <!-- Information about package limits and current assignments -->
+                <div class="package-stats">
+                    <h6><i class="fas fa-info-circle"></i> Package Assignment Status</h6>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-number">${studyPackage.max_students}</div>
+                            <div class="stat-label">Max Students Per Parent</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">${currentParentAssignments}</div>
+                            <div class="stat-label">Your Current Assignments</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" style="color: #28a745;">${availableSlots}</div>
+                            <div class="stat-label">Your Available Slots</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Add info message if some children already have the package -->
+                <c:if test="${not empty infoMessage}">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note:</strong> ${infoMessage}
+                    </div>
+                </c:if>
                 <h6><i class="fas fa-chart-bar"></i> Package Availability (Per Parent Limit)</h6>
                 <div class="stats-grid">
                     <div class="stat-item">
@@ -329,8 +354,8 @@
         <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
         <script>
                                         // Package capacity limits
-                                        const maxAvailableSlots = ${availableSlots}; // This is now per-parent limit
-                                        const packagePrice = ${amount}; // Fixed package price, not per student
+                                        const maxAvailableSlots = ${availableSlots}; // Parent's available slots
+                                        const packagePrice = ${amount}; // Fixed package price
 
                                         // Current selection state - dùng Set để tránh duplicate
                                         let selectedStudents = new Set();
@@ -341,8 +366,6 @@
                                         });
 
                                         function toggleStudent(studentId) {
-                                            console.log('toggleStudent called with ID:', studentId);
-
                                             const card = document.querySelector('[data-student-id="' + studentId + '"]');
                                             const checkbox = document.getElementById('student_' + studentId);
 
@@ -351,37 +374,32 @@
                                                 return;
                                             }
 
-                                            // Check if card is unavailable
+                                            // Check if card is unavailable (student already has package)
                                             if (card.classList.contains('unavailable')) {
-                                                console.log('Student unavailable, skipping');
+                                                alert('This student already has this package and cannot be selected again.');
                                                 return;
                                             }
 
-                                            // Simple toggle logic based on current visual state
+                                            // Toggle logic
                                             if (card.classList.contains('selected')) {
-                                                // Currently selected -> deselect
-                                                console.log('Deselecting student:', studentId);
+                                                // Deselect
                                                 selectedStudents.delete(studentId);
                                                 card.classList.remove('selected');
                                                 checkbox.checked = false;
                                             } else {
-                                                // Currently not selected -> try to select
+                                                // Check parent's available slots
                                                 if (selectedStudents.size >= maxAvailableSlots) {
-                                                    alert('You can only assign up to ' + maxAvailableSlots + ' student(s) to this package as per the parent limit.\n' +
-                                                            'This package allows maximum ' + ${studyPackage.max_students} + ' students per parent.');
+                                                    alert('You can only assign up to ' + maxAvailableSlots + ' more student(s) to this package.\n\n' +
+                                                            'You currently have ${currentParentAssignments} students assigned to this package.\n' +
+                                                            'Maximum allowed per parent: ${studyPackage.max_students} students.');
                                                     return;
                                                 }
 
-                                                console.log('Selecting student:', studentId);
+                                                // Select
                                                 selectedStudents.add(studentId);
                                                 card.classList.add('selected');
                                                 checkbox.checked = true;
                                             }
-
-                                            console.log('Current selection:', {
-                                                selectedCount: selectedStudents.size,
-                                                selectedStudents: Array.from(selectedStudents)
-                                            });
 
                                             updateUI();
                                         }
@@ -420,7 +438,6 @@
 
                                             if (selectedCount > 0) {
                                                 purchaseBtn.disabled = false;
-                                                // Show fixed package price, not multiplied by student count
                                                 purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase Package for ' +
                                                         selectedCount + ' Student(s) - ' +
                                                         packagePrice.toLocaleString() + ' VND';
@@ -485,30 +502,16 @@
                                                 return false;
                                             }
 
-                                            // Check if user wants to assign all or partial
-                                            if (selectedCount < ${fn:length(children)} && selectedCount < maxAvailableSlots) {
-                                                const remainingSlots = maxAvailableSlots - selectedCount;
-                                                const unselectedCount = ${fn:length(children)} - selectedCount;
-
-                                                if (remainingSlots > 0 && unselectedCount > 0) {
-                                                    const assignLaterMessage = 'You are purchasing ' + maxAvailableSlots + ' slot(s) but only assigning ' + selectedCount + ' student(s) now.\n\n' +
-                                                            'You will have ' + remainingSlots + ' slot(s) remaining that you can assign to other students later through "My Packages > Detailed Management".\n\n' +
-                                                            'Do you want to continue?';
-
-                                                    if (!confirm(assignLaterMessage)) {
-                                                        e.preventDefault();
-                                                        return false;
-                                                    }
-                                                }
-                                            }
-
-                                            // Fixed package price confirmation
+                                            // Confirmation message with clear information
                                             const confirmMessage = 'Purchase Confirmation:\n\n' +
                                                     'Package: ${studyPackage.name}\n' +
-                                                    'Package Capacity: ' + maxAvailableSlots + ' student(s)\n' +
-                                                    'Assigning Now: ' + selectedCount + ' student(s)\n' +
+                                                    'Students to assign: ' + selectedCount + '\n' +
                                                     'Duration: ${studyPackage.duration_days} days each\n' +
                                                     'Total Cost: ' + packagePrice.toLocaleString() + ' VND\n\n' +
+                                                    'Your package usage after this purchase:\n' +
+                                                    'Current assignments: ${currentParentAssignments}\n' +
+                                                    'New assignments: ' + selectedCount + '\n' +
+                                                    'Total: ' + (${currentParentAssignments} + selectedCount) + '/${studyPackage.max_students}\n\n' +
                                                     'Do you want to proceed with the payment?';
 
                                             if (!confirm(confirmMessage)) {
