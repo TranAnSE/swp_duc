@@ -51,6 +51,40 @@ public class BlockJspHtmlFilter implements Filter {
             }
         }
 
+        // Check dashboard access
+        if (uri.contains("/dashboard")) {
+            String action = req.getParameter("action");
+            if (action != null) {
+                switch (action) {
+                    case "admin":
+                        if (user == null || !user.getRole().equals(RoleConstants.ADMIN)) {
+                            res.sendRedirect("/error.jsp");
+                            return;
+                        }
+                        break;
+                    case "teacher":
+                        if (user == null || !(user.getRole().equals(RoleConstants.TEACHER) || user.getRole().equals(RoleConstants.ADMIN))) {
+                            res.sendRedirect("/error.jsp");
+                            return;
+                        }
+                        break;
+                    case "parent":
+                        if (user == null || !user.getRole().equals(RoleConstants.PARENT)) {
+                            res.sendRedirect("/error.jsp");
+                            return;
+                        }
+                        break;
+                    case "student":
+                        Object studentObj = session.getAttribute("student");
+                        if (!(studentObj instanceof model.Student)) {
+                            res.sendRedirect("/error.jsp");
+                            return;
+                        }
+                        break;
+                }
+            }
+        }
+
         chain.doFilter(request, response);
     }
 }
