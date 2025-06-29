@@ -108,6 +108,13 @@ public class GeminiAIService {
                 prompt.append("Generate TRUE/FALSE questions with only 2 options: 'True' and 'False'. ")
                         .append("Only one option should be correct. Focus on factual statements from the lesson.\n");
                 break;
+            case "mixed":
+                prompt.append("Generate a MIX of different question types: ")
+                        .append("- Some SINGLE CHOICE questions with 4 options (only 1 correct)\n")
+                        .append("- Some MULTIPLE CHOICE questions with 4-5 options (2-3 correct)\n")
+                        .append("- Some TRUE/FALSE questions with 2 options (1 correct)\n")
+                        .append("Distribute the question types evenly and vary the format to create engaging variety.\n");
+                break;
             default:
                 prompt.append("Generate educational questions with multiple options.\n");
                 break;
@@ -125,7 +132,8 @@ public class GeminiAIService {
         prompt.append("    \"options\": [\"Option 1\", \"Option 2\", \"Option 3\", \"Option 4\"],\n");
         prompt.append("    \"correctAnswers\": [0, 2],\n");
         prompt.append("    \"explanation\": \"Clear explanation of why the answer is correct\",\n");
-        prompt.append("    \"difficulty\": \"").append(request.getDifficulty().toLowerCase()).append("\"\n");
+        prompt.append("    \"difficulty\": \"").append(request.getDifficulty().toLowerCase()).append("\",\n");
+        prompt.append("    \"questionType\": \"single_choice\"").append("\n"); // Add actual question type for mixed
         prompt.append("  }\n");
         prompt.append("]\n\n");
         prompt.append("CRITICAL RULES:\n");
@@ -133,6 +141,7 @@ public class GeminiAIService {
         prompt.append("- For single choice: correctAnswers should have exactly 1 index\n");
         prompt.append("- For multiple choice: correctAnswers should have 2-3 indices\n");
         prompt.append("- For true/false: correctAnswers should have exactly 1 index (0 or 1)\n");
+        prompt.append("- For mixed: include 'questionType' field to specify actual type of each question\n");
         prompt.append("- Keep questions clear and educational, avoid overly complex language\n");
         prompt.append("- Respond with ONLY the JSON array, no markdown formatting, no extra text\n");
 
@@ -442,7 +451,12 @@ public class GeminiAIService {
                     ? questionObj.get("explanation").getAsString() : "No explanation provided.";
             question.setExplanation(explanation);
 
-            question.setQuestionType(questionType);
+            // Handle Mixed type - check if individual question has specific type
+            String actualQuestionType = questionType;
+            if ("mixed".equals(questionType.toLowerCase()) && questionObj.has("questionType")) {
+                actualQuestionType = questionObj.get("questionType").getAsString();
+            }
+            question.setQuestionType(actualQuestionType);
 
             // Set difficulty - default to "medium" if not provided
             String difficulty = questionObj.has("difficulty")
@@ -474,8 +488,8 @@ public class GeminiAIService {
                 correctAnswers.add(0);
             }
 
-            // Validate correct answers
-            correctAnswers = validateCorrectAnswers(correctAnswers, options.size(), questionType);
+            // Validate correct answers based on actual question type
+            correctAnswers = validateCorrectAnswers(correctAnswers, options.size(), actualQuestionType);
             question.setCorrectAnswers(correctAnswers);
 
             // Set legacy correctAnswerIndex for backward compatibility
@@ -522,7 +536,24 @@ public class GeminiAIService {
                 if (validAnswers.isEmpty()) {
                     validAnswers.add(0); // Default to first option
                 }
-                // For multiple choice, we allow multiple correct answers
+                // For multiple choice, allow multiple correct answers
+                break;
+
+            case "mixed":
+                // For mixed, determine based on number of options
+                if (optionCount == 2) {
+                    // Likely true/false, should have 1 correct answer
+                    if (validAnswers.isEmpty()) {
+                        validAnswers.add(0);
+                    } else if (validAnswers.size() > 1) {
+                        validAnswers = validAnswers.subList(0, 1);
+                    }
+                } else if (validAnswers.size() > 1) {
+                    // Multiple choice behavior
+                    // Keep multiple correct answers
+                } else if (validAnswers.isEmpty()) {
+                    validAnswers.add(0);
+                }
                 break;
 
             default:
@@ -566,6 +597,33 @@ public class GeminiAIService {
                     options.add("Option D - Please edit this option");
                     correctAnswers.add(0);
                     correctAnswers.add(2); // Multiple correct answers
+                    break;
+                case "mixed":
+                    // For mixed fallback, create variety
+                    if (i % 3 == 0) {
+                        // True/False
+                        options.add("True");
+                        options.add("False");
+                        correctAnswers.add(0);
+                        question.setQuestionType("true_false");
+                    } else if (i % 3 == 1) {
+                        // Multiple Choice
+                        options.add("Option A - Please edit this option");
+                        options.add("Option B - Please edit this option");
+                        options.add("Option C - Please edit this option");
+                        options.add("Option D - Please edit this option");
+                        correctAnswers.add(0);
+                        correctAnswers.add(2);
+                        question.setQuestionType("multiple_choice");
+                    } else {
+                        // Single Choice
+                        options.add("Option A - Please edit this option");
+                        options.add("Option B - Please edit this option");
+                        options.add("Option C - Please edit this option");
+                        options.add("Option D - Please edit this option");
+                        correctAnswers.add(0);
+                        question.setQuestionType("single_choice");
+                    }
                     break;
                 default: // single_choice
                     options.add("Option A - Please edit this option");

@@ -917,8 +917,20 @@
                                     </div>
                                 </label>
                             </div>
+
+                            <div class="question-type-card" data-type="mixed">
+                                <input type="radio" name="question_type" value="mixed" id="typeMixed">
+                                <label for="typeMixed">
+                                    <i class="fas fa-random question-type-icon"></i>
+                                    <div class="question-type-title">Mixed Types</div>
+                                    <div class="question-type-description">
+                                        Combination of different question types
+                                    </div>
+                                </label>
+                            </div>
                         </div>
                     </div>
+
 
                     <!-- Question Settings -->
                     <div class="form-section">

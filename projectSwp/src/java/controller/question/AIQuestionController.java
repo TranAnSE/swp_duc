@@ -541,18 +541,32 @@ public class AIQuestionController extends HttpServlet {
 
                 // Determine question type for database
                 String dbQuestionType = "SINGLE"; // Default
-                switch (aiQuestion.getQuestionType().toLowerCase()) {
-                    case "multiple_choice":
+                String actualQuestionType = aiQuestion.getQuestionType();
+
+                // Handle Mixed type - use the actual question type determined by AI
+                if ("mixed".equals(actualQuestionType)) {
+                    // For mixed, should have the actual type in the question object
+                    // If not available, determine based on number of correct answers
+                    List<Integer> correctAnswers = aiQuestion.getCorrectAnswers();
+                    if (correctAnswers != null && correctAnswers.size() > 1) {
                         dbQuestionType = "MULTIPLE";
-                        break;
-                    case "true_false":
-                    case "single_choice":
-                    default:
+                    } else {
                         dbQuestionType = "SINGLE";
-                        break;
+                    }
+                } else {
+                    switch (actualQuestionType.toLowerCase()) {
+                        case "multiple_choice":
+                            dbQuestionType = "MULTIPLE";
+                            break;
+                        case "true_false":
+                        case "single_choice":
+                        default:
+                            dbQuestionType = "SINGLE";
+                            break;
+                    }
                 }
 
-                // Enhanced: Use intelligent lesson assignment
+                // Use intelligent lesson assignment
                 int lessonId = aiQuestion.getAssignedLessonId();
                 if (lessonId <= 0) {
                     // Fallback to default assignment if intelligent assignment failed
