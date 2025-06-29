@@ -198,7 +198,7 @@ public class AIQuestionController extends HttpServlet {
             // Generate questions using AI
             List<GeminiAIService.AIQuestion> generatedQuestions = aiService.generateQuestions(aiRequest);
 
-            // Enhanced: Add lesson mapping information to each question
+            // Add lesson mapping information to each question
             enhanceQuestionsWithLessonInfo(generatedQuestions, contentMapping);
 
             // Store in session for preview
@@ -380,7 +380,7 @@ public class AIQuestionController extends HttpServlet {
     }
 
     /**
-     * Enhanced question generation with lesson info
+     * Question generation with lesson info
      */
     private void enhanceQuestionsWithLessonInfo(List<GeminiAIService.AIQuestion> questions,
             ContentAndLessonMapping mapping) {

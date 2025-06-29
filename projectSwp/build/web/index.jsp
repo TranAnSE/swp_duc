@@ -1178,7 +1178,7 @@
     <script src="${pageContext.request.contextPath}/assets/js/plugins.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/main.js"></script>
 
-    <!-- Enhanced Custom JavaScript -->
+    <!-- Custom JavaScript -->
     <script>
         $(document).ready(function() {
             // Initialize animations and interactions

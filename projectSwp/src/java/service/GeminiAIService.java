@@ -73,7 +73,7 @@ public class GeminiAIService {
 
         prompt.append("Lesson Content:\n").append(request.getLessonContent()).append("\n\n");
 
-        // Enhanced difficulty handling
+        // Difficulty handling
         String difficultyInstruction = "";
         switch (request.getDifficulty().toLowerCase()) {
             case "easy":
@@ -154,7 +154,7 @@ public class GeminiAIService {
     private String callGeminiAPI(String prompt) throws Exception {
         logger.info("Calling Gemini API...");
 
-        // Create request body with enhanced safety settings for hard difficulty
+        // Create request body with safety settings for hard difficulty
         JsonObject requestBody = new JsonObject();
         JsonArray contents = new JsonArray();
         JsonObject requestContent = new JsonObject();
@@ -167,7 +167,7 @@ public class GeminiAIService {
         contents.add(requestContent);
         requestBody.add("contents", contents);
 
-        // Enhanced generation config
+        // Generation config
         JsonObject generationConfig = new JsonObject();
         generationConfig.addProperty("temperature", 0.4); // Slightly higher for hard questions
         generationConfig.addProperty("topK", 30);
@@ -269,7 +269,7 @@ public class GeminiAIService {
             JsonArray candidates = responseJson.getAsJsonArray("candidates");
             JsonObject candidate = candidates.get(0).getAsJsonObject();
 
-            // Enhanced finish reason handling
+            // Finish reason handling
             if (candidate.has("finishReason")) {
                 String finishReason = candidate.get("finishReason").getAsString();
                 logger.info("Generation finished with reason: " + finishReason);

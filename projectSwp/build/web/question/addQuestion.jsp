@@ -158,7 +158,7 @@
                 transition: width 0.5s ease;
             }
 
-            /* Enhanced Select2 Custom Styling */
+            /* Select2 Custom Styling */
             .select2-container--bootstrap-5 .select2-selection {
                 border: 2px solid #e2e8f0 !important;
                 border-radius: 8px !important;

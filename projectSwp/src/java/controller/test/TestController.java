@@ -131,6 +131,18 @@ public class TestController extends HttpServlet {
                     case "getAllGrades":
                         handleGetAllGrades(request, response);
                         return;
+                    case "getQuestionsBySubject":
+                        handleGetQuestionsBySubject(request, response);
+                        return;
+                    case "getQuestionsByChapter":
+                        handleGetQuestionsByChapter(request, response);
+                        return;
+                    case "getAllQuestionsBySubject":
+                        handleGetAllQuestionsBySubject(request, response);
+                        return;
+                    case "getAllQuestionsByChapter":
+                        handleGetAllQuestionsByChapter(request, response);
+                        return;
                     default:
                         listTests(request, response);
                         break;
@@ -167,7 +179,7 @@ public class TestController extends HttpServlet {
         Map<Integer, String> categoryMap = getCategoryMap();
         request.setAttribute("categoryMap", categoryMap);
 
-        // Load hierarchy data for enhanced test creation
+        // Load hierarchy data for test creation
         try {
             GradeDAO gradeDAO = new GradeDAO();
             List<Grade> gradeList = gradeDAO.findAllFromGrade();
@@ -868,6 +880,198 @@ public class TestController extends HttpServlet {
                         .append("\"id\":").append(grade.getId())
                         .append(",\"name\":\"").append(escapeJsonString(grade.getName()))
                         .append("\"}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("[]");
+        }
+    }
+    // Handle getting questions by subject
+
+    private void handleGetQuestionsBySubject(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int subjectId = Integer.parseInt(request.getParameter("subjectId"));
+            int count = Integer.parseInt(request.getParameter("count"));
+            String difficulty = request.getParameter("difficulty");
+            String category = request.getParameter("category");
+            String excludeIdsStr = request.getParameter("excludeIds");
+
+            // Parse excluded IDs
+            Set<Integer> excludeIds = new HashSet<>();
+            if (excludeIdsStr != null && !excludeIdsStr.trim().isEmpty()) {
+                String[] ids = excludeIdsStr.split(",");
+                for (String id : ids) {
+                    try {
+                        excludeIds.add(Integer.parseInt(id.trim()));
+                    } catch (NumberFormatException e) {
+                        // Skip invalid IDs
+                    }
+                }
+            }
+
+            QuestionDAO questionDAO = new QuestionDAO();
+            List<Question> questions = questionDAO.getQuestionsBySubjectWithDetails(subjectId, count, difficulty, category, excludeIds);
+
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < questions.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Question question = questions.get(i);
+                String difficulty_val = question.getDifficulty() != null ? question.getDifficulty() : "medium";
+                String category_val = question.getCategory() != null ? question.getCategory() : "conceptual";
+                String questionType = question.getQuestion_type() != null ? question.getQuestion_type() : "SINGLE";
+
+                json.append("{\"id\":").append(question.getId())
+                        .append(",\"question\":\"").append(escapeJsonString(question.getQuestion()))
+                        .append("\",\"question_type\":\"").append(questionType)
+                        .append("\",\"difficulty\":\"").append(difficulty_val)
+                        .append("\",\"category\":\"").append(category_val)
+                        .append("\",\"isAI\":").append(question.isAIGenerated())
+                        .append("}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("[]");
+        }
+    }
+
+// Handle getting questions by chapter
+    private void handleGetQuestionsByChapter(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int chapterId = Integer.parseInt(request.getParameter("chapterId"));
+            int count = Integer.parseInt(request.getParameter("count"));
+            String difficulty = request.getParameter("difficulty");
+            String category = request.getParameter("category");
+            String excludeIdsStr = request.getParameter("excludeIds");
+
+            // Parse excluded IDs
+            Set<Integer> excludeIds = new HashSet<>();
+            if (excludeIdsStr != null && !excludeIdsStr.trim().isEmpty()) {
+                String[] ids = excludeIdsStr.split(",");
+                for (String id : ids) {
+                    try {
+                        excludeIds.add(Integer.parseInt(id.trim()));
+                    } catch (NumberFormatException e) {
+                        // Skip invalid IDs
+                    }
+                }
+            }
+
+            QuestionDAO questionDAO = new QuestionDAO();
+            List<Question> questions = questionDAO.getQuestionsByChapterWithDetails(chapterId, count, difficulty, category, excludeIds);
+
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < questions.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Question question = questions.get(i);
+                String difficulty_val = question.getDifficulty() != null ? question.getDifficulty() : "medium";
+                String category_val = question.getCategory() != null ? question.getCategory() : "conceptual";
+                String questionType = question.getQuestion_type() != null ? question.getQuestion_type() : "SINGLE";
+
+                json.append("{\"id\":").append(question.getId())
+                        .append(",\"question\":\"").append(escapeJsonString(question.getQuestion()))
+                        .append("\",\"question_type\":\"").append(questionType)
+                        .append("\",\"difficulty\":\"").append(difficulty_val)
+                        .append("\",\"category\":\"").append(category_val)
+                        .append("\",\"isAI\":").append(question.isAIGenerated())
+                        .append("}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("[]");
+        }
+    }
+
+// Handle getting all questions by subject (for manual selection)
+    private void handleGetAllQuestionsBySubject(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int subjectId = Integer.parseInt(request.getParameter("subjectId"));
+            QuestionDAO questionDAO = new QuestionDAO();
+            List<Question> questions = questionDAO.getAllQuestionsBySubject(subjectId);
+
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < questions.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Question question = questions.get(i);
+                String difficulty = question.getDifficulty() != null ? question.getDifficulty() : "medium";
+                String category = question.getCategory() != null ? question.getCategory() : "conceptual";
+                String questionType = question.getQuestion_type() != null ? question.getQuestion_type() : "SINGLE";
+
+                json.append("{\"id\":").append(question.getId())
+                        .append(",\"question\":\"").append(escapeJsonString(question.getQuestion()))
+                        .append("\",\"type\":\"").append(questionType)
+                        .append("\",\"difficulty\":\"").append(difficulty)
+                        .append("\",\"category\":\"").append(category)
+                        .append("\",\"isAI\":").append(question.isAIGenerated())
+                        .append("}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("[]");
+        }
+    }
+
+// Handle getting all questions by chapter (for manual selection)
+    private void handleGetAllQuestionsByChapter(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int chapterId = Integer.parseInt(request.getParameter("chapterId"));
+            QuestionDAO questionDAO = new QuestionDAO();
+            List<Question> questions = questionDAO.getAllQuestionsByChapter(chapterId);
+
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < questions.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Question question = questions.get(i);
+                String difficulty = question.getDifficulty() != null ? question.getDifficulty() : "medium";
+                String category = question.getCategory() != null ? question.getCategory() : "conceptual";
+                String questionType = question.getQuestion_type() != null ? question.getQuestion_type() : "SINGLE";
+
+                json.append("{\"id\":").append(question.getId())
+                        .append(",\"question\":\"").append(escapeJsonString(question.getQuestion()))
+                        .append("\",\"type\":\"").append(questionType)
+                        .append("\",\"difficulty\":\"").append(difficulty)
+                        .append("\",\"category\":\"").append(category)
+                        .append("\",\"isAI\":").append(question.isAIGenerated())
+                        .append("}");
             }
             json.append("]");
 

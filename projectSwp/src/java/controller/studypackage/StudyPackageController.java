@@ -1027,6 +1027,6 @@ public class StudyPackageController extends HttpServlet {
 
     @Override
     public String getServletInfo() {
-        return "Study Package Controller with enhanced package management";
+        return "Study Package Controller with package management";
     }
 }

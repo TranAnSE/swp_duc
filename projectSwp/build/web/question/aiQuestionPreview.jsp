@@ -661,7 +661,7 @@
                 accent-color: var(--success-color);
             }
 
-            /* Enhanced Select2 Custom Styling for Edit Sections */
+            /* Select2 Custom Styling for Edit Sections */
             .edit-section .select2-container--bootstrap-5 .select2-selection {
                 border: 2px solid #e5e7eb !important;
                 border-radius: 8px !important;
@@ -1234,7 +1234,7 @@
                                                     let editedQuestions = new Set();
                                                     let select2InitializedElements = new Set();
 
-                                                    // Enhanced Select2 initialization function for edit sections
+                                                    // Select2 initialization function for edit sections
                                                     function initializeSelect2ForEdit() {
                                                         $('.select2-edit').each(function () {
                                                             const $element = $(this);
@@ -1513,7 +1513,7 @@
                                                         }
                                                     });
 
-                                                    // Enhanced form submission with option data collection
+                                                    // form submission with option data collection
                                                     document.getElementById('approveForm').addEventListener('submit', function (e) {
                                                         const approvedCount = document.querySelectorAll('input[name="approved"]:checked').length;
 

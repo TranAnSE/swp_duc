@@ -4,7 +4,7 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>Enhanced Test Creation</title>
+        <title>Test Creation</title>
 
         <!-- CSS -->
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
@@ -453,7 +453,7 @@
                 }
             }
 
-            /* Enhanced selection stats for different states */
+            /* selection stats for different states */
             .selection-stats.has-selection {
                 background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             }
@@ -478,7 +478,7 @@
                     box-shadow: 0 2px 10px rgba(240, 147, 251, 0.3);
                 }
             }
-            /* Enhanced Filter Controls */
+            /* Filter Controls */
             .filter-controls-inline {
                 display: flex;
                 gap: 10px;
@@ -543,6 +543,178 @@
                     width: 100%;
                 }
             }
+            /* scope selection styles */
+            #scopeSelection, #scopeSelectionUpdate {
+                background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+                border: 2px solid #0ea5e9;
+                border-radius: 12px;
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+
+            #scopeSelection h5, #scopeSelectionUpdate h5 {
+                color: #0c4a6e;
+                margin-bottom: 15px;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            #scopeSelection label, #scopeSelectionUpdate label {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 10px;
+                font-weight: 500;
+                cursor: pointer;
+                padding: 8px 12px;
+                border-radius: 6px;
+                transition: all 0.2s ease;
+            }
+
+            #scopeSelection label:hover, #scopeSelectionUpdate label:hover {
+                background: rgba(14, 165, 233, 0.1);
+            }
+
+            #scopeSelection input[type="radio"], #scopeSelectionUpdate input[type="radio"] {
+                transform: scale(1.2);
+                accent-color: #0ea5e9;
+            }
+
+            /* hierarchy steps for different scopes */
+            .hierarchy-steps .step-item.scope-disabled {
+                opacity: 0.5;
+                pointer-events: none;
+            }
+
+            .hierarchy-steps .step-item.scope-active {
+                border-color: #10b981;
+                background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+            }
+
+            /* Scope indicator badges */
+            .scope-indicator {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+                color: white;
+                padding: 4px 10px;
+                border-radius: 12px;
+                font-size: 0.75rem;
+                font-weight: 500;
+                margin-left: 10px;
+            }
+
+            .scope-indicator.lesson {
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            }
+
+            .scope-indicator.chapter {
+                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            }
+
+            .scope-indicator.subject {
+                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            }
+
+            /* question item with scope information */
+            .question-item .question-scope {
+                font-size: 0.75rem;
+                color: #6b7280;
+                margin-top: 5px;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .question-item .question-scope i {
+                color: #9ca3af;
+            }
+
+            /* Loading states for different scopes */
+            .scope-loading {
+                background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+                padding: 20px;
+                text-align: center;
+                margin: 20px 0;
+            }
+
+            .scope-loading i {
+                font-size: 2rem;
+                color: #6b7280;
+                margin-bottom: 10px;
+            }
+
+            /* stats display for different scopes */
+            .selection-stats.scope-enhanced {
+                background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                border: 1px solid #f59e0b;
+                color: #92400e;
+            }
+
+            .selection-stats.scope-enhanced .scope-info {
+                font-size: 0.875rem;
+                margin-top: 5px;
+                opacity: 0.8;
+            }
+
+            /* Responsive design for scope selection */
+            @media (max-width: 768px) {
+                #scopeSelection, #scopeSelectionUpdate {
+                    padding: 15px;
+                }
+
+                #scopeSelection label, #scopeSelectionUpdate label {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 5px;
+                    padding: 10px;
+                }
+
+                .scope-indicator {
+                    margin-left: 0;
+                    margin-top: 5px;
+                }
+            }
+
+            /* Animation for scope transitions */
+            .scope-transition {
+                transition: all 0.3s ease;
+            }
+
+            .scope-fade-in {
+                animation: scopeFadeIn 0.3s ease;
+            }
+
+            @keyframes scopeFadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .scope-slide-up {
+                animation: scopeSlideUp 0.3s ease;
+            }
+
+            @keyframes scopeSlideUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
         </style>
     </head>
     <body>
@@ -581,7 +753,7 @@
                         </div>
                     </div>
 
-                    <!-- Enhanced Question Selection -->
+                    <!-- Question Selection -->
                     <div class="form-container">
                         <div class="form-section">
                             <h4><i class="fas fa-cogs"></i> Question Selection Method</h4>
@@ -724,7 +896,7 @@
                                     <i class="fas fa-square"></i> Deselect All
                                 </button>
 
-                                <!-- Enhanced Filter Controls -->
+                                <!-- Filter Controls -->
                                 <div class="filter-controls-inline">
                                     <select id="manualDifficultyFilter" class="filter-select" onchange="applyManualFilters()">
                                         <option value="all">All Difficulties</option>
@@ -801,6 +973,8 @@
                                             let currentLessonId = null;
                                             let allQuestions = [];
                                             let selectedQuestions = new Set();
+                                            let currentSubjectId = null;
+                                            let currentChapterId = null;
 
 //                                        console.log('Page loaded, initializing...');
 
@@ -909,7 +1083,6 @@
                                             // Toggle selection method
                                             window.toggleSelectionMethod = function () {
                                                 const method = $('input[name="selectionMethod"]:checked').val();
-//                                            console.log('Selection method changed to:', method);
                                                 if (method === 'smart') {
                                                     $('#smartGenerationSection').addClass('active');
                                                     $('#manualSelectionAlert').show();
@@ -920,7 +1093,110 @@
                                                     $('#generatedQuestionsPreview').removeClass('active');
                                                     $('#manualSelectionAlert').show();
                                                 }
+
+                                                // Show selection scope options for both methods
+                                                showSelectionScopeOptions();
                                             };
+
+                                            // Show selection scope options (Lesson, Chapter, Subject)
+                                            function showSelectionScopeOptions() {
+                                                // Add scope selection if not exists
+                                                if ($('#scopeSelection').length === 0) {
+                                                    const scopeHtml = `
+            <div id="scopeSelection" class="form-section" style="margin-bottom: 20px;">
+                <h5><i class="fas fa-layer-group"></i> Question Selection Scope</h5>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Choose the scope for question selection: specific lesson, entire chapter, or whole subject.
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label>
+                        <input type="radio" name="selectionScope" value="lesson" checked onchange="toggleSelectionScope()"> 
+                        <i class="fas fa-book"></i> Lesson Level - Select from a specific lesson
+                    </label><br>
+                    <label>
+                        <input type="radio" name="selectionScope" value="chapter" onchange="toggleSelectionScope()"> 
+                        <i class="fas fa-bookmark"></i> Chapter Level - Select from all lessons in a chapter
+                    </label><br>
+                    <label>
+                        <input type="radio" name="selectionScope" value="subject" onchange="toggleSelectionScope()"> 
+                        <i class="fas fa-graduation-cap"></i> Subject Level - Select from all lessons in a subject
+                    </label>
+                </div>
+            </div>
+        `;
+                                                    $('#hierarchySection').before(scopeHtml);
+                                                }
+
+                                                toggleSelectionScope();
+                                            }
+
+                                            // Toggle selection scope
+                                            window.toggleSelectionScope = function () {
+                                                const scope = $('input[name="selectionScope"]:checked').val();
+                                                const method = $('input[name="selectionMethod"]:checked').val();
+
+                                                // Update hierarchy section based on scope
+                                                updateHierarchyForScope(scope);
+
+                                                // Update smart generation section
+                                                if (method === 'smart') {
+                                                    updateSmartGenerationForScope(scope);
+                                                }
+
+                                                // Clear previous selections
+                                                clearQuestionDisplay();
+                                            };
+
+                                            // Update hierarchy section based on scope
+                                            function updateHierarchyForScope(scope) {
+                                                const $hierarchySteps = $('.hierarchy-steps');
+                                                const $lessonStep = $hierarchySteps.find('.step-item').eq(3);
+                                                const $chapterStep = $hierarchySteps.find('.step-item').eq(2);
+                                                const $subjectStep = $hierarchySteps.find('.step-item').eq(1);
+
+                                                // Reset all steps
+                                                $hierarchySteps.find('.step-item').show();
+
+                                                // Update instruction based on scope
+                                                let instruction = '';
+                                                switch (scope) {
+                                                    case 'lesson':
+                                                        instruction = 'Navigate through Grade → Subject → Chapter → Lesson to find questions';
+                                                        break;
+                                                    case 'chapter':
+                                                        instruction = 'Navigate through Grade → Subject → Chapter to find all questions in that chapter';
+                                                        $lessonStep.hide();
+                                                        break;
+                                                    case 'subject':
+                                                        instruction = 'Navigate through Grade → Subject to find all questions in that subject';
+                                                        $chapterStep.hide();
+                                                        $lessonStep.hide();
+                                                        break;
+                                                }
+
+                                                $('#hierarchySection .alert').html('<i class="fas fa-route"></i> ' + instruction);
+                                            }
+
+                                            // Update smart generation section based on scope
+                                            function updateSmartGenerationForScope(scope) {
+                                                const $generateBtn = $('#generateSmartBtn');
+                                                let buttonText = '';
+
+                                                switch (scope) {
+                                                    case 'lesson':
+                                                        buttonText = '<i class="fas fa-dice"></i> Generate from Lesson';
+                                                        break;
+                                                    case 'chapter':
+                                                        buttonText = '<i class="fas fa-dice"></i> Generate from Chapter';
+                                                        break;
+                                                    case 'subject':
+                                                        buttonText = '<i class="fas fa-dice"></i> Generate from Subject';
+                                                        break;
+                                                }
+
+                                                $generateBtn.html(buttonText);
+                                            }
 
                                             // Hierarchy selection handlers
                                             $('#gradeSelect').on('change', function () {
@@ -933,23 +1209,41 @@
                                                 }
                                             });
 
-                                            $('#subjectSelect').on('change', function () {
+                                            $('#subjectSelect').off('change').on('change', function () {
                                                 const subjectId = $(this).val();
-//                                            console.log('Subject selected:', subjectId);
+                                                const scope = $('input[name="selectionScope"]:checked').val();
+
                                                 if (subjectId) {
-                                                    loadChapters(subjectId);
-                                                    resetSubsequentSelects(['#chapterSelect', '#lessonSelect']);
-                                                    clearQuestionDisplay();
+                                                    if (scope === 'subject') {
+                                                        // Load questions directly from subject
+                                                        currentLessonId = null;
+                                                        currentSubjectId = subjectId;
+                                                        loadQuestionsFromSubject(subjectId);
+                                                    } else {
+                                                        // Continue with chapter selection
+                                                        loadChapters(subjectId);
+                                                        resetSubsequentSelects(['#chapterSelect', '#lessonSelect']);
+                                                        clearQuestionDisplay();
+                                                    }
                                                 }
                                             });
 
-                                            $('#chapterSelect').on('change', function () {
+                                            $('#chapterSelect').off('change').on('change', function () {
                                                 const chapterId = $(this).val();
-//                                            console.log('Chapter selected:', chapterId);
+                                                const scope = $('input[name="selectionScope"]:checked').val();
+
                                                 if (chapterId) {
-                                                    loadLessons(chapterId);
-                                                    resetSubsequentSelects(['#lessonSelect']);
-                                                    clearQuestionDisplay();
+                                                    if (scope === 'chapter') {
+                                                        // Load questions directly from chapter
+                                                        currentLessonId = null;
+                                                        currentChapterId = chapterId;
+                                                        loadQuestionsFromChapter(chapterId);
+                                                    } else {
+                                                        // Continue with lesson selection
+                                                        loadLessons(chapterId);
+                                                        resetSubsequentSelects(['#lessonSelect']);
+                                                        clearQuestionDisplay();
+                                                    }
                                                 }
                                             });
 
@@ -961,6 +1255,68 @@
                                                     loadQuestions(lessonId);
                                                 }
                                             });
+
+                                            // Load questions from subject
+                                            function loadQuestionsFromSubject(subjectId) {
+                                                const method = $('input[name="selectionMethod"]:checked').val();
+
+                                                if (method === 'manual') {
+                                                    loadManualQuestionsFromSubject(subjectId);
+                                                }
+                                            }
+
+                                            // Load questions from chapter
+                                            function loadQuestionsFromChapter(chapterId) {
+                                                const method = $('input[name="selectionMethod"]:checked').val();
+
+                                                if (method === 'manual') {
+                                                    loadManualQuestionsFromChapter(chapterId);
+                                                }
+                                            }
+
+                                            // Load manual questions from subject
+                                            function loadManualQuestionsFromSubject(subjectId) {
+                                                console.log('Loading manual questions from subject:', subjectId);
+
+                                                $('#manualQuestionsList').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Loading questions from subject...</div>');
+
+                                                $.get('test', {
+                                                    action: 'getAllQuestionsBySubject',
+                                                    subjectId: subjectId
+                                                }, function (data) {
+                                                    console.log('Subject questions loaded:', data);
+                                                    allQuestions = data;
+                                                    displayManualQuestions(data);
+                                                    $('#manualSelectionAlert').hide();
+                                                    $('#manualStats, #manualBulkActions').show();
+                                                    updateManualStats();
+                                                }).fail(function (xhr, status, error) {
+                                                    console.error('Failed to load subject questions:', error);
+                                                    $('#manualQuestionsList').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Failed to load questions: ' + error + '</div>');
+                                                });
+                                            }
+
+                                            // Load manual questions from chapter
+                                            function loadManualQuestionsFromChapter(chapterId) {
+                                                console.log('Loading manual questions from chapter:', chapterId);
+
+                                                $('#manualQuestionsList').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Loading questions from chapter...</div>');
+
+                                                $.get('test', {
+                                                    action: 'getAllQuestionsByChapter',
+                                                    chapterId: chapterId
+                                                }, function (data) {
+                                                    console.log('Chapter questions loaded:', data);
+                                                    allQuestions = data;
+                                                    displayManualQuestions(data);
+                                                    $('#manualSelectionAlert').hide();
+                                                    $('#manualStats, #manualBulkActions').show();
+                                                    updateManualStats();
+                                                }).fail(function (xhr, status, error) {
+                                                    console.error('Failed to load chapter questions:', error);
+                                                    $('#manualQuestionsList').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Failed to load questions: ' + error + '</div>');
+                                                });
+                                            }
 
                                             // Helper functions
                                             function resetSubsequentSelects(selectors) {
@@ -1170,25 +1526,61 @@
 
                                             // Smart generation functions
                                             window.generateRandomQuestions = function () {
-                                                if (!currentLessonId) {
-                                                    alert('Please select a lesson first');
-                                                    return;
-                                                }
-
+                                                const scope = $('input[name="selectionScope"]:checked').val();
                                                 const count = $('#questionCount').val();
                                                 const difficulty = $('#difficultyFilter').val();
                                                 const category = $('#categoryFilter').val();
 
-//                                            console.log('Generating random questions:', {lessonId: currentLessonId, count, difficulty, category});
+                                                let sourceId = null;
+                                                let action = '';
 
-                                                $.get('test', {
-                                                    action: 'getRandomQuestions',
-                                                    lessonId: currentLessonId,
+                                                switch (scope) {
+                                                    case 'lesson':
+                                                        if (!currentLessonId) {
+                                                            alert('Please select a lesson first');
+                                                            return;
+                                                        }
+                                                        sourceId = currentLessonId;
+                                                        action = 'getSmartQuestions';
+                                                        break;
+                                                    case 'chapter':
+                                                        if (!currentChapterId) {
+                                                            alert('Please select a chapter first');
+                                                            return;
+                                                        }
+                                                        sourceId = currentChapterId;
+                                                        action = 'getQuestionsByChapter';
+                                                        break;
+                                                    case 'subject':
+                                                        if (!currentSubjectId) {
+                                                            alert('Please select a subject first');
+                                                            return;
+                                                        }
+                                                        sourceId = currentSubjectId;
+                                                        action = 'getQuestionsBySubject';
+                                                        break;
+                                                }
+
+                                                console.log('Generating questions:', {scope, sourceId, count, difficulty, category});
+
+                                                const params = {
+                                                    action: action,
                                                     count: count,
                                                     difficulty: difficulty,
                                                     category: category
-                                                }, function (data) {
-//                                                console.log('Random questions generated:', data);
+                                                };
+
+                                                // Set the appropriate ID parameter
+                                                if (scope === 'lesson') {
+                                                    params.lessonId = sourceId;
+                                                } else if (scope === 'chapter') {
+                                                    params.chapterId = sourceId;
+                                                } else if (scope === 'subject') {
+                                                    params.subjectId = sourceId;
+                                                }
+
+                                                $.get('test', params, function (data) {
+                                                    console.log('Smart questions generated:', data);
                                                     if (data.length > 0) {
                                                         displayGeneratedQuestions(data);
                                                     } else {
@@ -1196,7 +1588,6 @@
                                                     }
                                                 }).fail(function (xhr, status, error) {
                                                     console.error('Failed to generate questions:', error);
-                                                    console.error('Response:', xhr.responseText);
                                                     alert('Failed to generate questions: ' + error);
                                                 });
                                             };
@@ -1370,6 +1761,12 @@
 
                                             // Initialize page state
                                             toggleSelectionMethod();
+
+                                            setTimeout(function () {
+                                                if ($('#scopeSelection').length === 0) {
+                                                    showSelectionScopeOptions();
+                                                }
+                                            }, 100);
 
 //                                        console.log('Initialization complete');
                                         });

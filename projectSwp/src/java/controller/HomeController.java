@@ -49,7 +49,7 @@ public class HomeController extends HttpServlet {
                 gradeMap.put(grade.getId(), grade);
             }
             
-            // Get popular study packages with enhanced info
+            // Get popular study packages
             List<StudyPackage> allPackages = packageDAO.getStudyPackage("SELECT * FROM study_package");
             List<Map<String, Object>> enhancedPackages = getEnhancedPackages(allPackages);
             
@@ -57,7 +57,7 @@ public class HomeController extends HttpServlet {
             List<Lesson> allLessons = lessonDAO.getAllLessons();
             List<Map<String, Object>> recentLessonsWithInfo = getRecentLessonsWithInfo(allLessons);
             
-            // Get test categories with enhanced info
+            // Get test categories
             List<Category> categories = categoryDAO.getAllCategories();
             
             // Get comprehensive statistics

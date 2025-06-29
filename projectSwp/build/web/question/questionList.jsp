@@ -121,7 +121,7 @@
                 margin-left: 0;
             }
 
-            /* Enhanced Quick Actions Button */
+            /* Quick Actions Button */
             .btn-outline-secondary {
                 color: var(--text-secondary);
                 border-color: var(--border-color);
@@ -310,7 +310,7 @@
 
         <script>
                                     $(document).ready(function () {
-                                        // Enhanced Bootstrap dropdown handling
+                                        // Bootstrap dropdown handling
                                         if (typeof bootstrap !== 'undefined') {
                                             // Bootstrap 5 is loaded - initialize dropdowns
                                             var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
@@ -425,7 +425,7 @@
                                         $('input[name="question_type"]:checked').closest('.question-type-card').addClass('selected');
                                         $('input[name="difficulty"]:checked').closest('.difficulty-option').addClass('selected');
 
-                                        // Enhanced dropdown click handling for nice-select (separate from Bootstrap dropdown)
+                                        // dropdown click handling for nice-select (separate from Bootstrap dropdown)
                                         $(document).on('click', '.nice-select', function (e) {
                                             e.stopPropagation();
                                             $('.nice-select').not(this).removeClass('open');
