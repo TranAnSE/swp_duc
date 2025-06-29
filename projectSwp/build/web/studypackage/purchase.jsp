@@ -187,9 +187,14 @@
                 <c:if test="${not empty studyPackage.description}">
                     <p><strong>Description:</strong> ${studyPackage.description}</p>
                 </c:if>
-                <p><strong>Duration:</strong> ${studyPackage.duration_days} days</p>
-                <p><strong>Price:</strong> <span class="price">${studyPackage.price} VND</span></p>
+                <p><strong>Duration:</strong> ${studyPackage.duration_days} days per student</p>
+                <p><strong>Package Price:</strong> <span class="price">${studyPackage.price} VND</span></p>
+                <p><small class="text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        This is a fixed package price that allows up to ${studyPackage.max_students} students per parent.
+                    </small></p>
             </div>
+
 
             <!-- Package Statistics -->
             <div class="package-stats">
@@ -217,11 +222,13 @@
 
                         <div class="warning-text">
                             <i class="fas fa-info-circle"></i>
-                            <strong>Important:</strong> This package allows up to <strong>${studyPackage.max_students}</strong> students per parent. 
+                            <strong>Important:</strong> This package allows up to <strong>${studyPackage.max_students}</strong> students per parent 
+                            at a fixed price of <strong>${studyPackage.price} VND</strong>. 
                             You currently have <strong>${currentParentAssignments}</strong> students assigned and can assign 
                             <strong>${availableSlots}</strong> more student(s).
                             Each assignment will last for ${studyPackage.duration_days} days from the purchase date.
                         </div>
+
 
                         <c:if test="${not empty unavailableChildren}">
                             <div class="unavailable-notice">
@@ -323,7 +330,7 @@
         <script>
                                         // Package capacity limits
                                         const maxAvailableSlots = ${availableSlots}; // This is now per-parent limit
-                                        const packagePrice = ${amount};
+                                        const packagePrice = ${amount}; // Fixed package price, not per student
 
                                         // Current selection state - dùng Set để tránh duplicate
                                         let selectedStudents = new Set();
@@ -413,8 +420,10 @@
 
                                             if (selectedCount > 0) {
                                                 purchaseBtn.disabled = false;
-                                                const totalCost = packagePrice * selectedCount;
-                                                purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase for ' + selectedCount + ' Student(s) - ' + totalCost.toLocaleString() + ' VND';
+                                                // Show fixed package price, not multiplied by student count
+                                                purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase Package for ' +
+                                                        selectedCount + ' Student(s) - ' +
+                                                        packagePrice.toLocaleString() + ' VND';
                                                 purchaseBtn.className = 'btn btn-success';
                                             } else {
                                                 purchaseBtn.disabled = true;
@@ -457,13 +466,6 @@
                                                     }
 
                                                     const totalCost = packagePrice * selectedCount;
-                                                    const confirmMessage = 'Purchase Confirmation:\n\n' +
-                                                            'Package: ${studyPackage.name}\n' +
-                                                            'Students: ' + selectedCount + ' student(s)\n' +
-                                                            'Duration: ${studyPackage.duration_days} days each\n' +
-                                                            'Parent Limit: ${studyPackage.max_students} students max\n' +
-                                                            'Total Cost: ' + totalCost.toLocaleString() + ' VND\n\n' +
-                                                            'Do you want to proceed with the payment?';
 
                                                     if (!confirm(confirmMessage)) {
                                                         e.preventDefault();
@@ -500,13 +502,13 @@
                                                 }
                                             }
 
-                                            const totalCost = packagePrice * maxAvailableSlots; // Pay for full package capacity
+                                            // Fixed package price confirmation
                                             const confirmMessage = 'Purchase Confirmation:\n\n' +
                                                     'Package: ${studyPackage.name}\n' +
                                                     'Package Capacity: ' + maxAvailableSlots + ' student(s)\n' +
                                                     'Assigning Now: ' + selectedCount + ' student(s)\n' +
                                                     'Duration: ${studyPackage.duration_days} days each\n' +
-                                                    'Total Cost: ' + totalCost.toLocaleString() + ' VND\n\n' +
+                                                    'Total Cost: ' + packagePrice.toLocaleString() + ' VND\n\n' +
                                                     'Do you want to proceed with the payment?';
 
                                             if (!confirm(confirmMessage)) {

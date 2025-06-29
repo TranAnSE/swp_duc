@@ -414,6 +414,7 @@ public class StudyPackageController extends HttpServlet {
 
                     request.setAttribute("packageId", id);
                     request.setAttribute("packageName", sp.getName());
+                    // Fixed price - no multiplication by student count
                     request.setAttribute("amount", Double.parseDouble(sp.getPrice()));
                     request.setAttribute("userId", account.getId());
                     request.setAttribute("studyPackage", sp);
@@ -994,10 +995,10 @@ public class StudyPackageController extends HttpServlet {
                     return;
                 }
 
-                // Create invoice first
+                // Create invoice first with fixed package price
                 InvoiceDAO invoiceDAO = new InvoiceDAO();
                 Invoice invoice = new Invoice();
-                invoice.setTotal_amount(studyPackage.getPrice());
+                invoice.setTotal_amount(studyPackage.getPrice()); // Fixed price, not multiplied
                 invoice.setParent_id(account.getId());
                 invoice.setCreated_at(LocalDate.now());
                 invoice.setStatus("Completed"); // Direct assignment without payment
