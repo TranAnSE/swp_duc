@@ -33,7 +33,7 @@
                                         <c:if test="${sessionScope.account.role == 'admin'}">
                                             <li><a href="#">Admin</a>
                                                 <ul class="submenu">
-                                                    <li><a href="/admin?action=dashboard">Dashboard</a></li>
+                                                    <li><a href="/dashboard">Dashboard</a></li>
                                                     <li><a href="/admin?action=listAccount">Manage Accounts</a></li>
                                                     <li><a href="/Question">Manage Questions</a></li>
                                                     <li><a href="/test">Manage Tests</a></li>
@@ -50,7 +50,7 @@
                                         <c:if test="${sessionScope.account.role == 'teacher'}">
                                             <li><a href="#">Teacher</a>
                                                 <ul class="submenu">
-                                                    <li><a href="/admin?action=teacherDashboard">Dashboard</a></li>
+                                                    <li><a href="/dashboard">Dashboard</a></li>
                                                     <li><a href="/student">Manage Student</a></li>
                                                     <li><a href="/LessonURL">My Lessons</a></li>
                                                     <li><a href="/Question">Question Bank</a></li>
@@ -64,7 +64,7 @@
                                         <c:if test="${sessionScope.role == 'student'}">
                                             <li><a href="#">Dashboard</a>
                                                 <ul class="submenu">
-                                                    <li><a href="/admin?action=studentDashboard">My Dashboard</a></li>
+                                                    <li><a href="/dashboard">My Dashboard</a></li>
                                                 </ul>
                                             </li>
                                             <li><a href="#">Learning</a>
@@ -87,7 +87,7 @@
                                         <c:if test="${sessionScope.account.role == 'parent'}">
                                             <li><a href="#">Parent</a>
                                                 <ul class="submenu">
-                                                    <li><a href="/admin?action=parentDashboard">Dashboard</a></li>
+                                                    <li><a href="/dashboard">Dashboard</a></li>
                                                     <li><a href="/invoice">Invoices</a></li>
                                                     <li><a href="/Grade">Grades</a></li>
                                                     <li><a href="/parent?action=myChildren">My Children</a></li>
