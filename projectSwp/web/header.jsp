@@ -72,6 +72,7 @@
                                                     <li><a href="/subjects">My Subjects</a></li>
                                                     <li><a href="/LessonURL">My Lessons</a></li>
                                                     <li><a href="/chapter">Chapters</a></li>
+                                                    <li><a href="/study_package?service=myPackages">My Package</a></li>
                                                 </ul>
                                             </li>
                                             <li><a href="#">Tests & Practice</a>

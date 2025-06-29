@@ -56,7 +56,10 @@ public class StudyPackageController extends HttpServlet {
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN) && !AuthUtil.hasRole(request, RoleConstants.TEACHER) && !AuthUtil.hasRole(request, RoleConstants.PARENT)) {
+        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN)
+                && !AuthUtil.hasRole(request, RoleConstants.TEACHER)
+                && !AuthUtil.hasRole(request, RoleConstants.PARENT)
+                && !AuthUtil.hasRole(request, RoleConstants.STUDENT)) {
             response.sendRedirect("/error.jsp");
             return;
         }
@@ -450,14 +453,26 @@ public class StudyPackageController extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = request.getSession();
         Account account = (Account) session.getAttribute("account");
+        Student student = (Student) session.getAttribute("student");
+
+        List<StudentPackage> studentPackages = new ArrayList<>();
 
         if (account != null && RoleConstants.PARENT.equals(account.getRole())) {
-            List<StudentPackage> studentPackages = studentPackageDAO.getStudentPackagesByParent(account.getId());
+            studentPackages = studentPackageDAO.getStudentPackagesByParent(account.getId());
             request.setAttribute("studentPackages", studentPackages);
             request.getRequestDispatcher("/studypackage/myPackages.jsp").forward(request, response);
-        } else {
-            response.sendRedirect("/error.jsp");
+            return;
         }
+
+        if (student != null) {
+            // Sử dụng phương thức mới sẽ được tạo ở Bước 3
+            studentPackages = studentPackageDAO.getStudentPackagesByStudentId(student.getId());
+            request.setAttribute("studentPackages", studentPackages);
+            request.getRequestDispatcher("/studypackage/myPackages.jsp").forward(request, response);
+            return;
+        }
+
+        response.sendRedirect("/error.jsp");
     }
 
     private void assignStudentToPackage(HttpServletRequest request, HttpServletResponse response)
