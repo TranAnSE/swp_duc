@@ -751,7 +751,58 @@ public class StudentPackageDAO extends DBContext {
 
     // Get parent's total available slots across all purchases
     public Map<String, Integer> getParentTotalAvailableSlots(int parentId, int packageId) {
-        return packagePurchaseDAO.getParentAvailableSlots(parentId, packageId);
+        Map<String, Integer> result = new HashMap<>();
+
+        // First check if parent has any purchases for this package
+        String purchaseCheckSql = "SELECT COUNT(*) as purchase_count FROM package_purchase WHERE parent_id = ? AND package_id = ? AND status = 'COMPLETED'";
+
+        try (PreparedStatement ps = connection.prepareStatement(purchaseCheckSql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int purchaseCount = rs.getInt("purchase_count");
+
+                if (purchaseCount == 0) {
+                    // Parent has never purchased this package
+                    result.put("totalPurchasedSlots", 0);
+                    result.put("currentlyAssigned", 0);
+                    result.put("availableSlots", 0); // Will be handled in controller for new purchases
+                    return result;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // If parent has purchases, use the existing view
+        String sql = "SELECT * FROM parent_package_available_slots WHERE parent_id = ? AND package_id = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                result.put("totalPurchasedSlots", rs.getInt("total_purchased_slots"));
+                result.put("currentlyAssigned", rs.getInt("currently_assigned"));
+                result.put("availableSlots", rs.getInt("available_slots"));
+            } else {
+                // Fallback - parent has no completed purchases
+                result.put("totalPurchasedSlots", 0);
+                result.put("currentlyAssigned", 0);
+                result.put("availableSlots", 0);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Set default values if error occurs
+            result.put("totalPurchasedSlots", 0);
+            result.put("currentlyAssigned", 0);
+            result.put("availableSlots", 0);
+        }
+
+        return result;
     }
 
 // Updated method to count parent assigned students across all purchases

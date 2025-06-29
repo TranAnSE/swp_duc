@@ -415,7 +415,12 @@ public class StudyPackageController extends HttpServlet {
                     int currentlyAssigned = slotInfo.getOrDefault("currentlyAssigned", 0);
                     int availableSlots = slotInfo.getOrDefault("availableSlots", 0);
 
-                    // Always allow purchase - parents can buy multiple times to get more slots
+                    // For first-time buyers, they have 0 purchased slots but can still purchase
+                    // Available slots should be the package's max_students for new buyers
+                    if (totalPurchasedSlots == 0) {
+                        availableSlots = sp.getMax_students(); // Allow full package capacity for new purchase
+                    }
+
                     request.setAttribute("packageId", id);
                     request.setAttribute("packageName", sp.getName());
                     request.setAttribute("amount", Double.parseDouble(sp.getPrice()));
@@ -465,6 +470,9 @@ public class StudyPackageController extends HttpServlet {
                             request.setAttribute("purchaseInfoMessage",
                                     "You have purchased " + totalPurchasedSlots + " total slots for this package. "
                                     + "Currently assigned: " + currentlyAssigned + ", Available: " + availableSlots);
+                        } else {
+                            request.setAttribute("purchaseInfoMessage",
+                                    "This is your first purchase of this package. You can assign up to " + sp.getMax_students() + " students.");
                         }
 
                     } catch (Exception e) {

@@ -270,8 +270,17 @@
 
                             <!-- Selection Counter -->
                             <div class="selection-counter" id="selectionCounter">
-                                <i class="fas fa-users"></i> Selected: <span id="selectedCount">0</span> / ${availableSlots} students
+                                <i class="fas fa-users"></i> Selected: <span id="selectedCount">0</span> / 
+                                <c:choose>
+                                    <c:when test="${totalPurchasedSlots == 0}">
+                                        ${studyPackage.max_students} students (First Purchase)
+                                    </c:when>
+                                    <c:otherwise>
+                                        ${availableSlots} students (Available Slots)
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
+
 
                             <!-- Available Students -->
                             <c:if test="${not empty children}">
@@ -358,13 +367,17 @@
                                         // Package capacity limits
                                         const maxAvailableSlots = ${availableSlots}; // Parent's available slots
                                         const packagePrice = ${amount}; // Fixed package price
+                                        const totalPurchasedSlots = ${totalPurchasedSlots}; // Total slots parent has purchased
+                                        const isFirstTimeBuyer = totalPurchasedSlots === 0; // Check if this is first purchase
 
-                                        // Current selection state - dùng Set để tránh duplicate
+                                        // Current selection state - use Set to avoid duplicates
                                         let selectedStudents = new Set();
 
                                         console.log('Package Info:', {
                                             maxAvailableSlots: maxAvailableSlots,
-                                            packagePrice: packagePrice
+                                            packagePrice: packagePrice,
+                                            totalPurchasedSlots: totalPurchasedSlots,
+                                            isFirstTimeBuyer: isFirstTimeBuyer
                                         });
 
                                         function toggleStudent(studentId) {
@@ -389,11 +402,19 @@
                                                 card.classList.remove('selected');
                                                 checkbox.checked = false;
                                             } else {
-                                                // Check parent's available slots
-                                                if (selectedStudents.size >= maxAvailableSlots) {
-                                                    alert('You can only assign up to ' + maxAvailableSlots + ' more student(s) to this package.\n\n' +
-                                                            'You currently have ${currentParentAssignments} students assigned to this package.\n' +
-                                                            'Maximum allowed per parent: ${studyPackage.max_students} students.');
+                                                // For first-time buyers, allow up to package max_students
+                                                // For existing buyers, use their available slots
+                                                const maxAllowedSelection = isFirstTimeBuyer ? ${studyPackage.max_students} : maxAvailableSlots;
+
+                                                if (selectedStudents.size >= maxAllowedSelection) {
+                                                    if (isFirstTimeBuyer) {
+                                                        alert('You can select up to ' + maxAllowedSelection + ' student(s) for this package purchase.\n\n' +
+                                                                'This package allows ' + ${studyPackage.max_students} + ' students per parent.');
+                                                    } else {
+                                                        alert('You can only assign up to ' + maxAllowedSelection + ' more student(s) to this package.\n\n' +
+                                                                'You currently have ${currentlyAssigned} students assigned to this package.\n' +
+                                                                'Total purchased slots: ' + totalPurchasedSlots);
+                                                    }
                                                     return;
                                                 }
 
@@ -416,12 +437,21 @@
                                                 counterElement.textContent = selectedCount;
                                             }
 
-                                            // Update counter color based on selection
+                                            // Update counter display based on purchase type
                                             const selectionCounter = document.getElementById('selectionCounter');
                                             if (selectionCounter) {
+                                                const maxAllowed = isFirstTimeBuyer ? ${studyPackage.max_students} : maxAvailableSlots;
+
+                                                // Update counter text
+                                                const counterText = selectionCounter.querySelector('span');
+                                                if (counterText) {
+                                                    counterText.textContent = selectedCount + ' / ' + maxAllowed;
+                                                }
+
+                                                // Update counter color
                                                 if (selectedCount === 0) {
                                                     selectionCounter.style.backgroundColor = '#6c757d';
-                                                } else if (selectedCount === maxAvailableSlots) {
+                                                } else if (selectedCount === maxAllowed) {
                                                     selectionCounter.style.backgroundColor = '#dc3545';
                                                 } else {
                                                     selectionCounter.style.backgroundColor = '#17a2b8';
@@ -439,21 +469,28 @@
                                                 return;
 
                                             if (selectedCount > 0) {
-                                                const availableSlots = ${availableSlots};
-                                                const needsNewPurchase = selectedCount > availableSlots;
-
                                                 purchaseBtn.disabled = false;
 
-                                                if (needsNewPurchase) {
-                                                    const additionalSlotsNeeded = selectedCount - availableSlots;
-                                                    purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase Additional Slots & Assign to ' +
+                                                if (isFirstTimeBuyer) {
+                                                    // First time buyer - always needs to purchase
+                                                    purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase Package for ' +
                                                             selectedCount + ' Student(s) - ' +
                                                             packagePrice.toLocaleString() + ' VND';
-                                                    purchaseBtn.className = 'btn btn-warning';
-                                                } else {
-                                                    purchaseBtn.innerHTML = '<i class="fas fa-user-plus"></i> Assign to ' +
-                                                            selectedCount + ' Student(s) (Using Available Slots)';
                                                     purchaseBtn.className = 'btn btn-success';
+                                                } else {
+                                                    // Existing buyer - check if they need additional purchase
+                                                    const needsNewPurchase = selectedCount > maxAvailableSlots;
+
+                                                    if (needsNewPurchase) {
+                                                        purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase Additional Slots & Assign to ' +
+                                                                selectedCount + ' Student(s) - ' +
+                                                                packagePrice.toLocaleString() + ' VND';
+                                                        purchaseBtn.className = 'btn btn-warning';
+                                                    } else {
+                                                        purchaseBtn.innerHTML = '<i class="fas fa-user-plus"></i> Assign to ' +
+                                                                selectedCount + ' Student(s) (Using Available Slots)';
+                                                        purchaseBtn.className = 'btn btn-success';
+                                                    }
                                                 }
                                             } else {
                                                 purchaseBtn.disabled = true;
@@ -465,6 +502,7 @@
                                         // Initialize when page loads
                                         document.addEventListener('DOMContentLoaded', function () {
                                             console.log('DOM Content Loaded - Initializing...');
+                                            console.log('Is First Time Buyer:', isFirstTimeBuyer);
 
                                             // RESET selection state
                                             selectedStudents.clear();
@@ -494,22 +532,13 @@
                                                         alert('Please select at least one student for this package.');
                                                         return false;
                                                     }
-
-                                                    const totalCost = packagePrice * selectedCount;
-
-                                                    if (!confirm(confirmMessage)) {
-                                                        e.preventDefault();
-                                                        return false;
-                                                    }
                                                 });
                                             }
                                         });
 
-                                        // Update form submission to handle partial assignment
+                                        // Update form submission confirmation
                                         $('#purchaseForm').on('submit', function (e) {
                                             const selectedCount = selectedStudents.size;
-                                            const availableSlots = ${availableSlots};
-                                            const needsNewPurchase = selectedCount > availableSlots;
 
                                             if (selectedCount === 0) {
                                                 e.preventDefault();
@@ -517,29 +546,35 @@
                                                 return false;
                                             }
 
-                                            let confirmMessage = 'Assignment Confirmation:\n\n' +
+                                            let confirmMessage = 'Purchase Confirmation:\n\n' +
                                                     'Package: ${studyPackage.name}\n' +
                                                     'Students to assign: ' + selectedCount + '\n' +
                                                     'Duration: ${studyPackage.duration_days} days each\n\n';
 
-                                            if (needsNewPurchase) {
-                                                const additionalSlotsNeeded = selectedCount - availableSlots;
-                                                confirmMessage += 'PURCHASE REQUIRED:\n' +
-                                                        'Available slots: ' + availableSlots + '\n' +
-                                                        'Additional slots needed: ' + additionalSlotsNeeded + '\n' +
-                                                        'Cost for additional purchase: ' + packagePrice.toLocaleString() + ' VND\n\n' +
-                                                        'This will give you ' + ${studyPackage.max_students} + ' more slots to use.\n\n';
+                                            if (isFirstTimeBuyer) {
+                                                confirmMessage += 'FIRST PURCHASE:\n' +
+                                                        'Package cost: ' + packagePrice.toLocaleString() + ' VND\n' +
+                                                        'This will give you ' + ${studyPackage.max_students} + ' slots to assign students.\n' +
+                                                        'Slots to be used immediately: ' + selectedCount + '\n' +
+                                                        'Remaining slots after purchase: ' + (${studyPackage.max_students} - selectedCount) + '\n\n';
                                             } else {
-                                                confirmMessage += 'Using existing available slots: ' + availableSlots + '\n' +
-                                                        'No additional payment required.\n\n';
+                                                const availableSlots = ${availableSlots};
+                                                const needsNewPurchase = selectedCount > availableSlots;
+
+                                                if (needsNewPurchase) {
+                                                    const additionalSlotsNeeded = selectedCount - availableSlots;
+                                                    confirmMessage += 'ADDITIONAL PURCHASE REQUIRED:\n' +
+                                                            'Available slots: ' + availableSlots + '\n' +
+                                                            'Additional slots needed: ' + additionalSlotsNeeded + '\n' +
+                                                            'Cost for additional purchase: ' + packagePrice.toLocaleString() + ' VND\n' +
+                                                            'This will give you ' + ${studyPackage.max_students} + ' more slots.\n\n';
+                                                } else {
+                                                    confirmMessage += 'Using existing available slots: ' + availableSlots + '\n' +
+                                                            'No additional payment required.\n\n';
+                                                }
                                             }
 
-                                            confirmMessage += 'Your package usage after this assignment:\n' +
-                                                    'Total purchased slots: ' + (${totalPurchasedSlots} + (needsNewPurchase ? ${studyPackage.max_students} : 0)) + '\n' +
-                                                    'Currently assigned: ' + ${currentlyAssigned} + '\n' +
-                                                    'New assignments: ' + selectedCount + '\n' +
-                                                    'Remaining available: ' + (availableSlots + (needsNewPurchase ? ${studyPackage.max_students} : 0) - selectedCount) + '\n\n' +
-                                                    'Do you want to proceed?';
+                                            confirmMessage += 'Do you want to proceed?';
 
                                             if (!confirm(confirmMessage)) {
                                                 e.preventDefault();
@@ -549,10 +584,12 @@
 
                                         // Debug: Show package capacity info
                                         console.log('=== Package Capacity Info ===');
-                                        console.log('Total Capacity: ${studyPackage.max_students} students');
-                                        console.log('Currently Assigned: ${currentAssignedCount} students');
+                                        console.log('Package Max Students: ${studyPackage.max_students} students');
+                                        console.log('Total Purchased Slots:', totalPurchasedSlots);
+                                        console.log('Currently Assigned: ${currentlyAssigned} students');
                                         console.log('Available Slots:', maxAvailableSlots, 'students');
                                         console.log('Your Available Children: ${fn:length(children)} students');
+                                        console.log('Is First Time Buyer:', isFirstTimeBuyer);
                                         console.log('============================');
         </script>
     </body>
