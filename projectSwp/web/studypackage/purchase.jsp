@@ -193,19 +193,19 @@
 
             <!-- Package Statistics -->
             <div class="package-stats">
-                <h6><i class="fas fa-chart-bar"></i> Package Availability</h6>
+                <h6><i class="fas fa-chart-bar"></i> Package Availability (Per Parent Limit)</h6>
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-number">${studyPackage.max_students}</div>
-                        <div class="stat-label">Total Capacity</div>
+                        <div class="stat-label">Max Students Per Parent</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">${currentAssignedCount}</div>
-                        <div class="stat-label">Currently Assigned</div>
+                        <div class="stat-number">${currentParentAssignments}</div>
+                        <div class="stat-label">Your Current Assignments</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" style="color: #28a745;">${availableSlots}</div>
-                        <div class="stat-label">Available Slots</div>
+                        <div class="stat-label">Your Available Slots</div>
                     </div>
                 </div>
             </div>
@@ -217,8 +217,9 @@
 
                         <div class="warning-text">
                             <i class="fas fa-info-circle"></i>
-                            <strong>Important:</strong> This package has <strong>${availableSlots}</strong> available slot(s) remaining. 
-                            You can select up to <strong>${availableSlots}</strong> of your students for this purchase.
+                            <strong>Important:</strong> This package allows up to <strong>${studyPackage.max_students}</strong> students per parent. 
+                            You currently have <strong>${currentParentAssignments}</strong> students assigned and can assign 
+                            <strong>${availableSlots}</strong> more student(s).
                             Each assignment will last for ${studyPackage.duration_days} days from the purchase date.
                         </div>
 
@@ -321,7 +322,7 @@
         <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
         <script>
                                         // Package capacity limits
-                                        const maxAvailableSlots = ${availableSlots};
+                                        const maxAvailableSlots = ${availableSlots}; // This is now per-parent limit
                                         const packagePrice = ${amount};
 
                                         // Current selection state - dùng Set để tránh duplicate
@@ -359,8 +360,8 @@
                                             } else {
                                                 // Currently not selected -> try to select
                                                 if (selectedStudents.size >= maxAvailableSlots) {
-                                                    alert('This package only has ' + maxAvailableSlots + ' available slot(s) remaining.\n' +
-                                                            'You cannot select more than ' + maxAvailableSlots + ' student(s).');
+                                                    alert('You can only assign up to ' + maxAvailableSlots + ' student(s) to this package as per the parent limit.\n' +
+                                                            'This package allows maximum ' + ${studyPackage.max_students} + ' students per parent.');
                                                     return;
                                                 }
 
@@ -460,6 +461,7 @@
                                                             'Package: ${studyPackage.name}\n' +
                                                             'Students: ' + selectedCount + ' student(s)\n' +
                                                             'Duration: ${studyPackage.duration_days} days each\n' +
+                                                            'Parent Limit: ${studyPackage.max_students} students max\n' +
                                                             'Total Cost: ' + totalCost.toLocaleString() + ' VND\n\n' +
                                                             'Do you want to proceed with the payment?';
 

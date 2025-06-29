@@ -169,15 +169,15 @@
                 <div class="info-grid">
                     <div class="info-item">
                         <div class="info-number">${studyPackage.max_students}</div>
-                        <div class="info-label">Max Students</div>
+                        <div class="info-label">Max Per Parent</div>
                     </div>
                     <div class="info-item">
                         <div class="info-number">${fn:length(assignments)}</div>
-                        <div class="info-label">Current Assignments</div>
+                        <div class="info-label">Your Assignments</div>
                     </div>
                     <div class="info-item">
                         <div class="info-number">${availableSlots}</div>
-                        <div class="info-label">Available Slots</div>
+                        <div class="info-label">Your Available Slots</div>
                     </div>
                     <div class="info-item">
                         <div class="info-number">${studyPackage.duration_days}</div>
@@ -272,8 +272,8 @@
                 <div class="section-card">
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle"></i>
-                        <strong>Package Full:</strong> This package has reached its maximum capacity of ${studyPackage.max_students} student(s). 
-                        To assign more students, you would need to remove existing assignments or purchase additional package slots.
+                        <strong>Parent Limit Reached:</strong> You have reached your maximum limit of ${studyPackage.max_students} student(s) for this package. 
+                        To assign more students, you would need to remove existing assignments first.
                     </div>
                 </div>
             </c:if>

@@ -398,16 +398,16 @@ public class StudyPackageController extends HttpServlet {
                 Account account = (Account) session.getAttribute("account");
 
                 if (account != null && RoleConstants.PARENT.equals(account.getRole())) {
-                    // Get current package assignment statistics
-                    int currentAssignedCount = studentPackageDAO.countAssignedStudents(id);
-                    int maxStudents = sp.getMax_students();
-                    int availableSlots = maxStudents - currentAssignedCount;
+                    // Get current parent's assignments for this package
+                    int currentParentAssignments = studentPackageDAO.countParentAssignedStudents(account.getId(), id);
+                    int maxStudentsPerParent = sp.getMax_students();
+                    int availableSlots = maxStudentsPerParent - currentParentAssignments;
 
-                    // Check if package has available slots
+                    // Check if parent has available slots
                     if (availableSlots <= 0) {
                         request.setAttribute("errorMessage",
-                                "This package has reached maximum student limit (" + maxStudents + " students). "
-                                + "Currently " + currentAssignedCount + " students are assigned.");
+                                "You have reached the maximum limit for this package (" + maxStudentsPerParent + " students per parent). "
+                                + "You currently have " + currentParentAssignments + " students assigned to this package.");
                         listStudyPackage(request, response);
                         return;
                     }
@@ -418,10 +418,10 @@ public class StudyPackageController extends HttpServlet {
                     request.setAttribute("userId", account.getId());
                     request.setAttribute("studyPackage", sp);
 
-                    // Add package statistics for display
-                    request.setAttribute("currentAssignedCount", currentAssignedCount);
+                    // Add parent-specific package statistics
+                    request.setAttribute("currentParentAssignments", currentParentAssignments);
                     request.setAttribute("availableSlots", availableSlots);
-                    request.setAttribute("maxStudentsAllowed", Math.min(availableSlots, sp.getMax_students()));
+                    request.setAttribute("maxStudentsPerParent", maxStudentsPerParent);
 
                     // Get parent's children for assignment
                     try {
@@ -1102,16 +1102,20 @@ public class StudyPackageController extends HttpServlet {
                 return;
             }
 
-            // Get current assignments
+            // Get parent's package statistics
+            Map<String, Object> packageStats = dao.getParentPackageStats(account.getId(), packageId);
+
+            // Get current assignments for this parent
             List<Map<String, Object>> assignments = dao.getPackageAssignmentDetails(packageId, account.getId());
 
-            // Get unassigned children
+            // Get unassigned children (considering parent's available slots)
             List<Map<String, Object>> unassignedChildren = studentPackageDAO.getUnassignedChildrenForPackage(account.getId(), packageId);
 
-            // Get available slots
+            // Get available slots for this parent
             int availableSlots = dao.getAvailableSlotsForParent(account.getId(), packageId);
 
             request.setAttribute("studyPackage", studyPackage);
+            request.setAttribute("packageStats", packageStats);
             request.setAttribute("assignments", assignments);
             request.setAttribute("unassignedChildren", unassignedChildren);
             request.setAttribute("availableSlots", availableSlots);
@@ -1123,6 +1127,10 @@ public class StudyPackageController extends HttpServlet {
             request.setAttribute("errorMessage", "Error managing assignments: " + e.getMessage());
             showMyPackagesDetailed(request, response);
         }
+    }
+
+    public int getAvailableSlotsForParent(int parentId, int packageId) {
+        return dao.getAvailableSlotsForParent(parentId, packageId);
     }
 
     private void assignAdditionalStudent(HttpServletRequest request, HttpServletResponse response)

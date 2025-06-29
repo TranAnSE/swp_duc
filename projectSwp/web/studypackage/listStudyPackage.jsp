@@ -310,7 +310,7 @@
                             <th>Type</th>
                             <th>Grade</th>
                             <th>Price (VND)</th>
-                            <th>Max Students</th>
+                            <th>Max Students<br><small class="text-muted">(Per Parent)</small></th>
                             <th>Duration (Days)</th>
                             <th>Description</th>
                             <th>Status</th>

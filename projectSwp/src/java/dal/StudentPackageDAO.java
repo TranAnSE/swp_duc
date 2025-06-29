@@ -377,12 +377,12 @@ public class StudentPackageDAO extends DBContext {
     }
 
     /**
-     * Assign additional students to an existing package purchase
+     * Assign additional students to an existing package purchase (per-parent
+     * limit)
      */
     public boolean assignAdditionalStudentToPackage(int studentId, int packageId, int parentId, int durationDays) {
         // Check if parent has available slots
-        StudyPackageDAO studyPackageDAO = new StudyPackageDAO();
-        if (!studyPackageDAO.canParentAssignMoreStudents(parentId, packageId)) {
+        if (!hasParentAvailableSlots(parentId, packageId)) {
             return false;
         }
 
@@ -406,10 +406,17 @@ public class StudentPackageDAO extends DBContext {
     }
 
     /**
-     * Get unassigned children for a parent and package
+     * Get unassigned children for a parent and package (considering per-parent
+     * limit)
      */
     public List<Map<String, Object>> getUnassignedChildrenForPackage(int parentId, int packageId) {
         List<Map<String, Object>> children = new ArrayList<>();
+
+        // First check if parent has available slots
+        if (!hasParentAvailableSlots(parentId, packageId)) {
+            return children; // Return empty list if no slots available
+        }
+
         String sql = """
         SELECT 
             s.id,
@@ -463,4 +470,54 @@ public class StudentPackageDAO extends DBContext {
             return false;
         }
     }
+
+    /**
+     * Check if parent has available slots for a package (per-parent limit)
+     */
+    public boolean hasParentAvailableSlots(int parentId, int packageId) {
+        String sql = """
+        SELECT 
+            pkg.max_students as max_per_parent,
+            COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as current_active
+        FROM study_package pkg
+        LEFT JOIN student_package sp ON pkg.id = sp.package_id AND sp.parent_id = ?
+        WHERE pkg.id = ?
+        GROUP BY pkg.max_students
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int maxPerParent = rs.getInt("max_per_parent");
+                int currentActive = rs.getInt("current_active");
+                return currentActive < maxPerParent;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    /**
+     * Count assigned students for a parent in a specific package
+     */
+    public int countParentAssignedStudents(int parentId, int packageId) {
+        String sql = "SELECT COUNT(*) FROM student_package WHERE parent_id = ? AND package_id = ? AND is_active = 1 AND expires_at > NOW()";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
 }

@@ -294,10 +294,13 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="max_students">Maximum Students *</label>
+                            <label for="max_students">Maximum Students Per Parent *</label>
                             <input type="number" name="max_students" id="max_students" 
                                    value="${studyPackageToEdit != null ? studyPackageToEdit.max_students : '1'}" 
-                                   required placeholder="Maximum students per package" min="1" max="100" />
+                                   required placeholder="Maximum students per parent" min="1" max="50" />
+                            <small class="form-text text-muted">
+                                This is the maximum number of students that each parent can assign to this package.
+                            </small>
                         </div>
                     </div>
 

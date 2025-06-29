@@ -441,12 +441,12 @@ public class StudyPackageDAO extends DBContext {
     }
 
     /**
-     * Check if parent can assign more students to a package
+     * Check if parent can assign more students to a package (per-parent limit)
      */
     public boolean canParentAssignMoreStudents(int parentId, int packageId) {
         String sql = """
         SELECT 
-            pkg.max_students,
+            pkg.max_students as max_per_parent,
             COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as current_active
         FROM study_package pkg
         LEFT JOIN student_package sp ON pkg.id = sp.package_id AND sp.parent_id = ?
@@ -460,9 +460,9 @@ public class StudyPackageDAO extends DBContext {
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
-                int maxStudents = rs.getInt("max_students");
+                int maxPerParent = rs.getInt("max_per_parent");
                 int currentActive = rs.getInt("current_active");
-                return currentActive < maxStudents;
+                return currentActive < maxPerParent;
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -477,7 +477,7 @@ public class StudyPackageDAO extends DBContext {
     public int getAvailableSlotsForParent(int parentId, int packageId) {
         String sql = """
         SELECT 
-            pkg.max_students,
+            pkg.max_students as max_per_parent,
             COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as current_active
         FROM study_package pkg
         LEFT JOIN student_package sp ON pkg.id = sp.package_id AND sp.parent_id = ?
@@ -491,14 +491,57 @@ public class StudyPackageDAO extends DBContext {
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
-                int maxStudents = rs.getInt("max_students");
+                int maxPerParent = rs.getInt("max_per_parent");
                 int currentActive = rs.getInt("current_active");
-                return Math.max(0, maxStudents - currentActive);
+                return Math.max(0, maxPerParent - currentActive);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
         return 0;
+    }
+
+    /**
+     * Get parent's package statistics
+     */
+    public Map<String, Object> getParentPackageStats(int parentId, int packageId) {
+        Map<String, Object> stats = new HashMap<>();
+        String sql = """
+        SELECT 
+            pkg.max_students as max_per_parent,
+            pkg.name as package_name,
+            pkg.price,
+            COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as active_assignments,
+            COUNT(*) as total_assignments,
+            MIN(sp.purchased_at) as first_purchase_date
+        FROM study_package pkg
+        LEFT JOIN student_package sp ON pkg.id = sp.package_id AND sp.parent_id = ?
+        WHERE pkg.id = ?
+        GROUP BY pkg.id, pkg.max_students, pkg.name, pkg.price
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int maxPerParent = rs.getInt("max_per_parent");
+                int activeAssignments = rs.getInt("active_assignments");
+
+                stats.put("maxPerParent", maxPerParent);
+                stats.put("packageName", rs.getString("package_name"));
+                stats.put("price", rs.getString("price"));
+                stats.put("activeAssignments", activeAssignments);
+                stats.put("totalAssignments", rs.getInt("total_assignments"));
+                stats.put("availableSlots", Math.max(0, maxPerParent - activeAssignments));
+                stats.put("firstPurchaseDate", rs.getTimestamp("first_purchase_date"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return stats;
     }
 }
