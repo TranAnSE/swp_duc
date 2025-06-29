@@ -164,6 +164,9 @@ public class StudyPackageController extends HttpServlet {
                 case "getParentAssignmentHistory":
                     handleGetParentAssignmentHistory(request, response);
                     return;
+                case "activate":
+                    activateStudyPackage(request, response);
+                    break;
                 default:
                     listStudyPackage(request, response);
                     break;
@@ -185,8 +188,8 @@ public class StudyPackageController extends HttpServlet {
             // For parents, show active packages only
             list = dao.getActivePackages();
         } else {
-            // For admin/teacher, show all packages
-            list = dao.getStudyPackage("SELECT * FROM study_package ORDER BY created_at DESC");
+            // For admin/teacher, show ALL packages (both active and inactive)
+            list = dao.getStudyPackage("SELECT * FROM study_package ORDER BY is_active DESC, created_at DESC");
         }
 
         // Load grades for display
@@ -692,9 +695,20 @@ public class StudyPackageController extends HttpServlet {
     private void showManageAssignments(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            // Get all packages with their assignments
+            // Get filter parameters
+            String packageName = request.getParameter("packageName");
+            String studentName = request.getParameter("studentName");
+            String status = request.getParameter("status");
+
+            // Get all packages with their assignments (with filtering)
             List<Map<String, Object>> packageAssignments = new ArrayList<>();
-            List<StudyPackage> allPackages = dao.getStudyPackage("SELECT * FROM study_package WHERE is_active = 1");
+            List<StudyPackage> allPackages;
+
+            if (packageName != null && !packageName.trim().isEmpty()) {
+                allPackages = dao.findStudyPackageByName(packageName.trim());
+            } else {
+                allPackages = dao.getStudyPackage("SELECT * FROM study_package WHERE is_active = 1");
+            }
 
             for (StudyPackage pkg : allPackages) {
                 Map<String, Object> packageData = new HashMap<>();
@@ -703,10 +717,23 @@ public class StudyPackageController extends HttpServlet {
                 packageData.put("packageType", pkg.getType());
                 packageData.put("maxStudents", pkg.getMax_students());
 
-                // Get assignments for this package
-                List<StudentPackage> assignments = studentPackageDAO.getStudentPackagesByPackage(pkg.getId());
+                // Get assignments for this package with filtering
+                List<StudentPackage> assignments = studentPackageDAO.getFilteredStudentPackagesByPackage(
+                        pkg.getId(), studentName, status);
+
+                // Calculate statistics
+                int activeCount = 0;
+                int totalCount = assignments.size();
+
+                for (StudentPackage assignment : assignments) {
+                    if (assignment.isActive()) {
+                        activeCount++;
+                    }
+                }
+
                 packageData.put("assignments", assignments);
-                packageData.put("assignmentCount", assignments.size());
+                packageData.put("assignmentCount", totalCount);
+                packageData.put("activeCount", activeCount);
 
                 packageAssignments.add(packageData);
             }
@@ -722,6 +749,11 @@ public class StudyPackageController extends HttpServlet {
             request.setAttribute("activeAssignments", dashboardData.get("activeAssignments"));
             request.setAttribute("expiredAssignments", dashboardData.get("expiredAssignments"));
             request.setAttribute("totalStudents", dashboardData.get("totalStudents"));
+
+            // Set filter parameters for form
+            request.setAttribute("filterPackageName", packageName);
+            request.setAttribute("filterStudentName", studentName);
+            request.setAttribute("filterStatus", status);
 
             request.getRequestDispatcher("/studypackage/manageAssignments.jsp").forward(request, response);
 
@@ -1403,6 +1435,22 @@ public class StudyPackageController extends HttpServlet {
             e.printStackTrace();
             response.getWriter().write("[]");
         }
+    }
+
+    private void activateStudyPackage(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            int result = dao.activateStudyPackage(id);
+            if (result > 0) {
+                request.setAttribute("message", "Study package activated successfully!");
+            } else {
+                request.setAttribute("errorMessage", "Cannot activate study package!");
+            }
+        } catch (NumberFormatException e) {
+            request.setAttribute("errorMessage", "Invalid ID format!");
+        }
+        response.sendRedirect("study_package");
     }
 
     @Override

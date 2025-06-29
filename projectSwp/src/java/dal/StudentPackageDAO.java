@@ -12,6 +12,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  *
  * @author ankha
@@ -606,4 +609,65 @@ public class StudentPackageDAO extends DBContext {
         return history;
     }
 
+    public List<StudentPackage> getFilteredStudentPackagesByPackage(int packageId, String studentName, String status) {
+        List<StudentPackage> list = new ArrayList<>();
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT sp.*, pkg.name as package_name, s.full_name as student_name, a.full_name as parent_name ");
+        sql.append("FROM student_package sp ");
+        sql.append("JOIN study_package pkg ON sp.package_id = pkg.id ");
+        sql.append("JOIN student s ON sp.student_id = s.id ");
+        sql.append("JOIN account a ON sp.parent_id = a.id ");
+        sql.append("WHERE sp.package_id = ? ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(packageId);
+
+        // Add student name filter
+        if (studentName != null && !studentName.trim().isEmpty()) {
+            sql.append("AND s.full_name LIKE ? ");
+            params.add("%" + studentName.trim() + "%");
+        }
+
+        // Add status filter
+        if (status != null && !status.trim().isEmpty()) {
+            switch (status.toLowerCase()) {
+                case "active":
+                    sql.append("AND sp.is_active = 1 AND sp.expires_at > NOW() ");
+                    break;
+                case "expired":
+                    sql.append("AND sp.expires_at <= NOW() ");
+                    break;
+                case "inactive":
+                    sql.append("AND sp.is_active = 0 ");
+                    break;
+            }
+        }
+
+        sql.append("ORDER BY sp.purchased_at DESC");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                StudentPackage studentPackage = new StudentPackage();
+                studentPackage.setId(rs.getInt("id"));
+                studentPackage.setStudent_id(rs.getInt("student_id"));
+                studentPackage.setPackage_id(rs.getInt("package_id"));
+                studentPackage.setParent_id(rs.getInt("parent_id"));
+                studentPackage.setPurchased_at(rs.getTimestamp("purchased_at").toLocalDateTime());
+                studentPackage.setExpires_at(rs.getTimestamp("expires_at").toLocalDateTime());
+                studentPackage.setIs_active(rs.getBoolean("is_active"));
+                studentPackage.setPackage_name(rs.getString("package_name"));
+                studentPackage.setStudent_name(rs.getString("student_name"));
+                studentPackage.setParent_name(rs.getString("parent_name"));
+                list.add(studentPackage);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 }

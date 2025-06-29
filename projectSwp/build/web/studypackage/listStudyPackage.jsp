@@ -368,14 +368,29 @@
                                                 <a href="study_package?service=edit&editId=${sp.id}" class="btn btn-primary btn-sm">
                                                     <i class="fas fa-edit"></i> Edit
                                                 </a>
-                                                <form method="post" action="study_package" style="display:inline-block;" 
-                                                      onsubmit="return confirm('Are you sure you want to deactivate package ID ${sp.id}?');">
-                                                    <input type="hidden" name="service" value="delete" />
-                                                    <input type="hidden" name="id" value="${sp.id}" />
-                                                    <button type="submit" class="btn btn-danger btn-sm">
-                                                        <i class="fas fa-ban"></i> Deactivate
-                                                    </button>
-                                                </form>
+
+                                                <c:choose>
+                                                    <c:when test="${sp.is_active}">
+                                                        <form method="post" action="study_package" style="display:inline-block;" 
+                                                              onsubmit="return confirm('Are you sure you want to deactivate package ID ${sp.id}?');">
+                                                            <input type="hidden" name="service" value="delete" />
+                                                            <input type="hidden" name="id" value="${sp.id}" />
+                                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                                <i class="fas fa-ban"></i> Deactivate
+                                                            </button>
+                                                        </form>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <form method="post" action="study_package" style="display:inline-block;" 
+                                                              onsubmit="return confirm('Are you sure you want to activate package ID ${sp.id}?');">
+                                                            <input type="hidden" name="service" value="activate" />
+                                                            <input type="hidden" name="id" value="${sp.id}" />
+                                                            <button type="submit" class="btn btn-success btn-sm">
+                                                                <i class="fas fa-check"></i> Activate
+                                                            </button>
+                                                        </form>
+                                                    </c:otherwise>
+                                                </c:choose>
                                             </c:if>
 
                                             <a href="study_package?service=detail&id=${sp.id}" class="btn btn-info btn-sm">

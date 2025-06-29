@@ -544,4 +544,17 @@ public class StudyPackageDAO extends DBContext {
 
         return stats;
     }
+
+    public int activateStudyPackage(int id) {
+        int n = 0;
+        String sql = "UPDATE study_package SET is_active = 1 WHERE id = ?";
+        try {
+            PreparedStatement pre = connection.prepareStatement(sql);
+            pre.setInt(1, id);
+            n = pre.executeUpdate();
+        } catch (SQLException ex) {
+            Logger.getLogger(StudyPackageDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return n;
+    }
 }

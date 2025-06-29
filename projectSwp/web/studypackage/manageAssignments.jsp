@@ -14,6 +14,11 @@
         <title>Manage Package Assignments</title>
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/bootstrap.min.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
         <style>
             body {
                 padding-top: 130px;
@@ -143,6 +148,69 @@
                 border-radius: 12px;
                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             }
+
+            /* Select2 custom styling */
+            .select2-container--bootstrap-5 .select2-selection {
+                min-height: 38px;
+                border-radius: 6px;
+                border: 1px solid #ced4da;
+            }
+
+            .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+                line-height: 36px;
+                padding-left: 12px;
+            }
+
+            .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+                height: 36px;
+                right: 10px;
+            }
+
+            .select2-dropdown {
+                border-radius: 6px;
+                border: 1px solid #ced4da;
+            }
+
+            /* Hide nice-select completely */
+            .nice-select {
+                display: none !important;
+                visibility: hidden !important;
+            }
+
+            /* Ensure select elements are always visible */
+            select {
+                display: block !important;
+                visibility: visible !important;
+            }
+
+            /* Override any nice-select styling */
+            select[style*="display: none"] {
+                display: block !important;
+            }
+
+            .assignment-stats {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                margin-bottom: 10px;
+            }
+
+            .stats-badge {
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 0.8em;
+                font-weight: bold;
+            }
+
+            .stats-active {
+                background-color: #d4edda;
+                color: #155724;
+            }
+
+            .stats-total {
+                background-color: #e3f2fd;
+                color: #1976d2;
+            }
         </style>
     </head>
     <body>
@@ -185,26 +253,26 @@
             <!-- Search and Filter -->
             <div class="search-filter">
                 <h5><i class="fas fa-filter"></i> Filter Assignments</h5>
-                <form method="get" action="study_package">
+                <form method="get" action="study_package" id="filterForm">
                     <input type="hidden" name="service" value="manageAssignments">
                     <div class="filter-row">
                         <div class="form-group">
                             <label for="packageName">Package Name</label>
                             <input type="text" id="packageName" name="packageName" class="form-control" 
-                                   placeholder="Search by package name" value="${param.packageName}">
+                                   placeholder="Search by package name" value="${filterPackageName}">
                         </div>
                         <div class="form-group">
                             <label for="studentName">Student Name</label>
                             <input type="text" id="studentName" name="studentName" class="form-control" 
-                                   placeholder="Search by student name" value="${param.studentName}">
+                                   placeholder="Search by student name" value="${filterStudentName}">
                         </div>
                         <div class="form-group">
                             <label for="status">Status</label>
                             <select id="status" name="status" class="form-control">
                                 <option value="">All Status</option>
-                                <option value="active" ${param.status == 'active' ? 'selected' : ''}>Active</option>
-                                <option value="expired" ${param.status == 'expired' ? 'selected' : ''}>Expired</option>
-                                <option value="inactive" ${param.status == 'inactive' ? 'selected' : ''}>Inactive</option>
+                                <option value="active" ${filterStatus == 'active' ? 'selected' : ''}>Active</option>
+                                <option value="expired" ${filterStatus == 'expired' ? 'selected' : ''}>Expired</option>
+                                <option value="inactive" ${filterStatus == 'inactive' ? 'selected' : ''}>Inactive</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -232,11 +300,16 @@
                                         Type: ${packageData.packageType} | 
                                         Max Students: ${packageData.maxStudents}
                                     </small>
+                                    <div class="assignment-stats">
+                                        <span class="stats-badge stats-active">
+                                            <i class="fas fa-check-circle"></i> Active: ${packageData.activeCount}
+                                        </span>
+                                        <span class="stats-badge stats-total">
+                                            <i class="fas fa-users"></i> Total: ${packageData.assignmentCount}
+                                        </span>
+                                    </div>
                                 </div>
                                 <div>
-                                    <span class="badge badge-info">
-                                        ${packageData.assignmentCount} / ${packageData.maxStudents} assigned
-                                    </span>
                                     <a href="study_package?service=detail&id=${packageData.packageId}" 
                                        class="btn btn-sm btn-outline-primary">
                                         <i class="fas fa-eye"></i> View Package
@@ -326,91 +399,116 @@
 
         <%@include file="../footer.jsp" %>
 
-        <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
+        <!-- jQuery -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <!-- Bootstrap JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
         <script>
-            function deactivateAssignment(assignmentId) {
-                if (confirm('Are you sure you want to deactivate this assignment? The student will lose access to the package.')) {
-                    $.ajax({
-                        url: 'study_package',
-                        type: 'POST',
-                        data: {
-                            service: 'deactivateAssignment',
-                            assignmentId: assignmentId
-                        },
-                        success: function (response) {
-                            if (response.success) {
-                                alert('Assignment deactivated successfully.');
-                                location.reload();
-                            } else {
-                                alert('Error: ' + response.message);
-                            }
-                        },
-                        error: function () {
-                            alert('Error deactivating assignment. Please try again.');
-                        }
-                    });
-                }
-            }
+                                                                $(document).ready(function () {
+                                                                    // Completely disable nice-select
+                                                                    $('.nice-select').remove();
+                                                                    $('select').show();
 
-            function viewAssignmentDetails(assignmentId) {
-                $('#assignmentModal').modal('show');
-                $('#assignmentModalBody').html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading assignment details...</div>');
+                                                                    // Initialize Select2 for all select elements
+                                                                    $('#status').select2({
+                                                                        theme: 'bootstrap-5',
+                                                                        placeholder: 'Select status...',
+                                                                        allowClear: true,
+                                                                        width: '100%'
+                                                                    });
 
-                $.ajax({
-                    url: 'study_package',
-                    type: 'GET',
-                    data: {
-                        service: 'getAssignmentDetails',
-                        assignmentId: assignmentId
-                    },
-                    success: function (data) {
-                        let html = '<div class="assignment-details">';
-                        html += '<div class="row">';
-                        html += '<div class="col-md-6">';
-                        html += '<h6><i class="fas fa-user"></i> Student Information</h6>';
-                        html += '<p><strong>Name:</strong> ' + data.studentName + '</p>';
-                        html += '<p><strong>Username:</strong> ' + data.studentUsername + '</p>';
-                        html += '<p><strong>Grade:</strong> ' + data.gradeName + '</p>';
-                        html += '</div>';
-                        html += '<div class="col-md-6">';
-                        html += '<h6><i class="fas fa-box"></i> Package Information</h6>';
-                        html += '<p><strong>Package:</strong> ' + data.packageName + '</p>';
-                        html += '<p><strong>Type:</strong> ' + data.packageType + '</p>';
-                        html += '<p><strong>Price:</strong> ' + data.packagePrice + ' VND</p>';
-                        html += '</div>';
-                        html += '</div>';
-                        html += '<hr>';
-                        html += '<div class="row">';
-                        html += '<div class="col-md-6">';
-                        html += '<h6><i class="fas fa-calendar"></i> Assignment Timeline</h6>';
-                        html += '<p><strong>Purchased:</strong> ' + data.purchasedAt + '</p>';
-                        html += '<p><strong>Expires:</strong> ' + data.expiresAt + '</p>';
-                        html += '<p><strong>Days Remaining:</strong> ' + data.daysRemaining + '</p>';
-                        html += '</div>';
-                        html += '<div class="col-md-6">';
-                        html += '<h6><i class="fas fa-user-friends"></i> Parent Information</h6>';
-                        html += '<p><strong>Parent:</strong> ' + data.parentName + '</p>';
-                        html += '<p><strong>Email:</strong> ' + data.parentEmail + '</p>';
-                        html += '</div>';
-                        html += '</div>';
-                        html += '</div>';
+                                                                    // Prevent nice-select from being initialized
+                                                                    if (typeof $.fn.niceSelect !== 'undefined') {
+                                                                        $.fn.niceSelect = function () {
+                                                                            return this;
+                                                                        };
+                                                                    }
+                                                                });
 
-                        $('#assignmentModalBody').html(html);
-                    },
-                    error: function () {
-                        $('#assignmentModalBody').html('<div class="alert alert-danger">Error loading assignment details.</div>');
-                    }
-                });
-            }
+                                                                function deactivateAssignment(assignmentId) {
+                                                                    if (confirm('Are you sure you want to deactivate this assignment? The student will lose access to the package.')) {
+                                                                        $.ajax({
+                                                                            url: 'study_package',
+                                                                            type: 'POST',
+                                                                            data: {
+                                                                                service: 'deactivateAssignment',
+                                                                                assignmentId: assignmentId
+                                                                            },
+                                                                            success: function (response) {
+                                                                                if (response.success) {
+                                                                                    alert('Assignment deactivated successfully.');
+                                                                                    location.reload();
+                                                                                } else {
+                                                                                    alert('Error: ' + response.message);
+                                                                                }
+                                                                            },
+                                                                            error: function () {
+                                                                                alert('Error deactivating assignment. Please try again.');
+                                                                            }
+                                                                        });
+                                                                    }
+                                                                }
 
-            // Auto-refresh every 5 minutes to keep data current
-            setInterval(function () {
-                if (document.visibilityState === 'visible') {
-                    location.reload();
-                }
-            }, 300000); // 5 minutes
+                                                                function viewAssignmentDetails(assignmentId) {
+                                                                    $('#assignmentModal').modal('show');
+                                                                    $('#assignmentModalBody').html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading assignment details...</div>');
+
+                                                                    $.ajax({
+                                                                        url: 'study_package',
+                                                                        type: 'GET',
+                                                                        data: {
+                                                                            service: 'getAssignmentDetails',
+                                                                            assignmentId: assignmentId
+                                                                        },
+                                                                        success: function (data) {
+                                                                            let html = '<div class="assignment-details">';
+                                                                            html += '<div class="row">';
+                                                                            html += '<div class="col-md-6">';
+                                                                            html += '<h6><i class="fas fa-user"></i> Student Information</h6>';
+                                                                            html += '<p><strong>Name:</strong> ' + data.studentName + '</p>';
+                                                                            html += '<p><strong>Username:</strong> ' + data.studentUsername + '</p>';
+                                                                            html += '<p><strong>Grade:</strong> ' + data.gradeName + '</p>';
+                                                                            html += '</div>';
+                                                                            html += '<div class="col-md-6">';
+                                                                            html += '<h6><i class="fas fa-box"></i> Package Information</h6>';
+                                                                            html += '<p><strong>Package:</strong> ' + data.packageName + '</p>';
+                                                                            html += '<p><strong>Type:</strong> ' + data.packageType + '</p>';
+                                                                            html += '<p><strong>Price:</strong> ' + data.packagePrice + ' VND</p>';
+                                                                            html += '</div>';
+                                                                            html += '</div>';
+                                                                            html += '<hr>';
+                                                                            html += '<div class="row">';
+                                                                            html += '<div class="col-md-6">';
+                                                                            html += '<h6><i class="fas fa-calendar"></i> Assignment Timeline</h6>';
+                                                                            html += '<p><strong>Purchased:</strong> ' + data.purchasedAt + '</p>';
+                                                                            html += '<p><strong>Expires:</strong> ' + data.expiresAt + '</p>';
+                                                                            html += '<p><strong>Days Remaining:</strong> ' + data.daysRemaining + '</p>';
+                                                                            html += '</div>';
+                                                                            html += '<div class="col-md-6">';
+                                                                            html += '<h6><i class="fas fa-user-friends"></i> Parent Information</h6>';
+                                                                            html += '<p><strong>Parent:</strong> ' + data.parentName + '</p>';
+                                                                            html += '<p><strong>Email:</strong> ' + data.parentEmail + '</p>';
+                                                                            html += '</div>';
+                                                                            html += '</div>';
+                                                                            html += '</div>';
+
+                                                                            $('#assignmentModalBody').html(html);
+                                                                        },
+                                                                        error: function () {
+                                                                            $('#assignmentModalBody').html('<div class="alert alert-danger">Error loading assignment details.</div>');
+                                                                        }
+                                                                    });
+                                                                }
+
+                                                                // Auto-refresh every 5 minutes to keep data current
+                                                                setInterval(function () {
+                                                                    if (document.visibilityState === 'visible') {
+                                                                        location.reload();
+                                                                    }
+                                                                }, 300000); // 5 minutes
         </script>
 
     </body>
