@@ -379,9 +379,16 @@ public class StudyPackageController extends HttpServlet {
                 Account account = (Account) session.getAttribute("account");
 
                 if (account != null && RoleConstants.PARENT.equals(account.getRole())) {
+                    // Get current package assignment statistics
+                    int currentAssignedCount = studentPackageDAO.countAssignedStudents(id);
+                    int maxStudents = sp.getMax_students();
+                    int availableSlots = maxStudents - currentAssignedCount;
+
                     // Check if package has available slots
-                    if (!studentPackageDAO.hasAvailableSlots(id)) {
-                        request.setAttribute("errorMessage", "This package has reached maximum student limit.");
+                    if (availableSlots <= 0) {
+                        request.setAttribute("errorMessage",
+                                "This package has reached maximum student limit (" + maxStudents + " students). "
+                                + "Currently " + currentAssignedCount + " students are assigned.");
                         listStudyPackage(request, response);
                         return;
                     }
@@ -392,10 +399,29 @@ public class StudyPackageController extends HttpServlet {
                     request.setAttribute("userId", account.getId());
                     request.setAttribute("studyPackage", sp);
 
+                    // Add package statistics for display
+                    request.setAttribute("currentAssignedCount", currentAssignedCount);
+                    request.setAttribute("availableSlots", availableSlots);
+                    request.setAttribute("maxStudentsAllowed", Math.min(availableSlots, sp.getMax_students()));
+
                     // Get parent's children for assignment
                     try {
                         List<Student> children = studentDAO.getStudentsByParentId(account.getId());
-                        request.setAttribute("children", children);
+
+                        // Filter out students who already have this package
+                        List<Student> availableChildren = new ArrayList<>();
+                        List<Student> unavailableChildren = new ArrayList<>();
+
+                        for (Student child : children) {
+                            if (studentPackageDAO.hasStudentActivePackage(child.getId(), id)) {
+                                unavailableChildren.add(child);
+                            } else {
+                                availableChildren.add(child);
+                            }
+                        }
+
+                        request.setAttribute("children", availableChildren);
+                        request.setAttribute("unavailableChildren", unavailableChildren);
 
                         // Also get grades for display
                         List<Grade> grades = gradeDAO.findAllFromGrade();

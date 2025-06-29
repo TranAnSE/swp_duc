@@ -339,4 +339,40 @@ public class StudentPackageDAO extends DBContext {
         }
         return list;
     }
+
+    /**
+     * Check if student already has an active package
+     */
+    public boolean hasStudentActivePackage(int studentId, int packageId) {
+        String sql = "SELECT COUNT(*) FROM student_package WHERE student_id = ? AND package_id = ? AND is_active = 1 AND expires_at > NOW()";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
+     * Get all students with active packages for a specific package
+     */
+    public List<Integer> getStudentsWithActivePackage(int packageId) {
+        List<Integer> studentIds = new ArrayList<>();
+        String sql = "SELECT student_id FROM student_package WHERE package_id = ? AND is_active = 1 AND expires_at > NOW()";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, packageId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                studentIds.add(rs.getInt("student_id"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return studentIds;
+    }
 }
