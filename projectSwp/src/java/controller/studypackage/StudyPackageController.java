@@ -139,6 +139,25 @@ public class StudyPackageController extends HttpServlet {
                 case "getStudentsByParent":
                     handleGetStudentsByParent(request, response);
                     return;
+                case "myPackagesDetailed":
+                    showMyPackagesDetailed(request, response);
+                    break;
+
+                case "managePackageAssignments":
+                    managePackageAssignments(request, response);
+                    break;
+
+                case "assignAdditionalStudent":
+                    assignAdditionalStudent(request, response);
+                    break;
+
+                case "removeStudentAssignment":
+                    removeStudentAssignment(request, response);
+                    break;
+
+                case "getUnassignedChildren":
+                    handleGetUnassignedChildren(request, response);
+                    return;
                 default:
                     listStudyPackage(request, response);
                     break;
@@ -1036,6 +1055,185 @@ public class StudyPackageController extends HttpServlet {
             }
         } else {
             response.sendRedirect("/error.jsp");
+        }
+    }
+
+    private void showMyPackagesDetailed(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        Account account = (Account) session.getAttribute("account");
+
+        if (account == null || !RoleConstants.PARENT.equals(account.getRole())) {
+            response.sendRedirect("/error.jsp");
+            return;
+        }
+
+        try {
+            List<Map<String, Object>> parentPackages = dao.getParentPackagesWithAssignments(account.getId());
+            request.setAttribute("parentPackages", parentPackages);
+            request.setAttribute("parent", account);
+
+            request.getRequestDispatcher("/studypackage/myPackagesDetailed.jsp").forward(request, response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Error loading package details: " + e.getMessage());
+            showMyPackages(request, response);
+        }
+    }
+
+    private void managePackageAssignments(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        Account account = (Account) session.getAttribute("account");
+
+        if (account == null || !RoleConstants.PARENT.equals(account.getRole())) {
+            response.sendRedirect("/error.jsp");
+            return;
+        }
+
+        try {
+            int packageId = Integer.parseInt(request.getParameter("packageId"));
+
+            // Get package details
+            StudyPackage studyPackage = dao.findStudyPackageById(packageId);
+            if (studyPackage == null) {
+                request.setAttribute("errorMessage", "Package not found.");
+                showMyPackagesDetailed(request, response);
+                return;
+            }
+
+            // Get current assignments
+            List<Map<String, Object>> assignments = dao.getPackageAssignmentDetails(packageId, account.getId());
+
+            // Get unassigned children
+            List<Map<String, Object>> unassignedChildren = studentPackageDAO.getUnassignedChildrenForPackage(account.getId(), packageId);
+
+            // Get available slots
+            int availableSlots = dao.getAvailableSlotsForParent(account.getId(), packageId);
+
+            request.setAttribute("studyPackage", studyPackage);
+            request.setAttribute("assignments", assignments);
+            request.setAttribute("unassignedChildren", unassignedChildren);
+            request.setAttribute("availableSlots", availableSlots);
+            request.setAttribute("packageId", packageId);
+
+            request.getRequestDispatcher("/studypackage/managePackageAssignments.jsp").forward(request, response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Error managing assignments: " + e.getMessage());
+            showMyPackagesDetailed(request, response);
+        }
+    }
+
+    private void assignAdditionalStudent(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        Account account = (Account) session.getAttribute("account");
+
+        if (account == null || !RoleConstants.PARENT.equals(account.getRole())) {
+            response.sendRedirect("/error.jsp");
+            return;
+        }
+
+        try {
+            int packageId = Integer.parseInt(request.getParameter("packageId"));
+            int studentId = Integer.parseInt(request.getParameter("studentId"));
+
+            StudyPackage studyPackage = dao.findStudyPackageById(packageId);
+            if (studyPackage == null) {
+                request.setAttribute("errorMessage", "Package not found.");
+                managePackageAssignments(request, response);
+                return;
+            }
+
+            boolean success = studentPackageDAO.assignAdditionalStudentToPackage(
+                    studentId, packageId, account.getId(), studyPackage.getDuration_days()
+            );
+
+            if (success) {
+                request.setAttribute("message", "Student assigned successfully!");
+            } else {
+                request.setAttribute("errorMessage", "Failed to assign student. Please check if you have available slots or if the student already has this package.");
+            }
+
+            // Redirect back to manage assignments page
+            response.sendRedirect("study_package?service=managePackageAssignments&packageId=" + packageId);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Error assigning student: " + e.getMessage());
+            showMyPackagesDetailed(request, response);
+        }
+    }
+
+    private void removeStudentAssignment(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        Account account = (Account) session.getAttribute("account");
+
+        if (account == null || !RoleConstants.PARENT.equals(account.getRole())) {
+            response.sendRedirect("/error.jsp");
+            return;
+        }
+
+        try {
+            int assignmentId = Integer.parseInt(request.getParameter("assignmentId"));
+            int packageId = Integer.parseInt(request.getParameter("packageId"));
+
+            boolean success = studentPackageDAO.removeStudentFromPackage(assignmentId, account.getId());
+
+            if (success) {
+                request.setAttribute("message", "Student assignment removed successfully!");
+            } else {
+                request.setAttribute("errorMessage", "Failed to remove student assignment.");
+            }
+
+            // Redirect back to manage assignments page
+            response.sendRedirect("study_package?service=managePackageAssignments&packageId=" + packageId);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Error removing assignment: " + e.getMessage());
+            showMyPackagesDetailed(request, response);
+        }
+    }
+
+    private void handleGetUnassignedChildren(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        HttpSession session = request.getSession();
+        Account account = (Account) session.getAttribute("account");
+
+        if (account == null || !RoleConstants.PARENT.equals(account.getRole())) {
+            response.getWriter().write("[]");
+            return;
+        }
+
+        try {
+            int packageId = Integer.parseInt(request.getParameter("packageId"));
+            List<Map<String, Object>> children = studentPackageDAO.getUnassignedChildrenForPackage(account.getId(), packageId);
+
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < children.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Map<String, Object> child = children.get(i);
+                json.append("{")
+                        .append("\"id\":").append(child.get("id"))
+                        .append(",\"fullName\":\"").append(escapeJson(child.get("fullName").toString()))
+                        .append("\",\"username\":\"").append(escapeJson(child.get("username").toString()))
+                        .append("\",\"gradeName\":\"").append(escapeJson(child.get("gradeName").toString()))
+                        .append("\"}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("[]");
         }
     }
 

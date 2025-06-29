@@ -320,164 +320,206 @@
         <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
         <script>
-            // Package capacity limits
-            const maxAvailableSlots = ${availableSlots};
-            const packagePrice = ${amount};
+                                        // Package capacity limits
+                                        const maxAvailableSlots = ${availableSlots};
+                                        const packagePrice = ${amount};
 
-            // Current selection state - dùng Set để tránh duplicate
-            let selectedStudents = new Set();
+                                        // Current selection state - dùng Set để tránh duplicate
+                                        let selectedStudents = new Set();
 
-            console.log('Package Info:', {
-                maxAvailableSlots: maxAvailableSlots,
-                packagePrice: packagePrice
-            });
+                                        console.log('Package Info:', {
+                                            maxAvailableSlots: maxAvailableSlots,
+                                            packagePrice: packagePrice
+                                        });
 
-            function toggleStudent(studentId) {
-                console.log('toggleStudent called with ID:', studentId);
+                                        function toggleStudent(studentId) {
+                                            console.log('toggleStudent called with ID:', studentId);
 
-                const card = document.querySelector('[data-student-id="' + studentId + '"]');
-                const checkbox = document.getElementById('student_' + studentId);
+                                            const card = document.querySelector('[data-student-id="' + studentId + '"]');
+                                            const checkbox = document.getElementById('student_' + studentId);
 
-                if (!card || !checkbox) {
-                    console.error('Card or checkbox not found for student:', studentId);
-                    return;
-                }
+                                            if (!card || !checkbox) {
+                                                console.error('Card or checkbox not found for student:', studentId);
+                                                return;
+                                            }
 
-                // Check if card is unavailable
-                if (card.classList.contains('unavailable')) {
-                    console.log('Student unavailable, skipping');
-                    return;
-                }
+                                            // Check if card is unavailable
+                                            if (card.classList.contains('unavailable')) {
+                                                console.log('Student unavailable, skipping');
+                                                return;
+                                            }
 
-                // Simple toggle logic based on current visual state
-                if (card.classList.contains('selected')) {
-                    // Currently selected -> deselect
-                    console.log('Deselecting student:', studentId);
-                    selectedStudents.delete(studentId);
-                    card.classList.remove('selected');
-                    checkbox.checked = false;
-                } else {
-                    // Currently not selected -> try to select
-                    if (selectedStudents.size >= maxAvailableSlots) {
-                        alert('This package only has ' + maxAvailableSlots + ' available slot(s) remaining.\n' +
-                                'You cannot select more than ' + maxAvailableSlots + ' student(s).');
-                        return;
-                    }
+                                            // Simple toggle logic based on current visual state
+                                            if (card.classList.contains('selected')) {
+                                                // Currently selected -> deselect
+                                                console.log('Deselecting student:', studentId);
+                                                selectedStudents.delete(studentId);
+                                                card.classList.remove('selected');
+                                                checkbox.checked = false;
+                                            } else {
+                                                // Currently not selected -> try to select
+                                                if (selectedStudents.size >= maxAvailableSlots) {
+                                                    alert('This package only has ' + maxAvailableSlots + ' available slot(s) remaining.\n' +
+                                                            'You cannot select more than ' + maxAvailableSlots + ' student(s).');
+                                                    return;
+                                                }
 
-                    console.log('Selecting student:', studentId);
-                    selectedStudents.add(studentId);
-                    card.classList.add('selected');
-                    checkbox.checked = true;
-                }
+                                                console.log('Selecting student:', studentId);
+                                                selectedStudents.add(studentId);
+                                                card.classList.add('selected');
+                                                checkbox.checked = true;
+                                            }
 
-                console.log('Current selection:', {
-                    selectedCount: selectedStudents.size,
-                    selectedStudents: Array.from(selectedStudents)
-                });
+                                            console.log('Current selection:', {
+                                                selectedCount: selectedStudents.size,
+                                                selectedStudents: Array.from(selectedStudents)
+                                            });
 
-                updateUI();
-            }
+                                            updateUI();
+                                        }
 
-            function updateUI() {
-                const selectedCount = selectedStudents.size;
-                console.log('Updating UI with selectedCount:', selectedCount);
+                                        function updateUI() {
+                                            const selectedCount = selectedStudents.size;
+                                            console.log('Updating UI with selectedCount:', selectedCount);
 
-                // Update selection counter
-                const counterElement = document.getElementById('selectedCount');
-                if (counterElement) {
-                    counterElement.textContent = selectedCount;
-                }
+                                            // Update selection counter
+                                            const counterElement = document.getElementById('selectedCount');
+                                            if (counterElement) {
+                                                counterElement.textContent = selectedCount;
+                                            }
 
-                // Update counter color based on selection
-                const selectionCounter = document.getElementById('selectionCounter');
-                if (selectionCounter) {
-                    if (selectedCount === 0) {
-                        selectionCounter.style.backgroundColor = '#6c757d';
-                    } else if (selectedCount === maxAvailableSlots) {
-                        selectionCounter.style.backgroundColor = '#dc3545';
-                    } else {
-                        selectionCounter.style.backgroundColor = '#17a2b8';
-                    }
-                }
+                                            // Update counter color based on selection
+                                            const selectionCounter = document.getElementById('selectionCounter');
+                                            if (selectionCounter) {
+                                                if (selectedCount === 0) {
+                                                    selectionCounter.style.backgroundColor = '#6c757d';
+                                                } else if (selectedCount === maxAvailableSlots) {
+                                                    selectionCounter.style.backgroundColor = '#dc3545';
+                                                } else {
+                                                    selectionCounter.style.backgroundColor = '#17a2b8';
+                                                }
+                                            }
 
-                // Update purchase button
-                updatePurchaseButton();
-            }
+                                            // Update purchase button
+                                            updatePurchaseButton();
+                                        }
 
-            function updatePurchaseButton() {
-                const selectedCount = selectedStudents.size;
-                const purchaseBtn = document.getElementById('purchaseBtn');
-                if (!purchaseBtn)
-                    return;
+                                        function updatePurchaseButton() {
+                                            const selectedCount = selectedStudents.size;
+                                            const purchaseBtn = document.getElementById('purchaseBtn');
+                                            if (!purchaseBtn)
+                                                return;
 
-                if (selectedCount > 0) {
-                    purchaseBtn.disabled = false;
-                    const totalCost = packagePrice * selectedCount;
-                    purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase for ' + selectedCount + ' Student(s) - ' + totalCost.toLocaleString() + ' VND';
-                    purchaseBtn.className = 'btn btn-success';
-                } else {
-                    purchaseBtn.disabled = true;
-                    purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Select Students First';
-                    purchaseBtn.className = 'btn btn-secondary';
-                }
-            }
+                                            if (selectedCount > 0) {
+                                                purchaseBtn.disabled = false;
+                                                const totalCost = packagePrice * selectedCount;
+                                                purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase for ' + selectedCount + ' Student(s) - ' + totalCost.toLocaleString() + ' VND';
+                                                purchaseBtn.className = 'btn btn-success';
+                                            } else {
+                                                purchaseBtn.disabled = true;
+                                                purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Select Students First';
+                                                purchaseBtn.className = 'btn btn-secondary';
+                                            }
+                                        }
 
-            // Initialize when page loads
-            document.addEventListener('DOMContentLoaded', function () {
-                console.log('DOM Content Loaded - Initializing...');
+                                        // Initialize when page loads
+                                        document.addEventListener('DOMContentLoaded', function () {
+                                            console.log('DOM Content Loaded - Initializing...');
 
-                // RESET selection state
-                selectedStudents.clear();
+                                            // RESET selection state
+                                            selectedStudents.clear();
 
-                // Clear any pre-selected checkboxes and visual states
-                const checkboxes = document.querySelectorAll('input[name="studentIds"]');
-                checkboxes.forEach(function (checkbox) {
-                    checkbox.checked = false;
-                    const card = document.querySelector('[data-student-id="' + checkbox.value + '"]');
-                    if (card) {
-                        card.classList.remove('selected');
-                    }
-                });
+                                            // Clear any pre-selected checkboxes and visual states
+                                            const checkboxes = document.querySelectorAll('input[name="studentIds"]');
+                                            checkboxes.forEach(function (checkbox) {
+                                                checkbox.checked = false;
+                                                const card = document.querySelector('[data-student-id="' + checkbox.value + '"]');
+                                                if (card) {
+                                                    card.classList.remove('selected');
+                                                }
+                                            });
 
-                // Initialize UI
-                updateUI();
+                                            // Initialize UI
+                                            updateUI();
 
-                // Form validation
-                const form = document.getElementById('purchaseForm');
-                if (form) {
-                    form.addEventListener('submit', function (e) {
-                        const selectedCount = selectedStudents.size;
-                        console.log('Form submit - selectedCount:', selectedCount);
+                                            // Form validation
+                                            const form = document.getElementById('purchaseForm');
+                                            if (form) {
+                                                form.addEventListener('submit', function (e) {
+                                                    const selectedCount = selectedStudents.size;
+                                                    console.log('Form submit - selectedCount:', selectedCount);
 
-                        if (selectedCount === 0) {
-                            e.preventDefault();
-                            alert('Please select at least one student for this package.');
-                            return false;
-                        }
+                                                    if (selectedCount === 0) {
+                                                        e.preventDefault();
+                                                        alert('Please select at least one student for this package.');
+                                                        return false;
+                                                    }
 
-                        const totalCost = packagePrice * selectedCount;
-                        const confirmMessage = 'Purchase Confirmation:\n\n' +
-                                'Package: ${studyPackage.name}\n' +
-                                'Students: ' + selectedCount + ' student(s)\n' +
-                                'Duration: ${studyPackage.duration_days} days each\n' +
-                                'Total Cost: ' + totalCost.toLocaleString() + ' VND\n\n' +
-                                'Do you want to proceed with the payment?';
+                                                    const totalCost = packagePrice * selectedCount;
+                                                    const confirmMessage = 'Purchase Confirmation:\n\n' +
+                                                            'Package: ${studyPackage.name}\n' +
+                                                            'Students: ' + selectedCount + ' student(s)\n' +
+                                                            'Duration: ${studyPackage.duration_days} days each\n' +
+                                                            'Total Cost: ' + totalCost.toLocaleString() + ' VND\n\n' +
+                                                            'Do you want to proceed with the payment?';
 
-                        if (!confirm(confirmMessage)) {
-                            e.preventDefault();
-                            return false;
-                        }
-                    });
-                }
-            });
+                                                    if (!confirm(confirmMessage)) {
+                                                        e.preventDefault();
+                                                        return false;
+                                                    }
+                                                });
+                                            }
+                                        });
 
-            // Debug: Show package capacity info
-            console.log('=== Package Capacity Info ===');
-            console.log('Total Capacity: ${studyPackage.max_students} students');
-            console.log('Currently Assigned: ${currentAssignedCount} students');
-            console.log('Available Slots:', maxAvailableSlots, 'students');
-            console.log('Your Available Children: ${fn:length(children)} students');
-            console.log('============================');
+                                        // Update form submission to handle partial assignment
+                                        $('#purchaseForm').on('submit', function (e) {
+                                            const selectedCount = selectedStudents.size;
+
+                                            if (selectedCount === 0) {
+                                                e.preventDefault();
+                                                alert('Please select at least one student for this package.');
+                                                return false;
+                                            }
+
+                                            // Check if user wants to assign all or partial
+                                            if (selectedCount < ${fn:length(children)} && selectedCount < maxAvailableSlots) {
+                                                const remainingSlots = maxAvailableSlots - selectedCount;
+                                                const unselectedCount = ${fn:length(children)} - selectedCount;
+
+                                                if (remainingSlots > 0 && unselectedCount > 0) {
+                                                    const assignLaterMessage = 'You are purchasing ' + maxAvailableSlots + ' slot(s) but only assigning ' + selectedCount + ' student(s) now.\n\n' +
+                                                            'You will have ' + remainingSlots + ' slot(s) remaining that you can assign to other students later through "My Packages > Detailed Management".\n\n' +
+                                                            'Do you want to continue?';
+
+                                                    if (!confirm(assignLaterMessage)) {
+                                                        e.preventDefault();
+                                                        return false;
+                                                    }
+                                                }
+                                            }
+
+                                            const totalCost = packagePrice * maxAvailableSlots; // Pay for full package capacity
+                                            const confirmMessage = 'Purchase Confirmation:\n\n' +
+                                                    'Package: ${studyPackage.name}\n' +
+                                                    'Package Capacity: ' + maxAvailableSlots + ' student(s)\n' +
+                                                    'Assigning Now: ' + selectedCount + ' student(s)\n' +
+                                                    'Duration: ${studyPackage.duration_days} days each\n' +
+                                                    'Total Cost: ' + totalCost.toLocaleString() + ' VND\n\n' +
+                                                    'Do you want to proceed with the payment?';
+
+                                            if (!confirm(confirmMessage)) {
+                                                e.preventDefault();
+                                                return false;
+                                            }
+                                        });
+
+                                        // Debug: Show package capacity info
+                                        console.log('=== Package Capacity Info ===');
+                                        console.log('Total Capacity: ${studyPackage.max_students} students');
+                                        console.log('Currently Assigned: ${currentAssignedCount} students');
+                                        console.log('Available Slots:', maxAvailableSlots, 'students');
+                                        console.log('Your Available Children: ${fn:length(children)} students');
+                                        console.log('============================');
         </script>
     </body>
 </html>

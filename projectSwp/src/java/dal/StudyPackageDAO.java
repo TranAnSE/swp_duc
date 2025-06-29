@@ -333,4 +333,172 @@ public class StudyPackageDAO extends DBContext {
         }
         return stats;
     }
+
+    /**
+     * Get packages purchased by parent with assignment details
+     */
+    public List<Map<String, Object>> getParentPackagesWithAssignments(int parentId) {
+        List<Map<String, Object>> packages = new ArrayList<>();
+        String sql = """
+        SELECT DISTINCT
+            sp.package_id,
+            pkg.name as package_name,
+            pkg.max_students,
+            pkg.price,
+            pkg.duration_days,
+            MIN(sp.purchased_at) as first_purchase_date,
+            COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as active_assignments,
+            COUNT(*) as total_assignments
+        FROM student_package sp
+        JOIN study_package pkg ON sp.package_id = pkg.id
+        WHERE sp.parent_id = ?
+        GROUP BY sp.package_id, pkg.name, pkg.max_students, pkg.price, pkg.duration_days
+        ORDER BY MIN(sp.purchased_at) DESC
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> packageInfo = new HashMap<>();
+                int packageId = rs.getInt("package_id");
+
+                packageInfo.put("packageId", packageId);
+                packageInfo.put("packageName", rs.getString("package_name"));
+                packageInfo.put("maxStudents", rs.getInt("max_students"));
+                packageInfo.put("price", rs.getString("price"));
+                packageInfo.put("durationDays", rs.getInt("duration_days"));
+                packageInfo.put("firstPurchaseDate", rs.getTimestamp("first_purchase_date"));
+                packageInfo.put("activeAssignments", rs.getInt("active_assignments"));
+                packageInfo.put("totalAssignments", rs.getInt("total_assignments"));
+
+                // Get detailed assignments for this package
+                packageInfo.put("assignments", getPackageAssignmentDetails(packageId, parentId));
+
+                packages.add(packageInfo);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return packages;
+    }
+
+    /**
+     * Get detailed assignment information for a specific package and parent
+     */
+    public List<Map<String, Object>> getPackageAssignmentDetails(int packageId, int parentId) {
+        List<Map<String, Object>> assignments = new ArrayList<>();
+        String sql = """
+        SELECT 
+            sp.id as assignment_id,
+            sp.student_id,
+            sp.purchased_at,
+            sp.expires_at,
+            sp.is_active,
+            s.full_name as student_name,
+            s.username as student_username,
+            g.name as grade_name,
+            CASE 
+                WHEN sp.expires_at > NOW() AND sp.is_active = 1 THEN 'ACTIVE'
+                WHEN sp.expires_at <= NOW() THEN 'EXPIRED'
+                ELSE 'INACTIVE'
+            END as status,
+            DATEDIFF(sp.expires_at, NOW()) as days_remaining
+        FROM student_package sp
+        JOIN student s ON sp.student_id = s.id
+        JOIN grade g ON s.grade_id = g.id
+        WHERE sp.package_id = ? AND sp.parent_id = ?
+        ORDER BY sp.purchased_at DESC
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, packageId);
+            ps.setInt(2, parentId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> assignment = new HashMap<>();
+                assignment.put("assignmentId", rs.getInt("assignment_id"));
+                assignment.put("studentId", rs.getInt("student_id"));
+                assignment.put("studentName", rs.getString("student_name"));
+                assignment.put("studentUsername", rs.getString("student_username"));
+                assignment.put("gradeName", rs.getString("grade_name"));
+                assignment.put("purchasedAt", rs.getTimestamp("purchased_at"));
+                assignment.put("expiresAt", rs.getTimestamp("expires_at"));
+                assignment.put("isActive", rs.getBoolean("is_active"));
+                assignment.put("status", rs.getString("status"));
+                assignment.put("daysRemaining", rs.getInt("days_remaining"));
+
+                assignments.add(assignment);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return assignments;
+    }
+
+    /**
+     * Check if parent can assign more students to a package
+     */
+    public boolean canParentAssignMoreStudents(int parentId, int packageId) {
+        String sql = """
+        SELECT 
+            pkg.max_students,
+            COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as current_active
+        FROM study_package pkg
+        LEFT JOIN student_package sp ON pkg.id = sp.package_id AND sp.parent_id = ?
+        WHERE pkg.id = ?
+        GROUP BY pkg.max_students
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int maxStudents = rs.getInt("max_students");
+                int currentActive = rs.getInt("current_active");
+                return currentActive < maxStudents;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    /**
+     * Get available slots for parent in a specific package
+     */
+    public int getAvailableSlotsForParent(int parentId, int packageId) {
+        String sql = """
+        SELECT 
+            pkg.max_students,
+            COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as current_active
+        FROM study_package pkg
+        LEFT JOIN student_package sp ON pkg.id = sp.package_id AND sp.parent_id = ?
+        WHERE pkg.id = ?
+        GROUP BY pkg.max_students
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                int maxStudents = rs.getInt("max_students");
+                int currentActive = rs.getInt("current_active");
+                return Math.max(0, maxStudents - currentActive);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return 0;
+    }
 }

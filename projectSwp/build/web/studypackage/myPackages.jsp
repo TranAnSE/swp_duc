@@ -105,9 +105,14 @@
         <main>
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2><i class="fas fa-box"></i> My Study Packages</h2>
-                <a href="${pageContext.request.contextPath}/study_package" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Purchase New Package
-                </a>
+                <div>
+                    <a href="${pageContext.request.contextPath}/study_package?service=myPackagesDetailed" class="btn btn-info">
+                        <i class="fas fa-cog"></i> Detailed Management
+                    </a>
+                    <a href="${pageContext.request.contextPath}/study_package" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Purchase New Package
+                    </a>
+                </div>
             </div>
 
             <c:choose>

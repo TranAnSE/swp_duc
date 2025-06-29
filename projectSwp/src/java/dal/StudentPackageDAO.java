@@ -375,4 +375,92 @@ public class StudentPackageDAO extends DBContext {
         }
         return studentIds;
     }
+
+    /**
+     * Assign additional students to an existing package purchase
+     */
+    public boolean assignAdditionalStudentToPackage(int studentId, int packageId, int parentId, int durationDays) {
+        // Check if parent has available slots
+        StudyPackageDAO studyPackageDAO = new StudyPackageDAO();
+        if (!studyPackageDAO.canParentAssignMoreStudents(parentId, packageId)) {
+            return false;
+        }
+
+        // Check if student already has this package
+        if (hasStudentActivePackage(studentId, packageId)) {
+            return false;
+        }
+
+        String sql = "INSERT INTO student_package (student_id, package_id, parent_id, expires_at, assigned_by) VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, packageId);
+            ps.setInt(3, parentId);
+            ps.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now().plusDays(durationDays)));
+            ps.setInt(5, parentId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Get unassigned children for a parent and package
+     */
+    public List<Map<String, Object>> getUnassignedChildrenForPackage(int parentId, int packageId) {
+        List<Map<String, Object>> children = new ArrayList<>();
+        String sql = """
+        SELECT 
+            s.id,
+            s.full_name,
+            s.username,
+            g.name as grade_name
+        FROM student s
+        JOIN grade g ON s.grade_id = g.id
+        WHERE s.parent_id = ?
+        AND s.id NOT IN (
+            SELECT sp.student_id 
+            FROM student_package sp 
+            WHERE sp.package_id = ? 
+            AND sp.is_active = 1 
+            AND sp.expires_at > NOW()
+        )
+        ORDER BY s.full_name
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> child = new HashMap<>();
+                child.put("id", rs.getInt("id"));
+                child.put("fullName", rs.getString("full_name"));
+                child.put("username", rs.getString("username"));
+                child.put("gradeName", rs.getString("grade_name"));
+                children.add(child);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return children;
+    }
+
+    /**
+     * Remove student assignment from package
+     */
+    public boolean removeStudentFromPackage(int assignmentId, int parentId) {
+        String sql = "UPDATE student_package SET is_active = 0 WHERE id = ? AND parent_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, assignmentId);
+            ps.setInt(2, parentId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
