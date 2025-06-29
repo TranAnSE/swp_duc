@@ -80,21 +80,6 @@ public class LessonController extends HttpServlet {
                     }
                     break;
 
-                case "view":
-                    String viewIdStr = request.getParameter("id");
-                    if (viewIdStr != null) {
-                        int viewId = Integer.parseInt(viewIdStr);
-                        Lesson lesson = lessonDAO.getLessonById(viewId);
-                        if (lesson != null) {
-                            request.setAttribute("lesson", lesson);
-                            request.getRequestDispatcher("lesson/viewLesson.jsp").forward(request, response);
-                            return;
-                        } else {
-                            request.setAttribute("error", "Không tìm thấy bài học với ID " + viewId);
-                        }
-                    }
-                    break;
-
                 case "delete":
                     String delIdStr = request.getParameter("id");
                     if (delIdStr != null) {
