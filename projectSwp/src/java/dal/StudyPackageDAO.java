@@ -557,4 +557,59 @@ public class StudyPackageDAO extends DBContext {
         }
         return n;
     }
+
+    /**
+     * Get packages purchased by parent with purchase history details
+     */
+    public List<Map<String, Object>> getParentPackagesWithPurchaseHistory(int parentId) {
+        List<Map<String, Object>> packages = new ArrayList<>();
+        String sql = """
+        SELECT DISTINCT
+            sp.package_id,
+            pkg.name as package_name,
+            pkg.max_students,
+            pkg.price,
+            pkg.duration_days,
+            MIN(sp.purchased_at) as first_purchase_date,
+            COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as active_assignments,
+            COUNT(*) as total_assignments
+        FROM student_package sp
+        JOIN study_package pkg ON sp.package_id = pkg.id
+        WHERE sp.parent_id = ?
+        GROUP BY sp.package_id, pkg.name, pkg.max_students, pkg.price, pkg.duration_days
+        ORDER BY MIN(sp.purchased_at) DESC
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> packageInfo = new HashMap<>();
+                int packageId = rs.getInt("package_id");
+
+                packageInfo.put("packageId", packageId);
+                packageInfo.put("packageName", rs.getString("package_name"));
+                packageInfo.put("maxStudents", rs.getInt("max_students"));
+                packageInfo.put("price", rs.getString("price"));
+                packageInfo.put("durationDays", rs.getInt("duration_days"));
+                packageInfo.put("firstPurchaseDate", rs.getTimestamp("first_purchase_date"));
+                packageInfo.put("activeAssignments", rs.getInt("active_assignments"));
+                packageInfo.put("totalAssignments", rs.getInt("total_assignments"));
+
+                // Get detailed assignments for this package
+                packageInfo.put("assignments", getPackageAssignmentDetails(packageId, parentId));
+
+                // Get purchase history for this package
+                PackagePurchaseDAO purchaseDAO = new PackagePurchaseDAO();
+                packageInfo.put("purchaseHistory", purchaseDAO.getParentPurchaseHistory(parentId, packageId));
+
+                packages.add(packageInfo);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return packages;
+    }
 }

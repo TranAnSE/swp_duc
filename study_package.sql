@@ -201,6 +201,8 @@ LEFT JOIN student_package sp ON pkg.id = sp.package_id
 WHERE pkg.is_active = 1
 GROUP BY sp.parent_id, sp.package_id, pkg.name, pkg.max_students;
 
+USE `db-script`;
+
 -- Add purchase tracking table to separate purchase from assignment
 CREATE TABLE IF NOT EXISTS package_purchase (
     id INT NOT NULL AUTO_INCREMENT,
@@ -239,3 +241,23 @@ JOIN study_package pkg ON pp.package_id = pkg.id
 LEFT JOIN student_package sp ON pp.id = sp.purchase_id
 WHERE pp.status = 'COMPLETED'
 GROUP BY pp.parent_id, pp.package_id, pkg.name;
+
+-- Create view for purchase history
+CREATE OR REPLACE VIEW parent_purchase_history AS
+SELECT 
+    pp.id as purchase_id,
+    pp.parent_id,
+    pp.package_id,
+    pp.purchase_date,
+    pp.total_amount,
+    pp.max_assignable_students,
+    pp.status,
+    pkg.name as package_name,
+    a.full_name as parent_name,
+    COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as students_assigned
+FROM package_purchase pp
+JOIN study_package pkg ON pp.package_id = pkg.id
+JOIN account a ON pp.parent_id = a.id
+LEFT JOIN student_package sp ON pp.id = sp.purchase_id
+GROUP BY pp.id, pp.parent_id, pp.package_id, pp.purchase_date, pp.total_amount, 
+         pp.max_assignable_students, pp.status, pkg.name, a.full_name;

@@ -532,21 +532,57 @@
                             <div class="package-stats">
                                 <div class="stat-item">
                                     <div class="stat-number">${packageInfo.maxStudents}</div>
-                                    <div class="stat-label">Max Students</div>
+                                    <div class="stat-label">Slots Per Purchase</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-number">
+                                        <c:set var="totalSlots" value="0"/>
+                                        <c:forEach items="${packageInfo.purchaseHistory}" var="purchase">
+                                            <c:set var="totalSlots" value="${totalSlots + purchase.maxAssignableStudents}"/>
+                                        </c:forEach>
+                                        ${totalSlots}
+                                    </div>
+                                    <div class="stat-label">Total Purchased Slots</div>
                                 </div>
                                 <div class="stat-item">
                                     <div class="stat-number">${packageInfo.activeAssignments}</div>
-                                    <div class="stat-label">Active Assignments</div>
+                                    <div class="stat-label">Currently Assigned</div>
                                 </div>
                                 <div class="stat-item">
-                                    <div class="stat-number">${packageInfo.totalAssignments}</div>
-                                    <div class="stat-label">Total Assignments</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-number">${packageInfo.maxStudents - packageInfo.activeAssignments}</div>
+                                    <div class="stat-number">${totalSlots - packageInfo.activeAssignments}</div>
                                     <div class="stat-label">Available Slots</div>
                                 </div>
                             </div>
+
+                            <!-- Purchase History Section -->
+                            <c:if test="${not empty packageInfo.purchaseHistory}">
+                                <div class="assignments-section">
+                                    <div class="section-title">
+                                        <i class="fas fa-receipt"></i> Purchase History (${fn:length(packageInfo.purchaseHistory)} purchases)
+                                    </div>
+                                    <div class="assignment-grid">
+                                        <c:forEach items="${packageInfo.purchaseHistory}" var="purchase">
+                                            <div class="student-assignment" style="border-left-color: #17a2b8;">
+                                                <div class="student-name">
+                                                    <i class="fas fa-shopping-cart"></i> Purchase #${purchase.purchaseId}
+                                                </div>
+                                                <div class="assignment-info">
+                                                    <div><strong>Date:</strong> 
+                                                        <fmt:formatDate value="${purchase.purchaseDate}" pattern="dd/MM/yyyy HH:mm"/>
+                                                    </div>
+                                                    <div><strong>Amount:</strong> ${purchase.totalAmount} VND</div>
+                                                    <div><strong>Slots Purchased:</strong> ${purchase.maxAssignableStudents}</div>
+                                                    <div><strong>Students Assigned:</strong> ${purchase.studentsAssigned}</div>
+                                                    <div><strong>Available:</strong> ${purchase.maxAssignableStudents - purchase.studentsAssigned}</div>
+                                                </div>
+                                                <span class="status-badge status-${purchase.status == 'COMPLETED' ? 'active' : 'inactive'}">
+                                                    ${purchase.status}
+                                                </span>
+                                            </div>
+                                        </c:forEach>
+                                    </div>
+                                </div>
+                            </c:if>
 
                             <!-- Student Assignments -->
                             <div class="assignments-section">

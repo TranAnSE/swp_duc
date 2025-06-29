@@ -198,47 +198,49 @@
 
             <!-- Package Statistics -->
             <div class="package-stats">
-                <!-- Information about package limits and current assignments -->
-                <div class="package-stats">
-                    <h6><i class="fas fa-info-circle"></i> Package Assignment Status</h6>
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-number">${studyPackage.max_students}</div>
-                            <div class="stat-label">Max Students Per Parent</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number">${currentParentAssignments}</div>
-                            <div class="stat-label">Your Current Assignments</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number" style="color: #28a745;">${availableSlots}</div>
-                            <div class="stat-label">Your Available Slots</div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Add info message if some children already have the package -->
-                <c:if test="${not empty infoMessage}">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>Note:</strong> ${infoMessage}
-                    </div>
-                </c:if>
-                <h6><i class="fas fa-chart-bar"></i> Package Availability (Per Parent Limit)</h6>
+                <h6><i class="fas fa-chart-bar"></i> Your Package Purchase History</h6>
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-number">${studyPackage.max_students}</div>
-                        <div class="stat-label">Max Students Per Parent</div>
+                        <div class="stat-label">Slots Per Purchase</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">${currentParentAssignments}</div>
-                        <div class="stat-label">Your Current Assignments</div>
+                        <div class="stat-number">${totalPurchasedSlots}</div>
+                        <div class="stat-label">Total Purchased Slots</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">${currentlyAssigned}</div>
+                        <div class="stat-label">Currently Assigned</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number" style="color: #28a745;">${availableSlots}</div>
-                        <div class="stat-label">Your Available Slots</div>
+                        <div class="stat-label">Available Slots</div>
                     </div>
                 </div>
+
+                <c:if test="${not empty purchaseHistory}">
+                    <div style="margin-top: 20px;">
+                        <h6><i class="fas fa-history"></i> Purchase History</h6>
+                        <div style="max-height: 200px; overflow-y: auto;">
+                            <c:forEach items="${purchaseHistory}" var="purchase">
+                                <div style="background: #f8f9fa; padding: 10px; margin: 5px 0; border-radius: 5px; font-size: 0.9em;">
+                                    <strong>Purchase Date:</strong> <fmt:formatDate value="${purchase.purchaseDate}" pattern="dd/MM/yyyy HH:mm"/> |
+                                    <strong>Amount:</strong> ${purchase.totalAmount} VND |
+                                    <strong>Slots:</strong> ${purchase.maxAssignableStudents} |
+                                    <strong>Used:</strong> ${purchase.studentsAssigned}
+                                </div>
+                            </c:forEach>
+                        </div>
+                    </div>
+                </c:if>
             </div>
+
+            <c:if test="${not empty purchaseInfoMessage}">
+                <div class="warning-text">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Purchase Information:</strong> ${purchaseInfoMessage}
+                </div>
+            </c:if>
 
             <c:choose>
                 <c:when test="${not empty children || not empty unavailableChildren}">
@@ -437,11 +439,22 @@
                                                 return;
 
                                             if (selectedCount > 0) {
+                                                const availableSlots = ${availableSlots};
+                                                const needsNewPurchase = selectedCount > availableSlots;
+
                                                 purchaseBtn.disabled = false;
-                                                purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase Package for ' +
-                                                        selectedCount + ' Student(s) - ' +
-                                                        packagePrice.toLocaleString() + ' VND';
-                                                purchaseBtn.className = 'btn btn-success';
+
+                                                if (needsNewPurchase) {
+                                                    const additionalSlotsNeeded = selectedCount - availableSlots;
+                                                    purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase Additional Slots & Assign to ' +
+                                                            selectedCount + ' Student(s) - ' +
+                                                            packagePrice.toLocaleString() + ' VND';
+                                                    purchaseBtn.className = 'btn btn-warning';
+                                                } else {
+                                                    purchaseBtn.innerHTML = '<i class="fas fa-user-plus"></i> Assign to ' +
+                                                            selectedCount + ' Student(s) (Using Available Slots)';
+                                                    purchaseBtn.className = 'btn btn-success';
+                                                }
                                             } else {
                                                 purchaseBtn.disabled = true;
                                                 purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Select Students First';
@@ -495,6 +508,8 @@
                                         // Update form submission to handle partial assignment
                                         $('#purchaseForm').on('submit', function (e) {
                                             const selectedCount = selectedStudents.size;
+                                            const availableSlots = ${availableSlots};
+                                            const needsNewPurchase = selectedCount > availableSlots;
 
                                             if (selectedCount === 0) {
                                                 e.preventDefault();
@@ -502,17 +517,29 @@
                                                 return false;
                                             }
 
-                                            // Confirmation message with clear information
-                                            const confirmMessage = 'Purchase Confirmation:\n\n' +
+                                            let confirmMessage = 'Assignment Confirmation:\n\n' +
                                                     'Package: ${studyPackage.name}\n' +
                                                     'Students to assign: ' + selectedCount + '\n' +
-                                                    'Duration: ${studyPackage.duration_days} days each\n' +
-                                                    'Total Cost: ' + packagePrice.toLocaleString() + ' VND\n\n' +
-                                                    'Your package usage after this purchase:\n' +
-                                                    'Current assignments: ${currentParentAssignments}\n' +
+                                                    'Duration: ${studyPackage.duration_days} days each\n\n';
+
+                                            if (needsNewPurchase) {
+                                                const additionalSlotsNeeded = selectedCount - availableSlots;
+                                                confirmMessage += 'PURCHASE REQUIRED:\n' +
+                                                        'Available slots: ' + availableSlots + '\n' +
+                                                        'Additional slots needed: ' + additionalSlotsNeeded + '\n' +
+                                                        'Cost for additional purchase: ' + packagePrice.toLocaleString() + ' VND\n\n' +
+                                                        'This will give you ' + ${studyPackage.max_students} + ' more slots to use.\n\n';
+                                            } else {
+                                                confirmMessage += 'Using existing available slots: ' + availableSlots + '\n' +
+                                                        'No additional payment required.\n\n';
+                                            }
+
+                                            confirmMessage += 'Your package usage after this assignment:\n' +
+                                                    'Total purchased slots: ' + (${totalPurchasedSlots} + (needsNewPurchase ? ${studyPackage.max_students} : 0)) + '\n' +
+                                                    'Currently assigned: ' + ${currentlyAssigned} + '\n' +
                                                     'New assignments: ' + selectedCount + '\n' +
-                                                    'Total: ' + (${currentParentAssignments} + selectedCount) + '/${studyPackage.max_students}\n\n' +
-                                                    'Do you want to proceed with the payment?';
+                                                    'Remaining available: ' + (availableSlots + (needsNewPurchase ? ${studyPackage.max_students} : 0) - selectedCount) + '\n\n' +
+                                                    'Do you want to proceed?';
 
                                             if (!confirm(confirmMessage)) {
                                                 e.preventDefault();

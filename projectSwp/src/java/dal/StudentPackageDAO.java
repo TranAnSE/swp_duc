@@ -14,12 +14,15 @@ import java.util.Map;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import model.PackagePurchase;
 
 /**
  *
  * @author ankha
  */
 public class StudentPackageDAO extends DBContext {
+
+    private PackagePurchaseDAO packagePurchaseDAO = new PackagePurchaseDAO();
 
     // Assign package to student
     public boolean assignPackageToStudent(int studentId, int packageId, int parentId, int durationDays) {
@@ -715,5 +718,56 @@ public class StudentPackageDAO extends DBContext {
             e.printStackTrace();
         }
         return list;
+    }
+
+    public boolean assignPackageToStudentWithPurchase(int studentId, int packageId, int parentId, int durationDays) {
+        // Find an available purchase for this parent and package
+        PackagePurchase availablePurchase = packagePurchaseDAO.getAvailablePurchaseForAssignment(parentId, packageId);
+
+        if (availablePurchase == null) {
+            System.out.println("No available purchase found for parent " + parentId + " and package " + packageId);
+            return false;
+        }
+
+        // Check if student already has active package
+        if (hasStudentActivePackage(studentId, packageId)) {
+            System.out.println("Student " + studentId + " already has active package " + packageId);
+            return false;
+        }
+
+        String sql = "INSERT INTO student_package (student_id, package_id, parent_id, expires_at, purchase_id) VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, packageId);
+            ps.setInt(3, parentId);
+            ps.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now().plusDays(durationDays)));
+            ps.setInt(5, availablePurchase.getId());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // Get parent's total available slots across all purchases
+    public Map<String, Integer> getParentTotalAvailableSlots(int parentId, int packageId) {
+        return packagePurchaseDAO.getParentAvailableSlots(parentId, packageId);
+    }
+
+// Updated method to count parent assigned students across all purchases
+    public int countParentAssignedStudentsTotal(int parentId, int packageId) {
+        Map<String, Integer> slots = getParentTotalAvailableSlots(parentId, packageId);
+        return slots.getOrDefault("currentlyAssigned", 0);
+    }
+
+// Check if parent has any available slots across all purchases
+    public boolean hasParentAvailableSlotsAcrossPurchases(int parentId, int packageId) {
+        Map<String, Integer> slots = getParentTotalAvailableSlots(parentId, packageId);
+        return slots.getOrDefault("availableSlots", 0) > 0;
+    }
+
+// Get parent's purchase history
+    public List<Map<String, Object>> getParentPurchaseHistory(int parentId, int packageId) {
+        return packagePurchaseDAO.getParentPurchaseHistory(parentId, packageId);
     }
 }
