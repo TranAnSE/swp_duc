@@ -105,13 +105,24 @@ public class CourseController extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        // Check authorization first
         if (!AuthUtil.hasRole(request, RoleConstants.ADMIN)
                 && !AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
-            response.sendRedirect("/error.jsp");
-            return;
+
+            // For AJAX requests, return JSON error
+            if (isAjaxRequest(request)) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\": false, \"message\": \"Access denied\"}");
+                return;
+            } else {
+                response.sendRedirect("/error.jsp");
+                return;
+            }
         }
 
         String action = request.getParameter("action");
+        System.out.println("CourseController POST - Action: " + action); // Debug log
 
         try {
             switch (action) {
@@ -122,6 +133,7 @@ public class CourseController extends HttpServlet {
                     updateCourse(request, response);
                     break;
                 case "addChapter":
+                    System.out.println("Processing addChapter request"); // Debug log
                     addChapterToCourse(request, response);
                     break;
                 case "removeChapter":
@@ -140,14 +152,23 @@ public class CourseController extends HttpServlet {
                     saveDraft(request, response);
                     break;
                 case "submit":
-                    submitForApproval(request, response);
+                    submitForApprovalPost(request, response);
                     break;
                 default:
-                    response.sendRedirect("course");
+                    System.out.println("Unknown action: " + action); // Debug log
+                    if (isAjaxRequest(request)) {
+                        response.setContentType("application/json");
+                        response.setCharacterEncoding("UTF-8");
+                        response.getWriter().write("{\"success\": false, \"message\": \"Unknown action: " + action + "\"}");
+                    } else {
+                        response.sendRedirect("course");
+                    }
                     break;
             }
         } catch (Exception e) {
             e.printStackTrace();
+            System.out.println("Error in CourseController POST: " + e.getMessage()); // Debug log
+
             // Return JSON error response for AJAX requests
             if (isAjaxRequest(request)) {
                 response.setContentType("application/json");
@@ -409,28 +430,47 @@ public class CourseController extends HttpServlet {
 
     private void addChapterToCourse(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
+        System.out.println("addChapterToCourse method called"); // Debug log
+
+        // Set response type before any processing
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        try (PrintWriter out = response.getWriter()) {
-            int courseId = Integer.parseInt(request.getParameter("courseId"));
-            int chapterId = Integer.parseInt(request.getParameter("chapterId"));
+        try {
+            String courseIdParam = request.getParameter("courseId");
+            String chapterIdParam = request.getParameter("chapterId");
+
+            System.out.println("Parameters - courseId: " + courseIdParam + ", chapterId: " + chapterIdParam); // Debug log
+
+            if (courseIdParam == null || chapterIdParam == null) {
+                response.getWriter().write("{\"success\": false, \"message\": \"Missing required parameters\"}");
+                return;
+            }
+
+            int courseId = Integer.parseInt(courseIdParam);
+            int chapterId = Integer.parseInt(chapterIdParam);
 
             // Get next display order
             int displayOrder = courseManagementDAO.getNextChapterOrder(courseId);
+            System.out.println("Display order: " + displayOrder); // Debug log
 
             boolean success = courseManagementDAO.addChapterToCourse(courseId, chapterId, displayOrder);
+            System.out.println("Add chapter result: " + success); // Debug log
 
             if (success) {
-                out.write("{\"success\": true, \"message\": \"Chapter added successfully\"}");
+                response.getWriter().write("{\"success\": true, \"message\": \"Chapter added successfully\"}");
             } else {
-                out.write("{\"success\": false, \"message\": \"Failed to add chapter\"}");
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to add chapter\"}");
             }
+
+        } catch (NumberFormatException e) {
+            System.out.println("Number format error: " + e.getMessage()); // Debug log
+            response.getWriter().write("{\"success\": false, \"message\": \"Invalid number format\"}");
         } catch (Exception e) {
-            response.setContentType("application/json");
-            try (PrintWriter out = response.getWriter()) {
-                out.write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
-            }
+            e.printStackTrace();
+            System.out.println("Exception in addChapterToCourse: " + e.getMessage()); // Debug log
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
         }
     }
 
@@ -439,22 +479,20 @@ public class CourseController extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        try (PrintWriter out = response.getWriter()) {
+        try {
             int courseId = Integer.parseInt(request.getParameter("courseId"));
             int chapterId = Integer.parseInt(request.getParameter("chapterId"));
 
             boolean success = courseManagementDAO.removeChapterFromCourse(courseId, chapterId);
 
             if (success) {
-                out.write("{\"success\": true, \"message\": \"Chapter removed successfully\"}");
+                response.getWriter().write("{\"success\": true, \"message\": \"Chapter removed successfully\"}");
             } else {
-                out.write("{\"success\": false, \"message\": \"Failed to remove chapter\"}");
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to remove chapter\"}");
             }
         } catch (Exception e) {
-            response.setContentType("application/json");
-            try (PrintWriter out = response.getWriter()) {
-                out.write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
-            }
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
         }
     }
 
@@ -463,7 +501,7 @@ public class CourseController extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        try (PrintWriter out = response.getWriter()) {
+        try {
             int courseId = Integer.parseInt(request.getParameter("courseId"));
             int lessonId = Integer.parseInt(request.getParameter("lessonId"));
             int chapterId = Integer.parseInt(request.getParameter("chapterId"));
@@ -479,15 +517,13 @@ public class CourseController extends HttpServlet {
             boolean success = courseManagementDAO.addLessonToCourse(courseId, lessonId, chapterId, displayOrder, lessonType);
 
             if (success) {
-                out.write("{\"success\": true, \"message\": \"Lesson added successfully\"}");
+                response.getWriter().write("{\"success\": true, \"message\": \"Lesson added successfully\"}");
             } else {
-                out.write("{\"success\": false, \"message\": \"Failed to add lesson\"}");
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to add lesson\"}");
             }
         } catch (Exception e) {
-            response.setContentType("application/json");
-            try (PrintWriter out = response.getWriter()) {
-                out.write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
-            }
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
         }
     }
 
@@ -496,22 +532,20 @@ public class CourseController extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        try (PrintWriter out = response.getWriter()) {
+        try {
             int courseId = Integer.parseInt(request.getParameter("courseId"));
             int lessonId = Integer.parseInt(request.getParameter("lessonId"));
 
             boolean success = courseManagementDAO.removeLessonFromCourse(courseId, lessonId);
 
             if (success) {
-                out.write("{\"success\": true, \"message\": \"Lesson removed successfully\"}");
+                response.getWriter().write("{\"success\": true, \"message\": \"Lesson removed successfully\"}");
             } else {
-                out.write("{\"success\": false, \"message\": \"Failed to remove lesson\"}");
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to remove lesson\"}");
             }
         } catch (Exception e) {
-            response.setContentType("application/json");
-            try (PrintWriter out = response.getWriter()) {
-                out.write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
-            }
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
         }
     }
 
@@ -520,28 +554,26 @@ public class CourseController extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        try (PrintWriter out = response.getWriter()) {
+        try {
             int courseId = Integer.parseInt(request.getParameter("courseId"));
             String contentType = request.getParameter("contentType");
             String[] contentIds = request.getParameterValues("contentIds");
 
             if (contentIds == null || contentIds.length == 0) {
-                out.write("{\"success\": false, \"message\": \"No content to reorder\"}");
+                response.getWriter().write("{\"success\": false, \"message\": \"No content to reorder\"}");
                 return;
             }
 
             boolean success = courseManagementDAO.reorderCourseContent(courseId, contentType, contentIds);
 
             if (success) {
-                out.write("{\"success\": true, \"message\": \"Content reordered successfully\"}");
+                response.getWriter().write("{\"success\": true, \"message\": \"Content reordered successfully\"}");
             } else {
-                out.write("{\"success\": false, \"message\": \"Failed to reorder content\"}");
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to reorder content\"}");
             }
         } catch (Exception e) {
-            response.setContentType("application/json");
-            try (PrintWriter out = response.getWriter()) {
-                out.write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
-            }
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
         }
     }
 
@@ -550,22 +582,40 @@ public class CourseController extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        try (PrintWriter out = response.getWriter()) {
+        try {
             int courseId = Integer.parseInt(request.getParameter("courseId"));
 
             // Update course's updated_at timestamp
             boolean success = courseManagementDAO.updateCourseTimestamp(courseId);
 
             if (success) {
-                out.write("{\"success\": true, \"message\": \"Draft saved successfully\"}");
+                response.getWriter().write("{\"success\": true, \"message\": \"Draft saved successfully\"}");
             } else {
-                out.write("{\"success\": false, \"message\": \"Failed to save draft\"}");
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to save draft\"}");
             }
         } catch (Exception e) {
-            response.setContentType("application/json");
-            try (PrintWriter out = response.getWriter()) {
-                out.write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+        }
+    }
+
+    private void submitForApprovalPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            boolean success = courseManagementDAO.submitCourseForApproval(courseId);
+
+            if (success) {
+                response.getWriter().write("{\"success\": true, \"message\": \"Course submitted for approval successfully\"}");
+            } else {
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to submit course for approval\"}");
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
         }
     }
 
@@ -781,11 +831,14 @@ public class CourseController extends HttpServlet {
                 .replace("\t", "\\t");
     }
 
-    // Helper method to check if request is AJAX
+    // Helper method to detect AJAX requests
     private boolean isAjaxRequest(HttpServletRequest request) {
-        String contentType = request.getContentType();
+        String requestedWith = request.getHeader("X-Requested-With");
         String accept = request.getHeader("Accept");
-        return (contentType != null && contentType.contains("application/x-www-form-urlencoded"))
-                || (accept != null && accept.contains("application/json"));
+        String contentType = request.getContentType();
+
+        return "XMLHttpRequest".equals(requestedWith)
+                || (accept != null && accept.contains("application/json"))
+                || (contentType != null && contentType.contains("application/x-www-form-urlencoded"));
     }
 }

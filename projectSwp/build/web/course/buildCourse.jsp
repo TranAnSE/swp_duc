@@ -596,28 +596,38 @@
 
                                 console.log('Adding chapter to course:', chapterId);
 
-                                const formData = new FormData();
-                                formData.append('action', 'addChapter');
-                                formData.append('courseId', '${courseId}');
-                                formData.append('chapterId', chapterId);
+                                // Use URLSearchParams for proper form encoding
+                                const params = new URLSearchParams();
+                                params.append('action', 'addChapter');
+                                params.append('courseId', '${courseId}');
+                                params.append('chapterId', chapterId);
 
                                 fetch('${pageContext.request.contextPath}/course', {
                                     method: 'POST',
-                                    body: formData
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                        'X-Requested-With': 'XMLHttpRequest'  // Mark as AJAX request
+                                    },
+                                    body: params.toString()
                                 })
                                         .then(response => {
                                             console.log('Response status:', response.status);
+                                            console.log('Response headers:', response.headers.get('content-type'));
+
                                             if (!response.ok) {
-                                                throw new Error('Network response was not ok');
+                                                throw new Error('Network response was not ok: ' + response.status);
                                             }
-                                            return response.text().then(text => {
-                                                try {
-                                                    return JSON.parse(text);
-                                                } catch (e) {
-                                                    console.error('Response is not JSON:', text);
-                                                    throw new Error('Invalid JSON response');
-                                                }
-                                            });
+
+                                            // Check if response is JSON
+                                            const contentType = response.headers.get('content-type');
+                                            if (!contentType || !contentType.includes('application/json')) {
+                                                return response.text().then(text => {
+                                                    console.error('Expected JSON but got:', text.substring(0, 500));
+                                                    throw new Error('Server returned HTML instead of JSON');
+                                                });
+                                            }
+
+                                            return response.json();
                                         })
                                         .then(data => {
                                             console.log('Response data:', data);
@@ -721,28 +731,34 @@
                                     return;
                                 }
 
-                                const formData = new FormData();
-                                formData.append('action', 'addLesson');
-                                formData.append('courseId', '${courseId}');
-                                formData.append('lessonId', lessonId);
-                                formData.append('chapterId', chapterId);
+                                const params = new URLSearchParams();
+                                params.append('action', 'addLesson');
+                                params.append('courseId', '${courseId}');
+                                params.append('lessonId', lessonId);
+                                params.append('chapterId', chapterId);
 
                                 fetch('${pageContext.request.contextPath}/course', {
                                     method: 'POST',
-                                    body: formData
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: params.toString()
                                 })
                                         .then(response => {
                                             if (!response.ok) {
                                                 throw new Error('Network response was not ok');
                                             }
-                                            return response.text().then(text => {
-                                                try {
-                                                    return JSON.parse(text);
-                                                } catch (e) {
-                                                    console.error('Response is not JSON:', text);
-                                                    throw new Error('Invalid JSON response');
-                                                }
-                                            });
+
+                                            const contentType = response.headers.get('content-type');
+                                            if (!contentType || !contentType.includes('application/json')) {
+                                                return response.text().then(text => {
+                                                    console.error('Expected JSON but got:', text.substring(0, 500));
+                                                    throw new Error('Server returned HTML instead of JSON');
+                                                });
+                                            }
+
+                                            return response.json();
                                         })
                                         .then(data => {
                                             if (data.success) {
@@ -797,27 +813,33 @@
                                     return;
                                 }
 
-                                const formData = new FormData();
-                                formData.append('action', actionMap[type]);
-                                formData.append('courseId', '${courseId}');
-                                formData.append(paramMap[type], id);
+                                const params = new URLSearchParams();
+                                params.append('action', actionMap[type]);
+                                params.append('courseId', '${courseId}');
+                                params.append(paramMap[type], id);
 
                                 fetch('${pageContext.request.contextPath}/course', {
                                     method: 'POST',
-                                    body: formData
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: params.toString()
                                 })
                                         .then(response => {
                                             if (!response.ok) {
                                                 throw new Error('Network response was not ok');
                                             }
-                                            return response.text().then(text => {
-                                                try {
-                                                    return JSON.parse(text);
-                                                } catch (e) {
-                                                    console.error('Response is not JSON:', text);
-                                                    throw new Error('Invalid JSON response');
-                                                }
-                                            });
+
+                                            const contentType = response.headers.get('content-type');
+                                            if (!contentType || !contentType.includes('application/json')) {
+                                                return response.text().then(text => {
+                                                    console.error('Expected JSON but got:', text.substring(0, 500));
+                                                    throw new Error('Server returned HTML instead of JSON');
+                                                });
+                                            }
+
+                                            return response.json();
                                         })
                                         .then(data => {
                                             if (data.success) {
@@ -893,26 +915,32 @@
                                             }
 
                                             function saveDraft() {
-                                                const formData = new FormData();
-                                                formData.append('action', 'saveDraft');
-                                                formData.append('courseId', '${courseId}');
+                                                const params = new URLSearchParams();
+                                                params.append('action', 'saveDraft');
+                                                params.append('courseId', '${courseId}');
 
                                                 fetch('${pageContext.request.contextPath}/course', {
                                                     method: 'POST',
-                                                    body: formData
+                                                    headers: {
+                                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                                        'X-Requested-With': 'XMLHttpRequest'
+                                                    },
+                                                    body: params.toString()
                                                 })
                                                         .then(response => {
                                                             if (!response.ok) {
                                                                 throw new Error('Network response was not ok');
                                                             }
-                                                            return response.text().then(text => {
-                                                                try {
-                                                                    return JSON.parse(text);
-                                                                } catch (e) {
-                                                                    console.error('Response is not JSON:', text);
-                                                                    throw new Error('Invalid JSON response');
-                                                                }
-                                                            });
+
+                                                            const contentType = response.headers.get('content-type');
+                                                            if (!contentType || !contentType.includes('application/json')) {
+                                                                return response.text().then(text => {
+                                                                    console.error('Expected JSON but got:', text.substring(0, 500));
+                                                                    throw new Error('Server returned HTML instead of JSON');
+                                                                });
+                                                            }
+
+                                                            return response.json();
                                                         })
                                                         .then(data => {
                                                             if (data.success) {
