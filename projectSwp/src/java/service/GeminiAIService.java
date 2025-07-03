@@ -33,7 +33,7 @@ public class GeminiAIService {
     private static final Logger logger = Logger.getLogger(GeminiAIService.class.getName());
 
     // Replace with your actual Gemini API key from Google AI Studio
-    private static final String API_KEY = "AIzaSyB8LPs9N0FcItmotUwp9x5cREowJI5kDMU"; // Enter ur actual API KEY
+    private static final String API_KEY = "AIzaSyDoKiCkuO-u5sQONk97rhncxOPy0bo7PII"; // Enter ur actual API KEY
     private static final String MODEL = "gemini-2.5-flash";
     private static final String API_URL = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL + ":generateContent";
 

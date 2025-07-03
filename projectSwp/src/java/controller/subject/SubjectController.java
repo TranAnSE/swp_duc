@@ -28,7 +28,6 @@ public class SubjectController extends HttpServlet {
             resp.sendRedirect("/error.jsp");
             return;
         }
-
         try {
             // Load grade map for display
             GradeDAO daoGrade = new GradeDAO();
@@ -60,16 +59,6 @@ public class SubjectController extends HttpServlet {
                 req.setAttribute("subject", newSubject);
                 req.getRequestDispatcher("Subject/addSubject.jsp").forward(req, resp);
 
-            } else if ("clearNotification".equals(action)) {
-                // Clear session notification attributes
-                HttpSession session = req.getSession();
-                session.removeAttribute("subjectCreated");
-                session.removeAttribute("newSubjectId");
-                session.removeAttribute("newSubjectName");
-                session.removeAttribute("newSubjectGradeId");
-                resp.setStatus(HttpServletResponse.SC_OK);
-                return;
-
             } else {
                 String name = req.getParameter("name");
                 List<Subject> subjectList = (name != null && !name.trim().isEmpty())
@@ -91,7 +80,6 @@ public class SubjectController extends HttpServlet {
             resp.sendRedirect("/error.jsp");
             return;
         }
-
         try {
             String idStr = req.getParameter("id");
             String name = req.getParameter("name");
@@ -106,12 +94,12 @@ public class SubjectController extends HttpServlet {
             if (idStr == null || idStr.trim().isEmpty()) {
                 // Insert new subject
                 daoSubject.insert(subject);
-
+                
                 // Get the inserted subject ID for course creation redirect
                 List<Subject> subjects = daoSubject.findByNameOfSubject(name);
                 if (!subjects.isEmpty()) {
                     Subject insertedSubject = subjects.get(0);
-
+                    
                     // Set success message with course creation option
                     req.getSession().setAttribute("subjectCreated", true);
                     req.getSession().setAttribute("newSubjectId", insertedSubject.getId());

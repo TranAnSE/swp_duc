@@ -16,11 +16,13 @@ import util.AuthUtil;
 import util.RoleConstants;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.ArrayList;
 
 /**
  *
@@ -82,6 +84,12 @@ public class CourseController extends HttpServlet {
                 case "deactivate":
                     deactivateCourse(request, response);
                     break;
+                case "getChapters":
+                    getChaptersBySubject(request, response);
+                    return;
+                case "getLessons":
+                    getLessonsByChapter(request, response);
+                    return;
                 default:
                     listCourses(request, response);
                     break;
@@ -116,11 +124,23 @@ public class CourseController extends HttpServlet {
                 case "addChapter":
                     addChapterToCourse(request, response);
                     break;
+                case "removeChapter":
+                    removeChapterFromCourse(request, response);
+                    break;
                 case "addLesson":
                     addLessonToCourse(request, response);
                     break;
+                case "removeLesson":
+                    removeLessonFromCourse(request, response);
+                    break;
                 case "reorderContent":
                     reorderCourseContent(request, response);
+                    break;
+                case "saveDraft":
+                    saveDraft(request, response);
+                    break;
+                case "submit":
+                    submitForApproval(request, response);
                     break;
                 default:
                     response.sendRedirect("course");
@@ -128,8 +148,15 @@ public class CourseController extends HttpServlet {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            request.setAttribute("errorMessage", "Error processing request: " + e.getMessage());
-            response.sendRedirect("course");
+            // Return JSON error response for AJAX requests
+            if (isAjaxRequest(request)) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+            } else {
+                request.setAttribute("errorMessage", "Error processing request: " + e.getMessage());
+                response.sendRedirect("course");
+            }
         }
     }
 
@@ -302,11 +329,309 @@ public class CourseController extends HttpServlet {
         }
     }
 
-    private void submitForApproval(HttpServletRequest request, HttpServletResponse response)
+    private void showEditForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
             int courseId = Integer.parseInt(request.getParameter("id"));
 
+            Map<String, Object> courseDetails = courseManagementDAO.getCourseDetails(courseId);
+            if (courseDetails == null) {
+                request.setAttribute("errorMessage", "Course not found.");
+                response.sendRedirect("course");
+                return;
+            }
+
+            // Check permissions
+            HttpSession session = request.getSession();
+            Account account = (Account) session.getAttribute("account");
+
+            if (!AuthUtil.hasRole(request, RoleConstants.ADMIN)) {
+                Integer createdBy = (Integer) courseDetails.get("created_by");
+                if (createdBy == null || !createdBy.equals(account.getId())) {
+                    request.setAttribute("errorMessage", "You don't have permission to edit this course.");
+                    response.sendRedirect("course");
+                    return;
+                }
+
+                String approvalStatus = (String) courseDetails.get("approval_status");
+                if ("PENDING_APPROVAL".equals(approvalStatus)) {
+                    request.setAttribute("errorMessage", "Course is pending approval and cannot be edited.");
+                    response.sendRedirect("course");
+                    return;
+                }
+            }
+
+            // Load grades and subjects for form
+            List<Grade> grades = gradeDAO.findAllFromGrade();
+            List<Subject> subjects = subjectDAO.findAll();
+
+            request.setAttribute("courseDetails", courseDetails);
+            request.setAttribute("grades", grades);
+            request.setAttribute("subjects", subjects);
+            request.setAttribute("isEdit", true);
+
+            request.getRequestDispatcher("/course/courseForm.jsp").forward(request, response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Error loading edit form: " + e.getMessage());
+            response.sendRedirect("course");
+        }
+    }
+
+    private void updateCourse(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            String courseTitle = request.getParameter("courseTitle");
+            String price = request.getParameter("price");
+            int durationDays = Integer.parseInt(request.getParameter("durationDays"));
+            String description = request.getParameter("description");
+            int subjectId = Integer.parseInt(request.getParameter("subjectId"));
+
+            boolean success = courseManagementDAO.updateCourse(courseId, courseTitle, price,
+                    durationDays, description, subjectId);
+
+            if (success) {
+                request.setAttribute("message", "Course updated successfully!");
+                response.sendRedirect("course?action=build&id=" + courseId);
+            } else {
+                request.setAttribute("errorMessage", "Failed to update course.");
+                showEditForm(request, response);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Error updating course: " + e.getMessage());
+            response.sendRedirect("course");
+        }
+    }
+
+    private void addChapterToCourse(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try (PrintWriter out = response.getWriter()) {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            int chapterId = Integer.parseInt(request.getParameter("chapterId"));
+
+            // Get next display order
+            int displayOrder = courseManagementDAO.getNextChapterOrder(courseId);
+
+            boolean success = courseManagementDAO.addChapterToCourse(courseId, chapterId, displayOrder);
+
+            if (success) {
+                out.write("{\"success\": true, \"message\": \"Chapter added successfully\"}");
+            } else {
+                out.write("{\"success\": false, \"message\": \"Failed to add chapter\"}");
+            }
+        } catch (Exception e) {
+            response.setContentType("application/json");
+            try (PrintWriter out = response.getWriter()) {
+                out.write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+            }
+        }
+    }
+
+    private void removeChapterFromCourse(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try (PrintWriter out = response.getWriter()) {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            int chapterId = Integer.parseInt(request.getParameter("chapterId"));
+
+            boolean success = courseManagementDAO.removeChapterFromCourse(courseId, chapterId);
+
+            if (success) {
+                out.write("{\"success\": true, \"message\": \"Chapter removed successfully\"}");
+            } else {
+                out.write("{\"success\": false, \"message\": \"Failed to remove chapter\"}");
+            }
+        } catch (Exception e) {
+            response.setContentType("application/json");
+            try (PrintWriter out = response.getWriter()) {
+                out.write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+            }
+        }
+    }
+
+    private void addLessonToCourse(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try (PrintWriter out = response.getWriter()) {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            int lessonId = Integer.parseInt(request.getParameter("lessonId"));
+            int chapterId = Integer.parseInt(request.getParameter("chapterId"));
+            String lessonType = request.getParameter("lessonType");
+
+            if (lessonType == null) {
+                lessonType = "LESSON";
+            }
+
+            // Get next display order
+            int displayOrder = courseManagementDAO.getNextLessonOrder(courseId, chapterId);
+
+            boolean success = courseManagementDAO.addLessonToCourse(courseId, lessonId, chapterId, displayOrder, lessonType);
+
+            if (success) {
+                out.write("{\"success\": true, \"message\": \"Lesson added successfully\"}");
+            } else {
+                out.write("{\"success\": false, \"message\": \"Failed to add lesson\"}");
+            }
+        } catch (Exception e) {
+            response.setContentType("application/json");
+            try (PrintWriter out = response.getWriter()) {
+                out.write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+            }
+        }
+    }
+
+    private void removeLessonFromCourse(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try (PrintWriter out = response.getWriter()) {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            int lessonId = Integer.parseInt(request.getParameter("lessonId"));
+
+            boolean success = courseManagementDAO.removeLessonFromCourse(courseId, lessonId);
+
+            if (success) {
+                out.write("{\"success\": true, \"message\": \"Lesson removed successfully\"}");
+            } else {
+                out.write("{\"success\": false, \"message\": \"Failed to remove lesson\"}");
+            }
+        } catch (Exception e) {
+            response.setContentType("application/json");
+            try (PrintWriter out = response.getWriter()) {
+                out.write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+            }
+        }
+    }
+
+    private void reorderCourseContent(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try (PrintWriter out = response.getWriter()) {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            String contentType = request.getParameter("contentType");
+            String[] contentIds = request.getParameterValues("contentIds");
+
+            if (contentIds == null || contentIds.length == 0) {
+                out.write("{\"success\": false, \"message\": \"No content to reorder\"}");
+                return;
+            }
+
+            boolean success = courseManagementDAO.reorderCourseContent(courseId, contentType, contentIds);
+
+            if (success) {
+                out.write("{\"success\": true, \"message\": \"Content reordered successfully\"}");
+            } else {
+                out.write("{\"success\": false, \"message\": \"Failed to reorder content\"}");
+            }
+        } catch (Exception e) {
+            response.setContentType("application/json");
+            try (PrintWriter out = response.getWriter()) {
+                out.write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+            }
+        }
+    }
+
+    private void saveDraft(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try (PrintWriter out = response.getWriter()) {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+
+            // Update course's updated_at timestamp
+            boolean success = courseManagementDAO.updateCourseTimestamp(courseId);
+
+            if (success) {
+                out.write("{\"success\": true, \"message\": \"Draft saved successfully\"}");
+            } else {
+                out.write("{\"success\": false, \"message\": \"Failed to save draft\"}");
+            }
+        } catch (Exception e) {
+            response.setContentType("application/json");
+            try (PrintWriter out = response.getWriter()) {
+                out.write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+            }
+        }
+    }
+
+    private void getChaptersBySubject(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int subjectId = Integer.parseInt(request.getParameter("subjectId"));
+            List<Chapter> chapters = chapterDAO.findChapterBySubjectId(subjectId);
+
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < chapters.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Chapter chapter = chapters.get(i);
+                json.append("{\"id\":").append(chapter.getId())
+                        .append(",\"name\":\"").append(escapeJson(chapter.getName()))
+                        .append("\",\"description\":\"").append(escapeJson(chapter.getDescription()))
+                        .append("\"}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            response.getWriter().write("[]");
+        }
+    }
+
+    private void getLessonsByChapter(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int chapterId = Integer.parseInt(request.getParameter("chapterId"));
+            List<Lesson> allLessons = lessonDAO.getAllLessons();
+
+            StringBuilder json = new StringBuilder("[");
+            boolean first = true;
+            for (Lesson lesson : allLessons) {
+                if (lesson.getChapter_id() == chapterId) {
+                    if (!first) {
+                        json.append(",");
+                    }
+                    json.append("{\"id\":").append(lesson.getId())
+                            .append(",\"name\":\"").append(escapeJson(lesson.getName()))
+                            .append("\",\"content\":\"").append(escapeJson(lesson.getContent()))
+                            .append("\"}");
+                    first = false;
+                }
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            response.getWriter().write("[]");
+        }
+    }
+
+    private void submitForApproval(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            int courseId = Integer.parseInt(request.getParameter("id"));
             boolean success = courseManagementDAO.submitCourseForApproval(courseId);
 
             if (success) {
@@ -314,7 +639,6 @@ public class CourseController extends HttpServlet {
             } else {
                 request.setAttribute("errorMessage", "Failed to submit course for approval.");
             }
-
             response.sendRedirect("course");
 
         } catch (Exception e) {
@@ -437,8 +761,6 @@ public class CourseController extends HttpServlet {
             throws ServletException, IOException {
         try {
             int courseId = Integer.parseInt(request.getParameter("id"));
-
-            // Redirect to video viewer for this course
             response.sendRedirect("/video-viewer?courseId=" + courseId);
 
         } catch (Exception e) {
@@ -448,29 +770,22 @@ public class CourseController extends HttpServlet {
         }
     }
 
-    private void showEditForm(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        // Implementation for editing course basic info
-        // Similar to showCreateForm but with pre-filled data
+    private String escapeJson(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
-    private void updateCourse(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        // Implementation for updating course basic info
-    }
-
-    private void addChapterToCourse(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        // Implementation for adding chapters to course
-    }
-
-    private void addLessonToCourse(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        // Implementation for adding lessons to course
-    }
-
-    private void reorderCourseContent(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        // Implementation for reordering course content
+    // Helper method to check if request is AJAX
+    private boolean isAjaxRequest(HttpServletRequest request) {
+        String contentType = request.getContentType();
+        String accept = request.getHeader("Accept");
+        return (contentType != null && contentType.contains("application/x-www-form-urlencoded"))
+                || (accept != null && accept.contains("application/json"));
     }
 }

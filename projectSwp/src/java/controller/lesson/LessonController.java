@@ -147,25 +147,31 @@ public class LessonController extends HttpServlet {
 
         try {
             if ("insert".equals(action)) {
-                // Đọc các tham số từ form
                 String name = request.getParameter("name");
                 String content = request.getParameter("content");
                 int chapterId = Integer.parseInt(request.getParameter("chapter_id"));
 
-                // Tạo đối tượng Lesson mới
                 Lesson lesson = new Lesson(0, name, content, chapterId, "");
 
-                // Xử lý nếu có file video
+                // Handle video file if present
                 Part videoPart = request.getPart("video_file");
                 if (videoPart != null && videoPart.getSize() > 0) {
                     String videoUrl = videoService.uploadAndUpdateLesson(videoPart, lesson);
                     lesson.setVideo_link(videoUrl);
                 }
 
-                // Lưu bài học vào database
                 lessonDAO.addLesson(lesson);
-                request.setAttribute("message", "Thêm bài học thành công");
 
+                // Check if should return to course builder
+                String returnTo = request.getParameter("returnTo");
+                String courseId = request.getParameter("courseId");
+
+                if ("course".equals(returnTo) && courseId != null) {
+                    response.sendRedirect("/course?action=build&id=" + courseId + "&message=Lesson created successfully");
+                    return;
+                }
+
+                request.setAttribute("message", "Lesson added successfully");
             } else if ("update".equals(action)) {
                 int id = Integer.parseInt(request.getParameter("id"));
                 String name = request.getParameter("name");

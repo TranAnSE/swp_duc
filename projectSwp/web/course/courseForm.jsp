@@ -10,7 +10,7 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>Create New Course</title>
+        <title>${isEdit ? 'Edit Course' : 'Create New Course'}</title>
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/bootstrap.min.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
 
@@ -113,13 +113,18 @@
                 line-height: 46px;
                 padding-left: 15px;
             }
+            .text-muted {
+                font-size: 0.875em;
+                color: #6c757d !important;
+                margin-top: 5px;
+            }
         </style>
     </head>
     <body>
         <%@include file="../header.jsp" %>
 
         <div class="form-container">
-            <h2 class="text-center mb-4">Create New Course</h2>
+            <h2 class="text-center mb-4">${isEdit ? 'Edit Course' : 'Create New Course'}</h2>
 
             <c:if test="${not empty errorMessage}">
                 <div class="alert alert-danger">${errorMessage}</div>
@@ -129,89 +134,179 @@
                 <div class="alert alert-success">${message}</div>
             </c:if>
 
-            <form id="courseForm" action="course" method="post">
-                <input type="hidden" name="action" value="create">
+            <c:choose>
+                <c:when test="${isEdit}">
+                    <!-- Edit Mode Form -->
+                    <form id="courseForm" action="course" method="post">
+                        <input type="hidden" name="action" value="update">
+                        <input type="hidden" name="courseId" value="${courseDetails.course_id}">
 
-                <!-- Step 1: Grade and Subject Selection -->
-                <div class="form-group">
-                    <label for="gradeId" class="form-label">Select Grade <span class="required">*</span></label>
-                    <select id="gradeId" name="gradeId" class="form-select" required>
-                        <option value="">-- Select Grade --</option>
-                        <c:forEach items="${grades}" var="grade">
-                            <option value="${grade.id}" 
-                                    ${preSelectedGradeId != null && preSelectedGradeId == grade.id ? 'selected' : ''}>
-                                ${grade.name}
-                            </option>
-                        </c:forEach>
-                    </select>
-                </div>
+                        <!-- Pre-filled form fields -->
+                        <div class="form-group">
+                            <label for="gradeId" class="form-label">Grade <span class="required">*</span></label>
+                            <select id="gradeId" name="gradeId" class="form-select" required disabled>
+                                <c:forEach items="${grades}" var="grade">
+                                    <option value="${grade.id}" 
+                                            ${courseDetails.grade_id == grade.id ? 'selected' : ''}>
+                                        ${grade.name}
+                                    </option>
+                                </c:forEach>
+                            </select>
+                            <small class="text-muted">Grade cannot be changed after course creation</small>
+                        </div>
 
-                <div class="form-group">
-                    <label for="subjectId" class="form-label">Select Subject <span class="required">*</span></label>
-                    <select id="subjectId" name="subjectId" class="form-select" required>
-                        <option value="">-- Select Subject --</option>
-                        <c:forEach items="${subjects}" var="subject">
-                            <option value="${subject.id}" data-grade-id="${subject.grade_id}"
-                                    ${preSelectedSubjectId != null && preSelectedSubjectId == subject.id ? 'selected' : ''}>
-                                ${subject.name}
-                            </option>
-                        </c:forEach>
-                    </select>
-                </div>
+                        <div class="form-group">
+                            <label for="subjectId" class="form-label">Subject <span class="required">*</span></label>
+                            <select id="subjectId" name="subjectId" class="form-select" required disabled>
+                                <c:forEach items="${subjects}" var="subject">
+                                    <option value="${subject.id}" 
+                                            ${courseDetails.subject_id == subject.id ? 'selected' : ''}>
+                                        ${subject.name}
+                                    </option>
+                                </c:forEach>
+                            </select>
+                            <small class="text-muted">Subject cannot be changed after course creation</small>
+                        </div>
 
-                <!-- Hierarchy Display -->
-                <div id="hierarchyDisplay" class="hierarchy-display" style="display: none;">
-                    <h5><i class="fas fa-sitemap"></i> Course Hierarchy</h5>
-                    <div class="hierarchy-path">
-                        <span id="selectedGradeName"></span>
-                        <i class="fas fa-arrow-right hierarchy-arrow"></i>
-                        <span id="selectedSubjectName"></span>
-                        <i class="fas fa-arrow-right hierarchy-arrow"></i>
-                        <span><strong>New Course</strong></span>
-                    </div>
-                </div>
-
-                <!-- Step 2: Course Details -->
-                <div id="courseDetailsSection" style="display: none;">
-                    <div class="form-group">
-                        <label for="courseTitle" class="form-label">Course Title <span class="required">*</span></label>
-                        <input type="text" id="courseTitle" name="courseTitle" class="form-control" 
-                               placeholder="Enter course title" required maxlength="500">
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="price" class="form-label">Price (VND) <span class="required">*</span></label>
-                                <input type="number" id="price" name="price" class="form-control" 
-                                       placeholder="Enter price" required min="0" step="1000">
+                        <!-- Hierarchy Display -->
+                        <div class="hierarchy-display">
+                            <h5><i class="fas fa-sitemap"></i> Course Hierarchy</h5>
+                            <div class="hierarchy-path">
+                                <span>${courseDetails.grade_name}</span>
+                                <i class="fas fa-arrow-right hierarchy-arrow"></i>
+                                <span>${courseDetails.subject_name}</span>
+                                <i class="fas fa-arrow-right hierarchy-arrow"></i>
+                                <span><strong>${courseDetails.course_title}</strong></span>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="durationDays" class="form-label">Duration (Days) <span class="required">*</span></label>
-                                <input type="number" id="durationDays" name="durationDays" class="form-control" 
-                                       placeholder="Enter duration in days" required min="1" max="3650" value="365">
+
+                        <!-- Editable fields -->
+                        <div class="form-group">
+                            <label for="courseTitle" class="form-label">Course Title <span class="required">*</span></label>
+                            <input type="text" id="courseTitle" name="courseTitle" class="form-control" 
+                                   value="${courseDetails.course_title}" required maxlength="500">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="price" class="form-label">Price (VND) <span class="required">*</span></label>
+                                    <input type="number" id="price" name="price" class="form-control" 
+                                           value="${courseDetails.price}" required min="0" step="1000">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="durationDays" class="form-label">Duration (Days) <span class="required">*</span></label>
+                                    <input type="number" id="durationDays" name="durationDays" class="form-control" 
+                                           value="${courseDetails.duration_days}" required min="1" max="3650">
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="form-group">
-                        <label for="description" class="form-label">Course Description</label>
-                        <textarea id="description" name="description" class="form-control" rows="4" 
-                                  placeholder="Enter course description"></textarea>
-                    </div>
+                        <div class="form-group">
+                            <label for="description" class="form-label">Course Description</label>
+                            <textarea id="description" name="description" class="form-control" rows="4">${courseDetails.description}</textarea>
+                        </div>
 
-                    <div class="btn-container">
-                        <button type="submit" class="btn-custom btn-primary-custom">
-                            <i class="fas fa-plus"></i> Create Course
-                        </button>
-                        <a href="${pageContext.request.contextPath}/course" class="btn-custom btn-secondary-custom">
-                            <i class="fas fa-arrow-left"></i> Back to List
-                        </a>
-                    </div>
-                </div>
-            </form>
+                        <div class="btn-container">
+                            <button type="submit" class="btn-custom btn-primary-custom">
+                                <i class="fas fa-save"></i> Update Course
+                            </button>
+                            <a href="${pageContext.request.contextPath}/course?action=build&id=${courseDetails.course_id}" 
+                               class="btn-custom btn-secondary-custom">
+                                <i class="fas fa-arrow-left"></i> Back to Course Builder
+                            </a>
+                        </div>
+                    </form>
+                </c:when>
+                <c:otherwise>
+                    <!-- Create Mode Form (existing form) -->
+                    <form id="courseForm" action="course" method="post">
+                        <input type="hidden" name="action" value="create">
+
+                        <!-- Step 1: Grade and Subject Selection -->
+                        <div class="form-group">
+                            <label for="gradeId" class="form-label">Select Grade <span class="required">*</span></label>
+                            <select id="gradeId" name="gradeId" class="form-select" required>
+                                <option value="">-- Select Grade --</option>
+                                <c:forEach items="${grades}" var="grade">
+                                    <option value="${grade.id}" 
+                                            ${preSelectedGradeId != null && preSelectedGradeId == grade.id ? 'selected' : ''}>
+                                        ${grade.name}
+                                    </option>
+                                </c:forEach>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="subjectId" class="form-label">Select Subject <span class="required">*</span></label>
+                            <select id="subjectId" name="subjectId" class="form-select" required>
+                                <option value="">-- Select Subject --</option>
+                                <c:forEach items="${subjects}" var="subject">
+                                    <option value="${subject.id}" data-grade-id="${subject.grade_id}"
+                                            ${preSelectedSubjectId != null && preSelectedSubjectId == subject.id ? 'selected' : ''}>
+                                        ${subject.name}
+                                    </option>
+                                </c:forEach>
+                            </select>
+                        </div>
+
+                        <!-- Hierarchy Display -->
+                        <div id="hierarchyDisplay" class="hierarchy-display" style="display: none;">
+                            <h5><i class="fas fa-sitemap"></i> Course Hierarchy</h5>
+                            <div class="hierarchy-path">
+                                <span id="selectedGradeName"></span>
+                                <i class="fas fa-arrow-right hierarchy-arrow"></i>
+                                <span id="selectedSubjectName"></span>
+                                <i class="fas fa-arrow-right hierarchy-arrow"></i>
+                                <span><strong>New Course</strong></span>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Course Details -->
+                        <div id="courseDetailsSection" style="display: none;">
+                            <div class="form-group">
+                                <label for="courseTitle" class="form-label">Course Title <span class="required">*</span></label>
+                                <input type="text" id="courseTitle" name="courseTitle" class="form-control" 
+                                       placeholder="Enter course title" required maxlength="500">
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="price" class="form-label">Price (VND) <span class="required">*</span></label>
+                                        <input type="number" id="price" name="price" class="form-control" 
+                                               placeholder="Enter price" required min="0" step="1000">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="durationDays" class="form-label">Duration (Days) <span class="required">*</span></label>
+                                        <input type="number" id="durationDays" name="durationDays" class="form-control" 
+                                               placeholder="Enter duration in days" required min="1" max="3650" value="365">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="description" class="form-label">Course Description</label>
+                                <textarea id="description" name="description" class="form-control" rows="4" 
+                                          placeholder="Enter course description"></textarea>
+                            </div>
+
+                            <div class="btn-container">
+                                <button type="submit" class="btn-custom btn-primary-custom">
+                                    <i class="fas fa-plus"></i> Create Course
+                                </button>
+                                <a href="${pageContext.request.contextPath}/course" class="btn-custom btn-secondary-custom">
+                                    <i class="fas fa-arrow-left"></i> Back to List
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </c:otherwise>
+            </c:choose>
         </div>
 
         <%@include file="../footer.jsp" %>
@@ -223,6 +318,38 @@
 
         <script>
             $(document).ready(function () {
+            <c:choose>
+                <c:when test="${isEdit}">
+                // Edit mode - no dynamic behavior needed
+                // Form validation for edit mode
+                $('#courseForm').on('submit', function (e) {
+                    const courseTitle = $('#courseTitle').val().trim();
+                    const price = $('#price').val();
+                    const durationDays = $('#durationDays').val();
+
+                    if (!courseTitle) {
+                        e.preventDefault();
+                        alert('Please enter a course title.');
+                        return false;
+                    }
+
+                    if (!price || price <= 0) {
+                        e.preventDefault();
+                        alert('Please enter a valid price.');
+                        return false;
+                    }
+
+                    if (!durationDays || durationDays <= 0) {
+                        e.preventDefault();
+                        alert('Please enter a valid duration.');
+                        return false;
+                    }
+
+                    return confirm('Are you sure you want to update this course?');
+                });
+                </c:when>
+                <c:otherwise>
+                // Create mode - original functionality
                 // Initialize Select2
                 $('#gradeId').select2({
                     placeholder: "-- Select Grade --",
@@ -290,11 +417,11 @@
                 }
 
                 // Initialize if pre-selected values exist
-                <c:if test="${preSelectedGradeId != null && preSelectedSubjectId != null}">
+                    <c:if test="${preSelectedGradeId != null && preSelectedSubjectId != null}">
                 updateHierarchyDisplay();
-                </c:if>
+                    </c:if>
 
-                // Form validation
+                // Form validation for create mode
                 $('#courseForm').on('submit', function (e) {
                     const gradeId = $('#gradeId').val();
                     const subjectId = $('#subjectId').val();
@@ -337,6 +464,8 @@
                             'Subject: ' + $('#subjectId option:selected').text() + '\n' +
                             'Course: ' + courseTitle);
                 });
+                </c:otherwise>
+            </c:choose>
             });
         </script>
     </body>

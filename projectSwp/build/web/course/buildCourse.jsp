@@ -66,7 +66,7 @@
             }
             .section-header {
                 display: flex;
-                justify-content: between;
+                justify-content: space-between;
                 align-items: center;
                 margin-bottom: 20px;
                 padding-bottom: 10px;
@@ -89,7 +89,7 @@
             }
             .content-item-header {
                 display: flex;
-                justify-content: between;
+                justify-content: space-between;
                 align-items: center;
             }
             .content-type-badge {
@@ -169,6 +169,35 @@
                 background: #d4edda;
                 border-color: #c3e6cb;
             }
+            .chapter-content {
+                margin-left: 20px;
+                margin-top: 10px;
+            }
+            .lesson-item {
+                background: #ffffff;
+                border-left: 3px solid #28a745;
+                margin-bottom: 5px;
+            }
+            .chapter-lessons {
+                margin-top: 10px;
+            }
+            .add-lesson-btn {
+                background: #e8f5e8;
+                border: 1px dashed #28a745;
+                color: #28a745;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-size: 0.9em;
+                margin-top: 5px;
+            }
+            .modal-content {
+                border-radius: 8px;
+            }
+            .modal-header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border-radius: 8px 8px 0 0;
+            }
         </style>
     </head>
     <body>
@@ -222,6 +251,9 @@
                         <button class="btn btn-outline-primary btn-sm" onclick="toggleAddContent()">
                             <i class="fas fa-plus"></i> Add Content
                         </button>
+                        <a href="course?action=edit&id=${courseId}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-edit"></i> Edit Course Info
+                        </a>
                     </div>
                 </div>
 
@@ -252,7 +284,6 @@
                     <hr class="my-4">
 
                     <!-- Existing Content Selection -->
-                    <h6>Or select from existing content:</h6>
                     <div class="row">
                         <div class="col-md-6">
                             <h6>Available Chapters</h6>
@@ -261,7 +292,12 @@
                                     <div class="list-group" style="max-height: 200px; overflow-y: auto;">
                                         <c:forEach items="${availableChapters}" var="chapter">
                                             <div class="list-group-item d-flex justify-content-between align-items-center">
-                                                <span>${chapter.name}</span>
+                                                <div>
+                                                    <strong>${chapter.name}</strong>
+                                                    <c:if test="${not empty chapter.description}">
+                                                        <br><small class="text-muted">${chapter.description}</small>
+                                                    </c:if>
+                                                </div>
                                                 <button class="btn btn-sm btn-outline-primary" 
                                                         onclick="addChapterToCourse(${chapter.id})">
                                                     <i class="fas fa-plus"></i> Add
@@ -271,9 +307,22 @@
                                     </div>
                                 </c:when>
                                 <c:otherwise>
-                                    <p class="text-muted">No chapters available for this subject. <a href="${pageContext.request.contextPath}/chapter?service=add&returnTo=course&courseId=${courseId}">Create one</a></p>
+                                    <p class="text-muted">No chapters available for this subject. 
+                                        <a href="${pageContext.request.contextPath}/chapter?service=add&returnTo=course&courseId=${courseId}">Create one</a>
+                                    </p>
                                 </c:otherwise>
                             </c:choose>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Quick Actions</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-info btn-sm" onclick="showLessonModal()">
+                                    <i class="fas fa-search"></i> Browse Lessons
+                                </button>
+                                <button class="btn btn-outline-warning btn-sm" onclick="showTestModal()">
+                                    <i class="fas fa-search"></i> Browse Tests
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -292,9 +341,9 @@
                             </div>
                         </c:when>
                         <c:otherwise>
-                            <!-- Chapters -->
+                            <!-- Chapters with nested lessons -->
                             <c:if test="${not empty courseChapters}">
-                                <h5><i class="fas fa-book"></i> Chapters (${courseChapters.size()})</h5>
+                                <h5><i class="fas fa-book"></i> Course Structure</h5>
                                 <div id="chaptersList" class="sortable-list">
                                     <c:forEach items="${courseChapters}" var="chapter">
                                         <div class="content-item" data-id="${chapter.chapter_id}" data-type="chapter">
@@ -304,36 +353,40 @@
                                                     <strong>${chapter.chapter_name}</strong>
                                                 </div>
                                                 <div>
+                                                    <button class="btn btn-sm btn-outline-success" 
+                                                            onclick="showAddLessonModal(${chapter.chapter_id}, '${chapter.chapter_name}')">
+                                                        <i class="fas fa-plus"></i> Add Lesson
+                                                    </button>
                                                     <button class="btn btn-sm btn-outline-danger" 
                                                             onclick="removeFromCourse('chapter', ${chapter.chapter_id})">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </div>
                                             </div>
-                                            <p class="text-muted mb-0">${chapter.chapter_description}</p>
-                                        </div>
-                                    </c:forEach>
-                                </div>
-                            </c:if>
+                                            <c:if test="${not empty chapter.chapter_description}">
+                                                <p class="text-muted mb-2">${chapter.chapter_description}</p>
+                                            </c:if>
 
-                            <!-- Lessons -->
-                            <c:if test="${not empty courseLessons}">
-                                <h5><i class="fas fa-play"></i> Lessons (${courseLessons.size()})</h5>
-                                <div id="lessonsList" class="sortable-list">
-                                    <c:forEach items="${courseLessons}" var="lesson">
-                                        <div class="content-item" data-id="${lesson.lesson_id}" data-type="lesson">
-                                            <div class="content-item-header">
-                                                <div>
-                                                    <span class="content-type-badge badge-lesson">Lesson</span>
-                                                    <strong>${lesson.lesson_name}</strong>
-                                                    <small class="text-muted">(${lesson.chapter_name})</small>
-                                                </div>
-                                                <div>
-                                                    <button class="btn btn-sm btn-outline-danger" 
-                                                            onclick="removeFromCourse('lesson', ${lesson.lesson_id})">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </div>
+                                            <!-- Lessons in this chapter -->
+                                            <div class="chapter-lessons">
+                                                <c:forEach items="${courseLessons}" var="lesson">
+                                                    <c:if test="${lesson.chapter_id == chapter.chapter_id}">
+                                                        <div class="content-item lesson-item" data-id="${lesson.lesson_id}" data-type="lesson">
+                                                            <div class="content-item-header">
+                                                                <div>
+                                                                    <span class="content-type-badge badge-lesson">Lesson</span>
+                                                                    <strong>${lesson.lesson_name}</strong>
+                                                                </div>
+                                                                <div>
+                                                                    <button class="btn btn-sm btn-outline-danger" 
+                                                                            onclick="removeFromCourse('lesson', ${lesson.lesson_id})">
+                                                                        <i class="fas fa-trash"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </c:if>
+                                                </c:forEach>
                                             </div>
                                         </div>
                                     </c:forEach>
@@ -361,7 +414,9 @@
                                                     </button>
                                                 </div>
                                             </div>
-                                            <p class="text-muted mb-0">${test.test_description}</p>
+                                            <c:if test="${not empty test.test_description}">
+                                                <p class="text-muted mb-0">${test.test_description}</p>
+                                            </c:if>
                                         </div>
                                     </c:forEach>
                                 </div>
@@ -418,7 +473,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Action Buttons -->
                 <div class="d-flex justify-content-between mt-4">
                     <a href="${pageContext.request.contextPath}/course" class="btn btn-secondary">
@@ -436,6 +490,34 @@
             </div>
         </div>
 
+        <!-- Add Lesson Modal -->
+        <div class="modal fade" id="addLessonModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Lesson to Chapter</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="chapterInfo" class="alert alert-info"></div>
+                        <div id="availableLessons">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <a id="createLessonBtn" href="#" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Create New Lesson
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <%@include file="../footer.jsp" %>
 
         <!-- JS -->
@@ -443,106 +525,351 @@
         <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
 
         <script>
-                            // Initialize sortable lists
+                            let currentChapterId = null;
+                            let currentChapterName = '';
+
+                            // Initialize when DOM is ready
                             document.addEventListener('DOMContentLoaded', function () {
-                                const sortableLists = document.querySelectorAll('.sortable-list');
-                                sortableLists.forEach(list => {
-                                    new Sortable(list, {
-                                        animation: 150,
-                                        ghostClass: 'sortable-ghost',
-                                        onEnd: function (evt) {
-                                            updateContentOrder();
+                                console.log('DOM loaded, initializing...');
+
+                                // Initialize sortable lists
+                                initializeSortable();
+
+                                // Initialize Bootstrap modal if exists
+                                initializeModals();
+
+                                // Set up event listeners
+                                setupEventListeners();
+                            });
+
+                            function initializeSortable() {
+                                try {
+                                    const sortableLists = document.querySelectorAll('.sortable-list');
+                                    console.log('Found sortable lists:', sortableLists.length);
+
+                                    sortableLists.forEach(list => {
+                                        if (typeof Sortable !== 'undefined') {
+                                            new Sortable(list, {
+                                                animation: 150,
+                                                ghostClass: 'sortable-ghost',
+                                                onEnd: function (evt) {
+                                                    updateContentOrder(evt.from);
+                                                }
+                                            });
                                         }
                                     });
-                                });
-                            });
+                                } catch (error) {
+                                    console.error('Error initializing sortable:', error);
+                                }
+                            }
+
+                            function initializeModals() {
+                                try {
+                                    // Check if Bootstrap is loaded
+                                    if (typeof bootstrap !== 'undefined') {
+                                        console.log('Bootstrap is available');
+                                    } else {
+                                        console.warn('Bootstrap is not loaded');
+                                    }
+                                } catch (error) {
+                                    console.error('Error checking Bootstrap:', error);
+                                }
+                            }
+
+                            function setupEventListeners() {
+                                // Set up any additional event listeners here
+                                console.log('Event listeners set up');
+                            }
 
                             function toggleAddContent() {
                                 const section = document.getElementById('addContentSection');
-                                section.style.display = section.style.display === 'none' ? 'block' : 'none';
+                                if (section) {
+                                    section.style.display = section.style.display === 'none' ? 'block' : 'none';
+                                }
                             }
 
                             function addChapterToCourse(chapterId) {
+                                if (!chapterId) {
+                                    console.error('Chapter ID is required');
+                                    return;
+                                }
+
+                                console.log('Adding chapter to course:', chapterId);
+
+                                const formData = new FormData();
+                                formData.append('action', 'addChapter');
+                                formData.append('courseId', '${courseId}');
+                                formData.append('chapterId', chapterId);
+
                                 fetch('${pageContext.request.contextPath}/course', {
                                     method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/x-www-form-urlencoded',
-                                    },
-                                    body: `action=addChapter&courseId=${courseId}&chapterId=${chapterId}`
+                                    body: formData
                                 })
-                                        .then(response => response.json())
+                                        .then(response => {
+                                            console.log('Response status:', response.status);
+                                            if (!response.ok) {
+                                                throw new Error('Network response was not ok');
+                                            }
+                                            return response.text().then(text => {
+                                                try {
+                                                    return JSON.parse(text);
+                                                } catch (e) {
+                                                    console.error('Response is not JSON:', text);
+                                                    throw new Error('Invalid JSON response');
+                                                }
+                                            });
+                                        })
                                         .then(data => {
+                                            console.log('Response data:', data);
                                             if (data.success) {
                                                 location.reload();
                                             } else {
-                                                alert('Failed to add chapter: ' + data.message);
+                                                alert('Failed to add chapter: ' + (data.message || 'Unknown error'));
                                             }
                                         })
                                         .catch(error => {
                                             console.error('Error:', error);
-                                            alert('An error occurred while adding the chapter.');
+                                            alert('An error occurred while adding the chapter: ' + error.message);
+                                        });
+                            }
+
+                            function showAddLessonModal(chapterId, chapterName) {
+                                if (!chapterId || !chapterName) {
+                                    console.error('Chapter ID and name are required');
+                                    return;
+                                }
+
+                                currentChapterId = chapterId;
+                                currentChapterName = chapterName;
+
+                                const chapterInfo = document.getElementById('chapterInfo');
+                                if (chapterInfo) {
+                                    chapterInfo.innerHTML = '<strong>Adding lesson to chapter:</strong> ' + chapterName;
+                                }
+
+                                // Update create lesson button URL
+                                const createLessonBtn = document.getElementById('createLessonBtn');
+                                if (createLessonBtn) {
+                                    createLessonBtn.href = '${pageContext.request.contextPath}/LessonURL?action=addForm&returnTo=course&courseId=${courseId}&chapterId=' + chapterId;
+                                }
+
+                                // Load available lessons for this chapter
+                                loadAvailableLessons(chapterId);
+
+                                // Show modal
+                                const modalElement = document.getElementById('addLessonModal');
+                                if (modalElement) {
+                                    if (typeof bootstrap !== 'undefined') {
+                                        new bootstrap.Modal(modalElement).show();
+                                    } else {
+                                        // Fallback for when Bootstrap is not available
+                                        modalElement.style.display = 'block';
+                                        modalElement.classList.add('show');
+                                    }
+                                }
+                            }
+
+                            function loadAvailableLessons(chapterId) {
+                                const container = document.getElementById('availableLessons');
+                                if (!container) {
+                                    console.error('Available lessons container not found');
+                                    return;
+                                }
+
+                                container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+                                fetch('${pageContext.request.contextPath}/course?action=getLessons&chapterId=' + chapterId)
+                                        .then(response => {
+                                            if (!response.ok) {
+                                                throw new Error('Network response was not ok');
+                                            }
+                                            return response.json();
+                                        })
+                                        .then(lessons => {
+                                            if (lessons.length === 0) {
+                                                container.innerHTML = '<p class="text-muted">No lessons available for this chapter. <a href="${pageContext.request.contextPath}/LessonURL?action=addForm&returnTo=course&courseId=${courseId}&chapterId=' + chapterId + '">Create one</a></p>';
+                                            } else {
+                                                let html = '<div class="list-group">';
+                                                lessons.forEach(lesson => {
+                                                    const lessonName = escapeHtml(lesson.name || '');
+                                                    const lessonContent = lesson.content ? escapeHtml(lesson.content.substring(0, 100)) + '...' : '';
+                                                    html += '<div class="list-group-item d-flex justify-content-between align-items-center">';
+                                                    html += '<div>';
+                                                    html += '<strong>' + lessonName + '</strong>';
+                                                    if (lessonContent) {
+                                                        html += '<br><small class="text-muted">' + lessonContent + '</small>';
+                                                    }
+                                                    html += '</div>';
+                                                    html += '<button class="btn btn-sm btn-outline-primary" onclick="addLessonToCourse(' + lesson.id + ', ' + chapterId + ')">';
+                                                    html += '<i class="fas fa-plus"></i> Add';
+                                                    html += '</button>';
+                                                    html += '</div>';
+                                                });
+                                                html += '</div>';
+                                                container.innerHTML = html;
+                                            }
+                                        })
+                                        .catch(error => {
+                                            console.error('Error loading lessons:', error);
+                                            container.innerHTML = '<p class="text-danger">Error loading lessons</p>';
+                                        });
+                            }
+
+                            function addLessonToCourse(lessonId, chapterId) {
+                                if (!lessonId || !chapterId) {
+                                    console.error('Lesson ID and Chapter ID are required');
+                                    return;
+                                }
+
+                                const formData = new FormData();
+                                formData.append('action', 'addLesson');
+                                formData.append('courseId', '${courseId}');
+                                formData.append('lessonId', lessonId);
+                                formData.append('chapterId', chapterId);
+
+                                fetch('${pageContext.request.contextPath}/course', {
+                                    method: 'POST',
+                                    body: formData
+                                })
+                                        .then(response => {
+                                            if (!response.ok) {
+                                                throw new Error('Network response was not ok');
+                                            }
+                                            return response.text().then(text => {
+                                                try {
+                                                    return JSON.parse(text);
+                                                } catch (e) {
+                                                    console.error('Response is not JSON:', text);
+                                                    throw new Error('Invalid JSON response');
+                                                }
+                                            });
+                                        })
+                                        .then(data => {
+                                            if (data.success) {
+                                                // Close modal
+                                                const modalElement = document.getElementById('addLessonModal');
+                                                if (modalElement) {
+                                                    if (typeof bootstrap !== 'undefined') {
+                                                        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                                                        if (modalInstance) {
+                                                            modalInstance.hide();
+                                                        }
+                                                    } else {
+                                                        modalElement.style.display = 'none';
+                                                        modalElement.classList.remove('show');
+                                                    }
+                                                }
+                                                location.reload();
+                                            } else {
+                                                alert('Failed to add lesson: ' + (data.message || 'Unknown error'));
+                                            }
+                                        })
+                                        .catch(error => {
+                                            console.error('Error:', error);
+                                            alert('An error occurred while adding the lesson: ' + error.message);
                                         });
                             }
 
                             function removeFromCourse(type, id) {
+                                if (!type || !id) {
+                                    console.error('Type and ID are required');
+                                    return;
+                                }
+
                                 if (!confirm('Are you sure you want to remove this ' + type + ' from the course?')) {
                                     return;
                                 }
 
+                                const actionMap = {
+                                    'chapter': 'removeChapter',
+                                    'lesson': 'removeLesson',
+                                    'test': 'removeTest'
+                                };
+
+                                const paramMap = {
+                                    'chapter': 'chapterId',
+                                    'lesson': 'lessonId',
+                                    'test': 'testId'
+                                };
+
+                                if (!actionMap[type] || !paramMap[type]) {
+                                    console.error('Invalid type:', type);
+                                    return;
+                                }
+
+                                const formData = new FormData();
+                                formData.append('action', actionMap[type]);
+                                formData.append('courseId', '${courseId}');
+                                formData.append(paramMap[type], id);
+
                                 fetch('${pageContext.request.contextPath}/course', {
                                     method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/x-www-form-urlencoded',
-                                    },
-                                    body: `action=removeContent&courseId=${courseId}&contentType=${type}&contentId=${id}`
+                                    body: formData
                                 })
-                                        .then(response => response.json())
+                                        .then(response => {
+                                            if (!response.ok) {
+                                                throw new Error('Network response was not ok');
+                                            }
+                                            return response.text().then(text => {
+                                                try {
+                                                    return JSON.parse(text);
+                                                } catch (e) {
+                                                    console.error('Response is not JSON:', text);
+                                                    throw new Error('Invalid JSON response');
+                                                }
+                                            });
+                                        })
                                         .then(data => {
                                             if (data.success) {
                                                 location.reload();
                                             } else {
-                                                alert('Failed to remove ' + type + ': ' + data.message);
+                                                alert('Failed to remove ' + type + ': ' + (data.message || 'Unknown error'));
                                             }
                                         })
                                         .catch(error => {
                                             console.error('Error:', error);
-                                            alert('An error occurred while removing the ' + type + '.');
+                                            alert('An error occurred while removing the ' + type + ': ' + error.message);
                                         });
                             }
 
-                            function updateContentOrder() {
-                                const chapters = Array.from(document.querySelectorAll('#chaptersList .content-item')).map((item, index) => ({
-                                        id: item.dataset.id,
-                                        type: 'chapter',
-                                        order: index + 1
-                                    }));
+                            function updateContentOrder(container) {
+                                if (!container) {
+                                    console.error('Container is required');
+                                    return;
+                                }
 
-                                const lessons = Array.from(document.querySelectorAll('#lessonsList .content-item')).map((item, index) => ({
-                                        id: item.dataset.id,
-                                        type: 'lesson',
-                                        order: index + 1
-                                    }));
+                                const items = container.querySelectorAll('.content-item');
+                                const contentIds = Array.from(items).map(item => item.dataset.id).filter(id => id);
+                                const contentType = items.length > 0 ? items[0].dataset.type : '';
 
-                                const tests = Array.from(document.querySelectorAll('#testsList .content-item')).map((item, index) => ({
-                                        id: item.dataset.id,
-                                        type: 'test',
-                                        order: index + 1
-                                    }));
+                                if (contentIds.length === 0 || !contentType) {
+                                    console.log('No content to reorder');
+                                    return;
+                                }
 
-                                const orderData = [...chapters, ...lessons, ...tests];
+                                const formData = new FormData();
+                                formData.append('action', 'reorderContent');
+                                formData.append('courseId', '${courseId}');
+                                formData.append('contentType', contentType);
+                                contentIds.forEach(id => formData.append('contentIds', id));
 
                                 fetch('${pageContext.request.contextPath}/course', {
                                     method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify({
-                                        action: 'reorderContent',
-                                        courseId: ${courseId},
-                                        contentOrder: orderData
-                                    })
+                                    body: formData
                                 })
-                                        .then(response => response.json())
+                                        .then(response => {
+                                            if (!response.ok) {
+                                                throw new Error('Network response was not ok');
+                                            }
+                                            return response.text().then(text => {
+                                                try {
+                                                    return JSON.parse(text);
+                                                } catch (e) {
+                                                    console.error('Response is not JSON:', text);
+                                                    return {success: false, message: 'Invalid response'};
+                                                }
+                                            });
+                                        })
                                         .then(data => {
                                             if (!data.success) {
                                                 console.error('Failed to update order:', data.message);
@@ -554,7 +881,7 @@
                             }
 
                             function submitForApproval() {
-                                if (!confirm('Are you sure you want to submit this course for approval? You will not be able to edit it while it\'s pending approval.')) {
+                                if (!confirm('Are you sure you want to submit this course for approval? You will not be able to edit it while it is pending approval.')) {
                                     return;
                                 }
 
@@ -566,45 +893,73 @@
                                             }
 
                                             function saveDraft() {
-                                                // Auto-save functionality
+                                                const formData = new FormData();
+                                                formData.append('action', 'saveDraft');
+                                                formData.append('courseId', '${courseId}');
+
                                                 fetch('${pageContext.request.contextPath}/course', {
                                                     method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/x-www-form-urlencoded',
-                                                    },
-                                                    body: `action=saveDraft&courseId=${courseId}`
+                                                    body: formData
                                                 })
-                                                        .then(response => response.json())
+                                                        .then(response => {
+                                                            if (!response.ok) {
+                                                                throw new Error('Network response was not ok');
+                                                            }
+                                                            return response.text().then(text => {
+                                                                try {
+                                                                    return JSON.parse(text);
+                                                                } catch (e) {
+                                                                    console.error('Response is not JSON:', text);
+                                                                    throw new Error('Invalid JSON response');
+                                                                }
+                                                            });
+                                                        })
                                                         .then(data => {
                                                             if (data.success) {
-                                                                // Show temporary success message
-                                                                const btn = event.target;
-                                                                const originalText = btn.innerHTML;
-                                                                btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
-                                                                btn.classList.remove('btn-success');
-                                                                btn.classList.add('btn-outline-success');
+                                                                // Find the save button and show success feedback
+                                                                const saveButtons = document.querySelectorAll('button[onclick*="saveDraft"]');
+                                                                if (saveButtons.length > 0) {
+                                                                    const btn = saveButtons[0];
+                                                                    const originalText = btn.innerHTML;
+                                                                    btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+                                                                    btn.classList.remove('btn-success');
+                                                                    btn.classList.add('btn-outline-success');
 
-                                                                setTimeout(() => {
-                                                                    btn.innerHTML = originalText;
-                                                                    btn.classList.remove('btn-outline-success');
-                                                                    btn.classList.add('btn-success');
-                                                                }, 2000);
+                                                                    setTimeout(() => {
+                                                                        btn.innerHTML = originalText;
+                                                                        btn.classList.remove('btn-outline-success');
+                                                                        btn.classList.add('btn-success');
+                                                                    }, 2000);
+                                                                }
                                                             } else {
-                                                                alert('Failed to save draft: ' + data.message);
+                                                                alert('Failed to save draft: ' + (data.message || 'Unknown error'));
                                                             }
                                                         })
                                                         .catch(error => {
                                                             console.error('Error:', error);
-                                                            alert('An error occurred while saving the draft.');
+                                                            alert('An error occurred while saving the draft: ' + error.message);
                                                         });
+                                            }
+
+                                            // Utility function to escape HTML - moved outside template literals
+                                            function escapeHtml(text) {
+                                                if (!text)
+                                                    return '';
+                                                const div = document.createElement('div');
+                                                div.textContent = text;
+                                                return div.innerHTML;
                                             }
 
                                             // Auto-save every 5 minutes
                                             setInterval(function () {
-                                                if (document.getElementById('courseContent').children.length > 0) {
+                                                const courseContent = document.getElementById('courseContent');
+                                                if (courseContent && courseContent.children.length > 0) {
+                                                    console.log('Auto-saving draft...');
                                                     saveDraft();
                                                 }
                                             }, 300000); // 5 minutes
         </script>
+
+
     </body>
 </html>

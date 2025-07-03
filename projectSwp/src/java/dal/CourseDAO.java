@@ -338,4 +338,114 @@ public class CourseDAO extends DBContext {
             return ps.executeUpdate() > 0;
         }
     }
+
+    public boolean updateCourse(int courseId, String courseTitle, String price,
+            int durationDays, String description, int subjectId) throws SQLException {
+        String sql = "UPDATE study_package SET course_title = ?, price = ?, duration_days = ?, "
+                + "description = ?, subject_id = ?, updated_at = CURRENT_TIMESTAMP "
+                + "WHERE id = ? AND type = 'COURSE'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, courseTitle);
+            ps.setString(2, price);
+            ps.setInt(3, durationDays);
+            ps.setString(4, description);
+            ps.setInt(5, subjectId);
+            ps.setInt(6, courseId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public int getNextChapterOrder(int courseId) throws SQLException {
+        String sql = "SELECT COALESCE(MAX(display_order), 0) + 1 FROM course_chapter WHERE course_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 1;
+    }
+
+    public int getNextLessonOrder(int courseId, int chapterId) throws SQLException {
+        String sql = "SELECT COALESCE(MAX(display_order), 0) + 1 FROM course_lesson WHERE course_id = ? AND chapter_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, chapterId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 1;
+    }
+
+    public boolean removeChapterFromCourse(int courseId, int chapterId) throws SQLException {
+        String sql = "UPDATE course_chapter SET is_active = 0 WHERE course_id = ? AND chapter_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, chapterId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public boolean removeLessonFromCourse(int courseId, int lessonId) throws SQLException {
+        String sql = "UPDATE course_lesson SET is_active = 0 WHERE course_id = ? AND lesson_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, lessonId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public boolean reorderCourseContent(int courseId, String contentType, String[] contentIds) throws SQLException {
+        String tableName;
+        String idColumn;
+
+        switch (contentType.toLowerCase()) {
+            case "chapter":
+                tableName = "course_chapter";
+                idColumn = "chapter_id";
+                break;
+            case "lesson":
+                tableName = "course_lesson";
+                idColumn = "lesson_id";
+                break;
+            case "test":
+                tableName = "course_test";
+                idColumn = "test_id";
+                break;
+            default:
+                return false;
+        }
+
+        String sql = "UPDATE " + tableName + " SET display_order = ? WHERE course_id = ? AND " + idColumn + " = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (int i = 0; i < contentIds.length; i++) {
+                ps.setInt(1, i + 1);
+                ps.setInt(2, courseId);
+                ps.setInt(3, Integer.parseInt(contentIds[i]));
+                ps.addBatch();
+            }
+            int[] results = ps.executeBatch();
+
+            // Check if all updates were successful
+            for (int result : results) {
+                if (result <= 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    public boolean updateCourseTimestamp(int courseId) throws SQLException {
+        String sql = "UPDATE study_package SET updated_at = CURRENT_TIMESTAMP WHERE id = ? AND type = 'COURSE'";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            return ps.executeUpdate() > 0;
+        }
+    }
 }

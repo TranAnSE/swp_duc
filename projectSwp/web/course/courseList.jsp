@@ -200,8 +200,18 @@
                                                     </c:if>
                                                 </c:if>
 
+                                                <!-- Edit Course Info -->
+                                                <c:if test="${sessionScope.account.role == 'admin' || sessionScope.account.role == 'teacher'}">
+                                                    <c:if test="${course.approval_status == 'DRAFT' || course.approval_status == 'REJECTED' || sessionScope.account.role == 'admin'}">
+                                                        <a href="${pageContext.request.contextPath}/course?action=edit&id=${course.course_id}" 
+                                                           class="btn btn-sm btn-secondary" title="Edit Course">
+                                                            <i class="fas fa-edit"></i> Edit
+                                                        </a>
+                                                    </c:if>
+                                                </c:if>
+
                                                 <!-- Submit for Approval (for teachers) -->
-                                                <c:if test="${sessionScope.account.role == 'teacher' && course.approval_status == 'DRAFT'}">
+                                                <c:if test="${sessionScope.account.role == 'teacher' && (course.approval_status == 'DRAFT' || course.approval_status == 'REJECTED')}">
                                                     <a href="${pageContext.request.contextPath}/course?action=submit&id=${course.course_id}" 
                                                        class="btn btn-sm btn-warning" title="Submit for Approval"
                                                        onclick="return confirm('Submit this course for approval?')">
@@ -308,16 +318,16 @@
         <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
 
         <script>
-            function showRejectModal(courseId) {
-                document.getElementById('rejectCourseId').value = courseId;
-                document.getElementById('rejectionReason').value = '';
-                new bootstrap.Modal(document.getElementById('rejectModal')).show();
-            }
+                                                                       function showRejectModal(courseId) {
+                                                                           document.getElementById('rejectCourseId').value = courseId;
+                                                                           document.getElementById('rejectionReason').value = '';
+                                                                           new bootstrap.Modal(document.getElementById('rejectModal')).show();
+                                                                       }
 
-            // Auto-dismiss alerts after 5 seconds
-            setTimeout(function () {
-                $('.alert').fadeOut('slow');
-            }, 5000);
+                                                                       // Auto-dismiss alerts after 5 seconds
+                                                                       setTimeout(function () {
+                                                                           $('.alert').fadeOut('slow');
+                                                                       }, 5000);
         </script>
     </body>
 </html>
