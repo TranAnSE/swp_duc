@@ -24,19 +24,19 @@ public class SubjectController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String action = req.getParameter("action");
-        if (!AuthUtil.hasRole(req, RoleConstants.ADMIN) && !AuthUtil.hasRole(req, RoleConstants.TEACHER)&&  !AuthUtil.hasRole(req, RoleConstants.STUDENT)) {
+        if (!AuthUtil.hasRole(req, RoleConstants.ADMIN) && !AuthUtil.hasRole(req, RoleConstants.TEACHER) && !AuthUtil.hasRole(req, RoleConstants.STUDENT)) {
             resp.sendRedirect("/error.jsp");
             return;
         }
+
         try {
-            // Lấy danh sách Grade để tạo map id -> name
+            // Load grade map for display
             GradeDAO daoGrade = new GradeDAO();
             List<Grade> gradeList = daoGrade.findAllFromGrade();
             Map<Integer, String> gradeMap = new HashMap<>();
             for (Grade g : gradeList) {
                 gradeMap.put(g.getId(), g.getName());
             }
-            // Truyền gradeMap xuống JSP
             req.setAttribute("gradeMap", gradeMap);
 
             if ("edit".equals(action)) {
@@ -60,6 +60,16 @@ public class SubjectController extends HttpServlet {
                 req.setAttribute("subject", newSubject);
                 req.getRequestDispatcher("Subject/addSubject.jsp").forward(req, resp);
 
+            } else if ("clearNotification".equals(action)) {
+                // Clear session notification attributes
+                HttpSession session = req.getSession();
+                session.removeAttribute("subjectCreated");
+                session.removeAttribute("newSubjectId");
+                session.removeAttribute("newSubjectName");
+                session.removeAttribute("newSubjectGradeId");
+                resp.setStatus(HttpServletResponse.SC_OK);
+                return;
+
             } else {
                 String name = req.getParameter("name");
                 List<Subject> subjectList = (name != null && !name.trim().isEmpty())
@@ -70,17 +80,18 @@ public class SubjectController extends HttpServlet {
 
         } catch (SQLException | NumberFormatException e) {
             e.printStackTrace();
-            req.setAttribute("error", "Lỗi xử lý dữ liệu: " + e.getMessage());
+            req.setAttribute("error", "Error processing data: " + e.getMessage());
             req.getRequestDispatcher("Subject/subjectList.jsp").forward(req, resp);
         }
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        if (!AuthUtil.hasRole(req, RoleConstants.ADMIN)) { // chỉ Admin chỉnh sửa môn học
+        if (!AuthUtil.hasRole(req, RoleConstants.ADMIN)) {
             resp.sendRedirect("/error.jsp");
             return;
         }
+
         try {
             String idStr = req.getParameter("id");
             String name = req.getParameter("name");
@@ -93,7 +104,20 @@ public class SubjectController extends HttpServlet {
             subject.setGrade_id(gradeId);
 
             if (idStr == null || idStr.trim().isEmpty()) {
+                // Insert new subject
                 daoSubject.insert(subject);
+
+                // Get the inserted subject ID for course creation redirect
+                List<Subject> subjects = daoSubject.findByNameOfSubject(name);
+                if (!subjects.isEmpty()) {
+                    Subject insertedSubject = subjects.get(0);
+
+                    // Set success message with course creation option
+                    req.getSession().setAttribute("subjectCreated", true);
+                    req.getSession().setAttribute("newSubjectId", insertedSubject.getId());
+                    req.getSession().setAttribute("newSubjectName", insertedSubject.getName());
+                    req.getSession().setAttribute("newSubjectGradeId", insertedSubject.getGrade_id());
+                }
             } else {
                 subject.setId(Integer.parseInt(idStr));
                 daoSubject.update(subject);
@@ -103,7 +127,7 @@ public class SubjectController extends HttpServlet {
 
         } catch (Exception e) {
             e.printStackTrace();
-            req.setAttribute("error", "Lỗi khi lưu môn học: " + e.getMessage());
+            req.setAttribute("error", "Error saving subject: " + e.getMessage());
 
             String idStr = req.getParameter("id");
             if (idStr == null || idStr.trim().isEmpty()) {

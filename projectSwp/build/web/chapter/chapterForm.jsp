@@ -9,8 +9,9 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <meta http-equiv="x-ua-compatible' : 'Sửa Chapter'}</title>
-              <meta name="description" content="">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title>${chapterToEdit == null ? 'Add Chapter' : 'Edit Chapter'}</title>
+        <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="manifest" href="site.webmanifest">
         <link rel="shortcut icon" type="image/x-icon" href="assets/img/favicon.ico">
@@ -28,7 +29,6 @@
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/fontawesome-all.min.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/themify-icons.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/slick.css">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/nice-select.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
         <style>
             .text-danger {
@@ -65,7 +65,22 @@
                 color: #343a40;
                 margin-bottom: 30px;
             }
-            /* Form thêm/sửa */
+            /* Course builder breadcrumb */
+            .course-breadcrumb {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+            }
+            .course-breadcrumb a {
+                color: rgba(255,255,255,0.8);
+                text-decoration: none;
+            }
+            .course-breadcrumb a:hover {
+                color: white;
+            }
+            /* Form styling */
             form[method="post"] {
                 background: #ffffff;
                 padding: 30px;
@@ -136,116 +151,140 @@
             form[method="post"] a:hover {
                 background-color: #5a6268;
             }
-            /* Thông báo */
+            /* Notification styling */
             .text-danger, .text-success {
                 font-size: 0.9em;
                 font-weight: bold;
                 margin: 10px 0;
-                text-align: center;
             }
-
-            .nice-select {
-                position: relative !important;
-                z-index: 999 !important;
-            }
-
-            .nice-select .list {
-                position: absolute !important;
-                top: 100% !important;
-                left: 0 !important;
-                right: 0 !important;
-                background: white !important;
-                border: 1px solid #ddd !important;
-                border-radius: 4px !important;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
-                max-height: 200px !important;
-                overflow-y: auto !important;
-                display: none !important;
-            }
-
-            .nice-select.open .list {
-                display: block !important;
-            }
-
-            .nice-select .option {
-                padding: 8px 12px !important;
-                cursor: pointer !important;
-            }
-
-            .nice-select .option:hover {
-                background-color: #f8f9fa !important;
+            .required {
+                color: #dc3545;
             }
         </style>
     </head>
     <body>
-        <!-- Preloader Start -->
-        <div id="preloader-active">
-            <div class="preloader d-flex align-items-center justify-content-center">
-                <div class="preloader-inner position-relative">
-                    <div class="preloader-circle"></div>
-                    <div class="preloader-img pere-text">
-                        <img src="${pageContext.request.contextPath}/assets/img/logo/loder.png" alt="">
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Preloader End -->
-
         <%@include file="../header.jsp" %>
 
         <main>
-            <h2>${chapterToEdit == null ? 'Add new Chapter' : 'Edit Chapter'}</h2>
+            <!-- Course Builder Breadcrumb (if coming from course builder) -->
+            <c:if test="${returnToCourse}">
+                <div class="course-breadcrumb">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0" style="background: transparent;">
+                            <li class="breadcrumb-item">
+                                <a href="${pageContext.request.contextPath}/course"><i class="fas fa-graduation-cap"></i> Courses</a>
+                            </li>
+                            <li class="breadcrumb-item">
+                                <a href="${pageContext.request.contextPath}/course?action=build&id=${courseId}">
+                                    <i class="fas fa-cogs"></i> Course Builder
+                                </a>
+                            </li>
+                            <li class="breadcrumb-item active" aria-current="page" style="color: white;">
+                                <i class="fas fa-plus"></i> Add Chapter
+                            </li>
+                        </ol>
+                    </nav>
+                </div>
+            </c:if>
 
-            <!-- Thông báo lỗi và thành công -->
+            <h2>
+                <i class="fas fa-book"></i> 
+                ${chapterToEdit == null ? 'Add New Chapter' : 'Edit Chapter'}
+            </h2>
+
+            <!-- Error/Success Messages -->
             <c:if test="${not empty errorMessage}">
-                <div class="text-danger"><c:out value="${errorMessage}"/></div>
-            </c:if>
-            <c:if test="${not empty message}">
-                <div class="text-success"><c:out value="${message}"/></div>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i> ${errorMessage}
+                </div>
             </c:if>
 
-            <!-- Form thêm/sửa chapter -->
-            <form action="chapter" method="post">
-                <input type="hidden" name="service" value="${chapterToEdit == null ? 'add' : 'edit'}" />
-                <c:if test="${not empty chapterToEdit}">
-                    <input type="hidden" name="id" value="${chapterToEdit.id}" />
+            <c:if test="${not empty message}">
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> ${message}
+                </div>
+            </c:if>
+
+            <!-- Chapter Form -->
+            <form method="post" action="chapter">
+                <input type="hidden" name="service" value="${chapterToEdit == null ? 'add' : 'edit'}">
+                
+                <!-- Hidden fields for course builder return -->
+                <c:if test="${returnToCourse}">
+                    <input type="hidden" name="returnTo" value="course">
+                    <input type="hidden" name="courseId" value="${courseId}">
                 </c:if>
+
                 <div class="form-group">
-                    <label for="id">ID</label>
-                    <input type="number" name="id" id="id" value="${chapterToEdit != null ? chapterToEdit.id : ''}" 
-                           ${chapterToEdit != null ? 'readonly' : ''} required placeholder="enter ID" min="1" />
+                    <label for="id">Chapter ID <span class="required">*</span></label>
+                    <input type="number" id="id" name="id" 
+                           value="${chapterToEdit != null ? chapterToEdit.id : ''}" 
+                           ${chapterToEdit != null ? 'readonly' : ''} 
+                           required min="1" max="999999">
                 </div>
+
                 <div class="form-group">
-                    <label for="name">Name</label>
-                    <input type="text" name="name" id="name" value="${chapterToEdit != null ? chapterToEdit.name : ''}" 
-                           required placeholder="enter Name chapter" maxlength="100" />
+                    <label for="name">Chapter Name <span class="required">*</span></label>
+                    <input type="text" id="name" name="name" 
+                           value="${chapterToEdit != null ? chapterToEdit.name : ''}" 
+                           required maxlength="255" placeholder="Enter chapter name">
                 </div>
+
                 <div class="form-group">
-                    <label for="description">Description</label>
-                    <textarea name="description" id="description" placeholder="enter description" maxlength="500">${chapterToEdit != null ? chapterToEdit.description : ''}</textarea>
-                </div>
-                <div class="form-group">
-                    <label for="subject_id">Subject</label>
-                    <select name="subject_id" id="subject_id" required>
-                        <option value="">Choose Subject</option>
+                    <label for="subject_id">Subject <span class="required">*</span></label>
+                    <select id="subject_id" name="subject_id" required>
+                        <option value="">-- Select Subject --</option>
                         <c:forEach var="subject" items="${listSubject}">
-                            <option value="${subject.id}" ${chapterToEdit != null && chapterToEdit.subject_id == subject.id ? 'selected' : ''}>
-                                <c:out value="${subject.name}"/>
+                            <option value="${subject.id}" 
+                                    ${(chapterToEdit != null && chapterToEdit.subject_id == subject.id) ? 'selected' : ''}>
+                                ${subject.name}
                             </option>
                         </c:forEach>
                     </select>
                 </div>
-                <div>
-                    <input type="submit" value="${chapterToEdit == null ? 'Creat' : 'Save'}" />
-                    <a href="chapter">Back</a>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" 
+                              placeholder="Enter chapter description">${chapterToEdit != null ? chapterToEdit.description : ''}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <input type="submit" value="${chapterToEdit == null ? 'Add Chapter' : 'Update Chapter'}">
+                </div>
+
+                <div class="form-group">
+                    <c:choose>
+                        <c:when test="${returnToCourse}">
+                            <a href="${pageContext.request.contextPath}/course?action=build&id=${courseId}">
+                                <i class="fas fa-arrow-left"></i> Back to Course Builder
+                            </a>
+                        </c:when>
+                        <c:otherwise>
+                            <a href="${pageContext.request.contextPath}/chapter">
+                                <i class="fas fa-list"></i> Back to List
+                            </a>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
             </form>
+
+            <!-- Help Section for Course Builder -->
+            <c:if test="${returnToCourse}">
+                <div class="alert alert-info mt-4">
+                    <h5><i class="fas fa-info-circle"></i> Creating Chapter for Course</h5>
+                    <p>You are creating a new chapter that will be available for your course. After creating this chapter, you can:</p>
+                    <ul>
+                        <li>Add it to your course content</li>
+                        <li>Create lessons within this chapter</li>
+                        <li>Organize your course structure</li>
+                    </ul>
+                    <p><strong>Note:</strong> The chapter will be created for the selected subject and can be used in multiple courses.</p>
+                </div>
+            </c:if>
         </main>
 
         <%@include file="../footer.jsp" %>
-        <div id="back-top">
-            <a title="Go to Top" href="#"> <i class="fas fa-level-up-alt"></i></a>
-        </div>
 
         <!-- JS here -->
         <script src="${pageContext.request.contextPath}/assets/js/vendor/modernizr-3.5.0.min.js"></script>
@@ -259,7 +298,6 @@
         <script src="${pageContext.request.contextPath}/assets/js/animated.headline.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/jquery.magnific-popup.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/gijgo.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.nice-select.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/jquery.sticky.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/jquery.barfiller.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/jquery.counterup.min.js"></script>
@@ -275,16 +313,39 @@
         <script src="${pageContext.request.contextPath}/assets/js/main.js"></script>
 
         <script>
-            $(document).ready(function () {
-                // Destroy existing nice-select instances
-                $('select').niceSelect('destroy');
+            // Form validation
+            document.querySelector('form').addEventListener('submit', function(e) {
+                const id = document.getElementById('id').value;
+                const name = document.getElementById('name').value.trim();
+                const subjectId = document.getElementById('subject_id').value;
 
-                // Reinitialize nice-select
-                $('select').niceSelect();
+                if (!id || id <= 0) {
+                    alert('Please enter a valid Chapter ID (positive number).');
+                    e.preventDefault();
+                    return false;
+                }
 
-                $('.nice-select').on('click', function () {
-                    $(this).toggleClass('open');
-                });
+                if (!name) {
+                    alert('Please enter a chapter name.');
+                    e.preventDefault();
+                    return false;
+                }
+
+                if (!subjectId) {
+                    alert('Please select a subject.');
+                    e.preventDefault();
+                    return false;
+                }
+
+                return true;
+            });
+
+            // Auto-focus on first input
+            document.addEventListener('DOMContentLoaded', function() {
+                const firstInput = document.querySelector('input[type="number"], input[type="text"]');
+                if (firstInput && !firstInput.hasAttribute('readonly')) {
+                    firstInput.focus();
+                }
             });
         </script>
     </body>

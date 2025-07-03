@@ -19,6 +19,7 @@ import model.Chapter;
 import model.Subject;
 import util.AuthUtil;
 import util.RoleConstants;
+
 /**
  *
  * @author Na
@@ -38,7 +39,7 @@ public class ChapterController extends HttpServlet {
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // ✅ PHÂN QUYỀN: chỉ cho phép ADMIN hoặc TEACHER
+        // Authorization check
         if (!AuthUtil.hasRole(request, RoleConstants.ADMIN) && !AuthUtil.hasRole(request, RoleConstants.TEACHER) && !AuthUtil.hasRole(request, RoleConstants.PARENT)) {
             response.sendRedirect("/error.jsp");
             return;
@@ -78,7 +79,7 @@ public class ChapterController extends HttpServlet {
                     break;
             }
         } catch (Exception e) {
-            request.setAttribute("errorMessage", "Lỗi hệ thống: " + e.getMessage());
+            request.setAttribute("errorMessage", "System error: " + e.getMessage());
             request.setAttribute("listChapter", List.of());
             request.setAttribute("listSubject", List.of());
             request.setAttribute("subjectMap", new HashMap<Integer, String>());
@@ -102,6 +103,15 @@ public class ChapterController extends HttpServlet {
             throws ServletException, IOException, Exception {
         List<Subject> listSubject = subjectDAO.findAll();
         request.setAttribute("listSubject", listSubject != null ? listSubject : List.of());
+
+        // Check if coming from course builder
+        String returnTo = request.getParameter("returnTo");
+        String courseId = request.getParameter("courseId");
+        if ("course".equals(returnTo) && courseId != null) {
+            request.setAttribute("returnToCourse", true);
+            request.setAttribute("courseId", courseId);
+        }
+
         request.getRequestDispatcher("/chapter/chapterForm.jsp").forward(request, response);
     }
 
@@ -115,14 +125,23 @@ public class ChapterController extends HttpServlet {
 
             Chapter chapter = new Chapter(id, name, description, subjectId);
             int result = chapterDAO.addChapter(chapter);
+
             if (result > 0) {
-                response.sendRedirect("chapter");
+                // Check if should return to course builder
+                String returnTo = request.getParameter("returnTo");
+                String courseId = request.getParameter("courseId");
+
+                if ("course".equals(returnTo) && courseId != null) {
+                    response.sendRedirect("course?action=build&id=" + courseId + "&message=Chapter created successfully");
+                } else {
+                    response.sendRedirect("chapter");
+                }
             } else {
-                request.setAttribute("errorMessage", "Không thể thêm chapter!");
+                request.setAttribute("errorMessage", "Cannot add chapter!");
                 showAddForm(request, response);
             }
         } catch (NumberFormatException e) {
-            request.setAttribute("errorMessage", "Định dạng ID hoặc Subject ID không hợp lệ!");
+            request.setAttribute("errorMessage", "Invalid ID or Subject ID format!");
             showAddForm(request, response);
         }
     }
@@ -151,11 +170,11 @@ public class ChapterController extends HttpServlet {
             if (result > 0) {
                 response.sendRedirect("chapter");
             } else {
-                request.setAttribute("errorMessage", "Không thể cập nhật chapter!");
+                request.setAttribute("errorMessage", "Cannot update chapter!");
                 showEditForm(request, response);
             }
         } catch (NumberFormatException e) {
-            request.setAttribute("errorMessage", "Định dạng ID hoặc Subject ID không hợp lệ!");
+            request.setAttribute("errorMessage", "Invalid ID or Subject ID format!");
             showEditForm(request, response);
         }
     }
@@ -166,12 +185,12 @@ public class ChapterController extends HttpServlet {
             int id = Integer.parseInt(request.getParameter("id"));
             int result = chapterDAO.deleteChapter(id);
             if (result > 0) {
-                request.setAttribute("message", "Xóa chapter thành công!");
+                request.setAttribute("message", "Chapter deleted successfully!");
             } else {
-                request.setAttribute("errorMessage", "Không thể xóa chapter!");
+                request.setAttribute("errorMessage", "Cannot delete chapter!");
             }
         } catch (NumberFormatException e) {
-            request.setAttribute("errorMessage", "Định dạng ID không hợp lệ!");
+            request.setAttribute("errorMessage", "Invalid ID format!");
         }
         listChapter(request, response);
     }
@@ -192,7 +211,7 @@ public class ChapterController extends HttpServlet {
                 listChapter = chapter != null ? List.of(chapter) : List.of();
             } catch (NumberFormatException e) {
                 listChapter = List.of();
-                request.setAttribute("message", "ID không hợp lệ!");
+                request.setAttribute("message", "Invalid ID!");
             }
         } else if (nameParam != null && !nameParam.isEmpty()) {
             listChapter = chapterDAO.findChapterByName(nameParam);
@@ -202,7 +221,7 @@ public class ChapterController extends HttpServlet {
                 listChapter = chapterDAO.findChapterBySubjectId(subjectId);
             } catch (NumberFormatException e) {
                 listChapter = List.of();
-                request.setAttribute("message", "Subject ID không hợp lệ!");
+                request.setAttribute("message", "Invalid Subject ID!");
             }
         } else {
             listChapter = List.of();
