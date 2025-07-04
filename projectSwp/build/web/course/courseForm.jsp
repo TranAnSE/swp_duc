@@ -101,22 +101,61 @@
                 background: #5a6268;
                 color: white;
             }
+
+            /* Select2 Custom Styling */
             .select2-container {
                 width: 100% !important;
+                z-index: 1000;
             }
-            .select2-container--default .select2-selection--single {
-                height: 48px;
-                border-radius: 6px;
-                border: 1px solid #ced4da;
+            .select2-selection--single {
+                height: 48px !important;
+                padding: 12px 15px !important;
+                border-radius: 6px !important;
+                border: 1px solid #ced4da !important;
+                font-size: 16px !important;
+                line-height: 24px !important;
             }
-            .select2-container--default .select2-selection--single .select2-selection__rendered {
-                line-height: 46px;
-                padding-left: 15px;
+            .select2-selection__rendered {
+                line-height: 24px !important;
+                padding-left: 0 !important;
+                color: #495057 !important;
+            }
+            .select2-selection__arrow {
+                height: 46px !important;
+                right: 15px !important;
+            }
+            .select2-container--focus .select2-selection--single {
+                border-color: #007bff !important;
+                box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25) !important;
+            }
+            .select2-dropdown {
+                border-radius: 6px !important;
+                border: 1px solid #ced4da !important;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+                z-index: 9999 !important;
+            }
+            .select2-results__option {
+                padding: 12px 15px !important;
+                font-size: 16px !important;
+            }
+            .select2-results__option--highlighted {
+                background-color: #007bff !important;
+            }
+            .select2-search--dropdown .select2-search__field {
+                padding: 8px 12px !important;
+                border-radius: 4px !important;
+                border: 1px solid #ced4da !important;
+                font-size: 16px !important;
             }
             .text-muted {
                 font-size: 0.875em;
                 color: #6c757d !important;
                 margin-top: 5px;
+            }
+
+            /* Hide nice-select elements */
+            .nice-select {
+                display: none !important;
             }
         </style>
     </head>
@@ -144,7 +183,7 @@
                         <!-- Pre-filled form fields -->
                         <div class="form-group">
                             <label for="gradeId" class="form-label">Grade <span class="required">*</span></label>
-                            <select id="gradeId" name="gradeId" class="form-select" required disabled>
+                            <select id="gradeId" name="gradeId" class="form-select select2-enabled" required disabled>
                                 <c:forEach items="${grades}" var="grade">
                                     <option value="${grade.id}" 
                                             ${courseDetails.grade_id == grade.id ? 'selected' : ''}>
@@ -157,7 +196,7 @@
 
                         <div class="form-group">
                             <label for="subjectId" class="form-label">Subject <span class="required">*</span></label>
-                            <select id="subjectId" name="subjectId" class="form-select" required disabled>
+                            <select id="subjectId" name="subjectId" class="form-select select2-enabled" required disabled>
                                 <c:forEach items="${subjects}" var="subject">
                                     <option value="${subject.id}" 
                                             ${courseDetails.subject_id == subject.id ? 'selected' : ''}>
@@ -221,14 +260,14 @@
                     </form>
                 </c:when>
                 <c:otherwise>
-                    <!-- Create Mode Form (existing form) -->
+                    <!-- Create Mode Form -->
                     <form id="courseForm" action="course" method="post">
                         <input type="hidden" name="action" value="create">
 
                         <!-- Step 1: Grade and Subject Selection -->
                         <div class="form-group">
                             <label for="gradeId" class="form-label">Select Grade <span class="required">*</span></label>
-                            <select id="gradeId" name="gradeId" class="form-select" required>
+                            <select id="gradeId" name="gradeId" class="form-select select2-enabled" required>
                                 <option value="">-- Select Grade --</option>
                                 <c:forEach items="${grades}" var="grade">
                                     <option value="${grade.id}" 
@@ -241,10 +280,11 @@
 
                         <div class="form-group">
                             <label for="subjectId" class="form-label">Select Subject <span class="required">*</span></label>
-                            <select id="subjectId" name="subjectId" class="form-select" required>
+                            <select id="subjectId" name="subjectId" class="form-select select2-enabled" required>
                                 <option value="">-- Select Subject --</option>
                                 <c:forEach items="${subjects}" var="subject">
-                                    <option value="${subject.id}" data-grade-id="${subject.grade_id}"
+                                    <option value="${subject.id}" 
+                                            data-grade-id="${subject.grade_id}"
                                             ${preSelectedSubjectId != null && preSelectedSubjectId == subject.id ? 'selected' : ''}>
                                         ${subject.name}
                                     </option>
@@ -318,10 +358,38 @@
 
         <script>
             $(document).ready(function () {
+                // Disable nice-select initialization
+                if (typeof $.fn.niceSelect !== 'undefined') {
+                    $.fn.niceSelect = function () {
+                        return this;
+                    };
+                }
+
+                // Destroy any existing Select2 instances and nice-select
+                $('.select2-enabled').each(function () {
+                    if ($(this).hasClass('select2-hidden-accessible')) {
+                        $(this).select2('destroy');
+                    }
+                    // Remove nice-select if exists
+                    if ($(this).next('.nice-select').length) {
+                        $(this).next('.nice-select').remove();
+                        $(this).show();
+                    }
+                });
+
+                // Initialize Select2 with proper configuration
+                $('.select2-enabled').select2({
+                    placeholder: function () {
+                        return $(this).data('placeholder') || '-- Select --';
+                    },
+                    allowClear: true,
+                    width: '100%',
+                    dropdownParent: $('body')
+                });
+
             <c:choose>
                 <c:when test="${isEdit}">
-                // Edit mode - no dynamic behavior needed
-                // Form validation for edit mode
+                // Edit mode - form validation
                 $('#courseForm').on('submit', function (e) {
                     const courseTitle = $('#courseTitle').val().trim();
                     const price = $('#price').val();
@@ -349,17 +417,7 @@
                 });
                 </c:when>
                 <c:otherwise>
-                // Create mode - original functionality
-                // Initialize Select2
-                $('#gradeId').select2({
-                    placeholder: "-- Select Grade --",
-                    allowClear: true
-                });
-
-                $('#subjectId').select2({
-                    placeholder: "-- Select Subject --",
-                    allowClear: true
-                });
+                // Create mode functionality
 
                 // Handle grade selection
                 $('#gradeId').on('change', function () {
@@ -384,10 +442,26 @@
                         if (currentSubjectGradeId && currentSubjectGradeId != selectedGradeId) {
                             $subjectSelect.val('').trigger('change');
                         }
+
+                        // Refresh Select2
+                        $subjectSelect.select2('destroy').select2({
+                            placeholder: '-- Select Subject --',
+                            allowClear: true,
+                            width: '100%',
+                            dropdownParent: $('body')
+                        });
                     } else {
                         // Show all subjects
                         $subjectSelect.find('option').show();
                         $subjectSelect.val('').trigger('change');
+
+                        // Refresh Select2
+                        $subjectSelect.select2('destroy').select2({
+                            placeholder: '-- Select Subject --',
+                            allowClear: true,
+                            width: '100%',
+                            dropdownParent: $('body')
+                        });
                     }
 
                     updateHierarchyDisplay();

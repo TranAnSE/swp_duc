@@ -30,6 +30,10 @@
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/themify-icons.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/slick.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
         <style>
             .text-danger {
                 color: red;
@@ -101,8 +105,7 @@
             }
             form[method="post"] input[type="text"],
             form[method="post"] input[type="number"],
-            form[method="post"] textarea,
-            form[method="post"] select {
+            form[method="post"] textarea {
                 width: 200px;
                 padding: 8px 12px;
                 font-size: 14px;
@@ -119,8 +122,7 @@
             }
             form[method="post"] input[type="text"]:focus,
             form[method="post"] input[type="number"]:focus,
-            form[method="post"] textarea:focus,
-            form[method="post"] select:focus {
+            form[method="post"] textarea:focus {
                 border-color: #007bff;
                 outline: none;
             }
@@ -159,6 +161,57 @@
             }
             .required {
                 color: #dc3545;
+            }
+
+            /* Select2 Custom Styling */
+            .form-group .select2-container {
+                width: 200px !important;
+                z-index: 1000;
+            }
+            .select2-selection--single {
+                height: 38px !important;
+                padding: 6px 12px !important;
+                border-radius: 6px !important;
+                border: 1px solid #ced4da !important;
+                font-size: 14px !important;
+                line-height: 26px !important;
+            }
+            .select2-selection__rendered {
+                line-height: 26px !important;
+                padding-left: 0 !important;
+                color: #495057 !important;
+            }
+            .select2-selection__arrow {
+                height: 36px !important;
+                right: 12px !important;
+            }
+            .select2-container--focus .select2-selection--single {
+                border-color: #007bff !important;
+                box-shadow: none !important;
+            }
+            .select2-dropdown {
+                border-radius: 6px !important;
+                border: 1px solid #ced4da !important;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+                z-index: 9999 !important;
+            }
+            .select2-results__option {
+                padding: 8px 12px !important;
+                font-size: 14px !important;
+            }
+            .select2-results__option--highlighted {
+                background-color: #007bff !important;
+            }
+            .select2-search--dropdown .select2-search__field {
+                padding: 6px 10px !important;
+                border-radius: 4px !important;
+                border: 1px solid #ced4da !important;
+                font-size: 14px !important;
+            }
+
+            /* Hide nice-select elements */
+            .nice-select {
+                display: none !important;
             }
         </style>
     </head>
@@ -208,7 +261,7 @@
             <!-- Chapter Form -->
             <form method="post" action="chapter">
                 <input type="hidden" name="service" value="${chapterToEdit == null ? 'add' : 'edit'}">
-                
+
                 <!-- Hidden fields for course builder return -->
                 <c:if test="${returnToCourse}">
                     <input type="hidden" name="returnTo" value="course">
@@ -232,7 +285,7 @@
 
                 <div class="form-group">
                     <label for="subject_id">Subject <span class="required">*</span></label>
-                    <select id="subject_id" name="subject_id" required>
+                    <select id="subject_id" name="subject_id" class="form-select select2-enabled" required>
                         <option value="">-- Select Subject --</option>
                         <c:forEach var="subject" items="${listSubject}">
                             <option value="${subject.id}" 
@@ -312,36 +365,66 @@
         <script src="${pageContext.request.contextPath}/assets/js/plugins.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/main.js"></script>
 
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
         <script>
-            // Form validation
-            document.querySelector('form').addEventListener('submit', function(e) {
-                const id = document.getElementById('id').value;
-                const name = document.getElementById('name').value.trim();
-                const subjectId = document.getElementById('subject_id').value;
-
-                if (!id || id <= 0) {
-                    alert('Please enter a valid Chapter ID (positive number).');
-                    e.preventDefault();
-                    return false;
+            $(document).ready(function () {
+                // Disable nice-select initialization
+                if (typeof $.fn.niceSelect !== 'undefined') {
+                    $.fn.niceSelect = function () {
+                        return this;
+                    };
                 }
 
-                if (!name) {
-                    alert('Please enter a chapter name.');
-                    e.preventDefault();
-                    return false;
-                }
+                // Destroy any existing Select2 instances and nice-select
+                $('.select2-enabled').each(function () {
+                    if ($(this).hasClass('select2-hidden-accessible')) {
+                        $(this).select2('destroy');
+                    }
+                    // Remove nice-select if exists
+                    if ($(this).next('.nice-select').length) {
+                        $(this).next('.nice-select').remove();
+                        $(this).show();
+                    }
+                });
 
-                if (!subjectId) {
-                    alert('Please select a subject.');
-                    e.preventDefault();
-                    return false;
-                }
+                // Initialize Select2 for subject dropdown
+                $('.select2-enabled').select2({
+                    placeholder: '-- Select Subject --',
+                    allowClear: true,
+                    width: '200px',
+                    dropdownParent: $('body')
+                });
 
-                return true;
-            });
+                // Form validation
+                document.querySelector('form').addEventListener('submit', function (e) {
+                    const id = document.getElementById('id').value;
+                    const name = document.getElementById('name').value.trim();
+                    const subjectId = document.getElementById('subject_id').value;
 
-            // Auto-focus on first input
-            document.addEventListener('DOMContentLoaded', function() {
+                    if (!id || id <= 0) {
+                        alert('Please enter a valid Chapter ID (positive number).');
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    if (!name) {
+                        alert('Please enter a chapter name.');
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    if (!subjectId) {
+                        alert('Please select a subject.');
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    return true;
+                });
+
+                // Auto-focus on first input
                 const firstInput = document.querySelector('input[type="number"], input[type="text"]');
                 if (firstInput && !firstInput.hasAttribute('readonly')) {
                     firstInput.focus();

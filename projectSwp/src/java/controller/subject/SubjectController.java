@@ -21,6 +21,16 @@ public class SubjectController extends HttpServlet {
 
     private DAOSubject daoSubject = new DAOSubject();
 
+    private void loadGradeMap(HttpServletRequest req) throws SQLException {
+        GradeDAO daoGrade = new GradeDAO();
+        List<Grade> gradeList = daoGrade.findAllFromGrade();
+        Map<Integer, String> gradeMap = new HashMap<>();
+        for (Grade g : gradeList) {
+            gradeMap.put(g.getId(), g.getName());
+        }
+        req.setAttribute("gradeMap", gradeMap);
+    }
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String action = req.getParameter("action");
@@ -29,14 +39,8 @@ public class SubjectController extends HttpServlet {
             return;
         }
         try {
-            // Load grade map for display
-            GradeDAO daoGrade = new GradeDAO();
-            List<Grade> gradeList = daoGrade.findAllFromGrade();
-            Map<Integer, String> gradeMap = new HashMap<>();
-            for (Grade g : gradeList) {
-                gradeMap.put(g.getId(), g.getName());
-            }
-            req.setAttribute("gradeMap", gradeMap);
+            // Load grade map for all requests
+            loadGradeMap(req);
 
             if ("edit".equals(action)) {
                 int id = Integer.parseInt(req.getParameter("id"));
@@ -76,11 +80,28 @@ public class SubjectController extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        String action = req.getParameter("action");
+
+        // Handle AJAX request to clear notification
+        if ("clearNotification".equals(action)) {
+            HttpSession session = req.getSession();
+            session.removeAttribute("subjectCreated");
+            session.removeAttribute("newSubjectId");
+            session.removeAttribute("newSubjectName");
+            session.removeAttribute("newSubjectGradeId");
+            resp.setStatus(HttpServletResponse.SC_OK);
+            return;
+        }
+
         if (!AuthUtil.hasRole(req, RoleConstants.ADMIN)) {
             resp.sendRedirect("/error.jsp");
             return;
         }
+
         try {
+            // Load grade map for error handling
+            loadGradeMap(req);
+
             String idStr = req.getParameter("id");
             String name = req.getParameter("name");
             String description = req.getParameter("description");
@@ -94,12 +115,12 @@ public class SubjectController extends HttpServlet {
             if (idStr == null || idStr.trim().isEmpty()) {
                 // Insert new subject
                 daoSubject.insert(subject);
-                
+
                 // Get the inserted subject ID for course creation redirect
                 List<Subject> subjects = daoSubject.findByNameOfSubject(name);
                 if (!subjects.isEmpty()) {
                     Subject insertedSubject = subjects.get(0);
-                    
+
                     // Set success message with course creation option
                     req.getSession().setAttribute("subjectCreated", true);
                     req.getSession().setAttribute("newSubjectId", insertedSubject.getId());
