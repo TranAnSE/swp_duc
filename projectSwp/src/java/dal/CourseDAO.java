@@ -185,12 +185,12 @@ public class CourseDAO extends DBContext {
     }
 
     public List<Map<String, Object>> getCourseLessons(int courseId) throws SQLException {
-        String sql = "SELECT cl.*, l.name as lesson_name, l.content as lesson_content, c.name as chapter_name "
+        String sql = "SELECT cl.*, l.name as lesson_name, l.content as lesson_content, l.video_link, c.name as chapter_name "
                 + "FROM course_lesson cl "
                 + "JOIN lesson l ON cl.lesson_id = l.id "
                 + "JOIN chapter c ON cl.chapter_id = c.id "
                 + "WHERE cl.course_id = ? AND cl.is_active = 1 "
-                + "ORDER BY cl.display_order";
+                + "ORDER BY cl.chapter_id, cl.display_order";
 
         List<Map<String, Object>> lessons = new ArrayList<>();
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -201,8 +201,10 @@ public class CourseDAO extends DBContext {
                 Map<String, Object> lesson = new HashMap<>();
                 lesson.put("id", rs.getInt("id"));
                 lesson.put("lesson_id", rs.getInt("lesson_id"));
+                lesson.put("chapter_id", rs.getInt("chapter_id"));
                 lesson.put("lesson_name", rs.getString("lesson_name"));
                 lesson.put("lesson_content", rs.getString("lesson_content"));
+                lesson.put("video_link", rs.getString("video_link"));
                 lesson.put("chapter_name", rs.getString("chapter_name"));
                 lesson.put("lesson_type", rs.getString("lesson_type"));
                 lesson.put("display_order", rs.getInt("display_order"));
@@ -304,8 +306,20 @@ public class CourseDAO extends DBContext {
     }
 
     public boolean addLessonToCourse(int courseId, int lessonId, int chapterId, int displayOrder, String lessonType) throws SQLException {
-        String sql = "INSERT INTO course_lesson (course_id, lesson_id, chapter_id, display_order, lesson_type) "
-                + "VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE display_order = ?, lesson_type = ?, is_active = 1";
+        // First check if lesson already exists
+        String checkSql = "SELECT COUNT(*) FROM course_lesson WHERE course_id = ? AND lesson_id = ? AND is_active = 1";
+        try (PreparedStatement checkPs = connection.prepareStatement(checkSql)) {
+            checkPs.setInt(1, courseId);
+            checkPs.setInt(2, lessonId);
+            ResultSet rs = checkPs.executeQuery();
+            if (rs.next() && rs.getInt(1) > 0) {
+                System.out.println("Lesson already exists in course");
+                return false; // Lesson already exists
+            }
+        }
+
+        String sql = "INSERT INTO course_lesson (course_id, lesson_id, chapter_id, display_order, lesson_type, is_active) "
+                + "VALUES (?, ?, ?, ?, ?, 1)";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, courseId);
@@ -313,9 +327,14 @@ public class CourseDAO extends DBContext {
             ps.setInt(3, chapterId);
             ps.setInt(4, displayOrder);
             ps.setString(5, lessonType);
-            ps.setInt(6, displayOrder);
-            ps.setString(7, lessonType);
-            return ps.executeUpdate() > 0;
+
+            int result = ps.executeUpdate();
+            System.out.println("addLessonToCourse SQL result: " + result);
+            return result > 0;
+        } catch (SQLException e) {
+            System.err.println("Error in addLessonToCourse: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
     }
 
@@ -369,7 +388,7 @@ public class CourseDAO extends DBContext {
     }
 
     public int getNextLessonOrder(int courseId, int chapterId) throws SQLException {
-        String sql = "SELECT COALESCE(MAX(display_order), 0) + 1 FROM course_lesson WHERE course_id = ? AND chapter_id = ?";
+        String sql = "SELECT COALESCE(MAX(display_order), 0) + 1 FROM course_lesson WHERE course_id = ? AND chapter_id = ? AND is_active = 1";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, courseId);
             ps.setInt(2, chapterId);

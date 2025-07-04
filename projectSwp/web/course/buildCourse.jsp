@@ -198,6 +198,59 @@
                 color: white;
                 border-radius: 8px 8px 0 0;
             }
+            /* Modal fallback styles */
+            .modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                z-index: 1055;
+                width: 100%;
+                height: 100%;
+                overflow-x: hidden;
+                overflow-y: auto;
+                outline: 0;
+            }
+
+            .modal.show {
+                display: block !important;
+            }
+
+            .modal-backdrop {
+                position: fixed;
+                top: 0;
+                left: 0;
+                z-index: 1050;
+                width: 100vw;
+                height: 100vh;
+                background-color: #000;
+            }
+
+            .modal-backdrop.fade {
+                opacity: 0;
+            }
+
+            .modal-backdrop.show {
+                opacity: 0.5;
+            }
+
+            .modal-open {
+                overflow: hidden;
+            }
+
+            /* Sortable ghost styles */
+            .sortable-ghost {
+                opacity: 0.4;
+                background: #f8f9fa;
+            }
+
+            .content-item {
+                cursor: move;
+                transition: all 0.3s ease;
+            }
+
+            .content-item:hover {
+                background-color: #f8f9fa;
+            }
         </style>
     </head>
     <body>
@@ -565,11 +618,20 @@
 
                             function initializeModals() {
                                 try {
-                                    // Check if Bootstrap is loaded
+                                    // Check Bootstrap version and availability
                                     if (typeof bootstrap !== 'undefined') {
                                         console.log('Bootstrap is available');
+
+                                        // Check if Modal.getInstance exists
+                                        if (typeof bootstrap.Modal !== 'undefined' && typeof bootstrap.Modal.getInstance === 'function') {
+                                            console.log('Bootstrap Modal.getInstance is available');
+                                        } else {
+                                            console.log('Bootstrap Modal.getInstance not available, using fallback');
+                                        }
+                                    } else if (typeof $ !== 'undefined' && typeof $.fn.modal !== 'undefined') {
+                                        console.log('jQuery Bootstrap modal is available');
                                     } else {
-                                        console.warn('Bootstrap is not loaded');
+                                        console.warn('No Bootstrap modal library detected');
                                     }
                                 } catch (error) {
                                     console.error('Error checking Bootstrap:', error);
@@ -606,7 +668,7 @@
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/x-www-form-urlencoded',
-                                        'X-Requested-With': 'XMLHttpRequest'  // Mark as AJAX request
+                                        'X-Requested-With': 'XMLHttpRequest'
                                     },
                                     body: params.toString()
                                 })
@@ -618,7 +680,6 @@
                                                 throw new Error('Network response was not ok: ' + response.status);
                                             }
 
-                                            // Check if response is JSON
                                             const contentType = response.headers.get('content-type');
                                             if (!contentType || !contentType.includes('application/json')) {
                                                 return response.text().then(text => {
@@ -654,7 +715,7 @@
 
                                 const chapterInfo = document.getElementById('chapterInfo');
                                 if (chapterInfo) {
-                                    chapterInfo.innerHTML = '<strong>Adding lesson to chapter:</strong> ' + chapterName;
+                                    chapterInfo.innerHTML = '<strong>Adding lesson to chapter:</strong> ' + escapeHtml(chapterName);
                                 }
 
                                 // Update create lesson button URL
@@ -666,16 +727,117 @@
                                 // Load available lessons for this chapter
                                 loadAvailableLessons(chapterId);
 
-                                // Show modal
-                                const modalElement = document.getElementById('addLessonModal');
-                                if (modalElement) {
-                                    if (typeof bootstrap !== 'undefined') {
-                                        new bootstrap.Modal(modalElement).show();
-                                    } else {
-                                        // Fallback for when Bootstrap is not available
-                                        modalElement.style.display = 'block';
-                                        modalElement.classList.add('show');
+                                // Show modal with multiple fallback methods
+                                showModal('addLessonModal');
+                            }
+
+                            // Universal modal show function with fallbacks
+                            function showModal(modalId) {
+                                const modalElement = document.getElementById(modalId);
+                                if (!modalElement) {
+                                    console.error('Modal element not found:', modalId);
+                                    return;
+                                }
+
+                                try {
+                                    // Method 1: Bootstrap 5 with getInstance
+                                    if (typeof bootstrap !== 'undefined' &&
+                                            typeof bootstrap.Modal !== 'undefined' &&
+                                            typeof bootstrap.Modal.getInstance === 'function') {
+
+                                        let modalInstance = bootstrap.Modal.getInstance(modalElement);
+                                        if (!modalInstance) {
+                                            modalInstance = new bootstrap.Modal(modalElement);
+                                        }
+                                        modalInstance.show();
+                                        return;
                                     }
+
+                                    // Method 2: Bootstrap 5 without getInstance
+                                    if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal !== 'undefined') {
+                                        const modalInstance = new bootstrap.Modal(modalElement);
+                                        modalInstance.show();
+                                        return;
+                                    }
+
+                                    // Method 3: jQuery Bootstrap
+                                    if (typeof $ !== 'undefined' && typeof $.fn.modal !== 'undefined') {
+                                        $(modalElement).modal('show');
+                                        return;
+                                    }
+
+                                    // Method 4: Manual fallback
+                                    modalElement.style.display = 'block';
+                                    modalElement.classList.add('show');
+                                    modalElement.setAttribute('aria-hidden', 'false');
+
+                                    // Add backdrop
+                                    let backdrop = document.querySelector('.modal-backdrop');
+                                    if (!backdrop) {
+                                        backdrop = document.createElement('div');
+                                        backdrop.className = 'modal-backdrop fade show';
+                                        document.body.appendChild(backdrop);
+                                    }
+
+                                    // Add modal-open class to body
+                                    document.body.classList.add('modal-open');
+
+                                    console.log('Modal shown using manual fallback');
+
+                                } catch (error) {
+                                    console.error('Error showing modal:', error);
+                                    // Last resort - just show the modal element
+                                    modalElement.style.display = 'block';
+                                }
+                            }
+
+                            // Universal modal hide function with fallbacks
+                            function hideModal(modalId) {
+                                const modalElement = document.getElementById(modalId);
+                                if (!modalElement) {
+                                    console.error('Modal element not found:', modalId);
+                                    return;
+                                }
+
+                                try {
+                                    // Method 1: Bootstrap 5 with getInstance
+                                    if (typeof bootstrap !== 'undefined' &&
+                                            typeof bootstrap.Modal !== 'undefined' &&
+                                            typeof bootstrap.Modal.getInstance === 'function') {
+
+                                        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                                        if (modalInstance) {
+                                            modalInstance.hide();
+                                            return;
+                                        }
+                                    }
+
+                                    // Method 2: jQuery Bootstrap
+                                    if (typeof $ !== 'undefined' && typeof $.fn.modal !== 'undefined') {
+                                        $(modalElement).modal('hide');
+                                        return;
+                                    }
+
+                                    // Method 3: Manual fallback
+                                    modalElement.style.display = 'none';
+                                    modalElement.classList.remove('show');
+                                    modalElement.setAttribute('aria-hidden', 'true');
+
+                                    // Remove backdrop
+                                    const backdrop = document.querySelector('.modal-backdrop');
+                                    if (backdrop) {
+                                        backdrop.remove();
+                                    }
+
+                                    // Remove modal-open class from body
+                                    document.body.classList.remove('modal-open');
+
+                                    console.log('Modal hidden using manual fallback');
+
+                                } catch (error) {
+                                    console.error('Error hiding modal:', error);
+                                    // Last resort - just hide the modal element
+                                    modalElement.style.display = 'none';
                                 }
                             }
 
@@ -762,19 +924,8 @@
                                         })
                                         .then(data => {
                                             if (data.success) {
-                                                // Close modal
-                                                const modalElement = document.getElementById('addLessonModal');
-                                                if (modalElement) {
-                                                    if (typeof bootstrap !== 'undefined') {
-                                                        const modalInstance = bootstrap.Modal.getInstance(modalElement);
-                                                        if (modalInstance) {
-                                                            modalInstance.hide();
-                                                        }
-                                                    } else {
-                                                        modalElement.style.display = 'none';
-                                                        modalElement.classList.remove('show');
-                                                    }
-                                                }
+                                                // Close modal using universal hide function
+                                                hideModal('addLessonModal');
                                                 location.reload();
                                             } else {
                                                 alert('Failed to add lesson: ' + (data.message || 'Unknown error'));
@@ -869,28 +1020,31 @@
                                     return;
                                 }
 
-                                const formData = new FormData();
-                                formData.append('action', 'reorderContent');
-                                formData.append('courseId', '${courseId}');
-                                formData.append('contentType', contentType);
-                                contentIds.forEach(id => formData.append('contentIds', id));
+                                const params = new URLSearchParams();
+                                params.append('action', 'reorderContent');
+                                params.append('courseId', '${courseId}');
+                                params.append('contentType', contentType);
+                                contentIds.forEach(id => params.append('contentIds', id));
 
                                 fetch('${pageContext.request.contextPath}/course', {
                                     method: 'POST',
-                                    body: formData
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: params.toString()
                                 })
                                         .then(response => {
                                             if (!response.ok) {
                                                 throw new Error('Network response was not ok');
                                             }
-                                            return response.text().then(text => {
-                                                try {
-                                                    return JSON.parse(text);
-                                                } catch (e) {
-                                                    console.error('Response is not JSON:', text);
-                                                    return {success: false, message: 'Invalid response'};
-                                                }
-                                            });
+
+                                            const contentType = response.headers.get('content-type');
+                                            if (contentType && contentType.includes('application/json')) {
+                                                return response.json();
+                                            } else {
+                                                return {success: true}; // Assume success if not JSON
+                                            }
                                         })
                                         .then(data => {
                                             if (!data.success) {
@@ -969,7 +1123,7 @@
                                                         });
                                             }
 
-                                            // Utility function to escape HTML - moved outside template literals
+                                            // Utility function to escape HTML
                                             function escapeHtml(text) {
                                                 if (!text)
                                                     return '';
@@ -986,8 +1140,30 @@
                                                     saveDraft();
                                                 }
                                             }, 300000); // 5 minutes
+
+                                            // Close modal when clicking outside or on close button
+                                            document.addEventListener('click', function (event) {
+                                                if (event.target.classList.contains('modal') ||
+                                                        event.target.classList.contains('modal-backdrop') ||
+                                                        event.target.classList.contains('btn-close') ||
+                                                        event.target.getAttribute('data-bs-dismiss') === 'modal') {
+
+                                                    const openModals = document.querySelectorAll('.modal.show');
+                                                    openModals.forEach(modal => {
+                                                        hideModal(modal.id);
+                                                    });
+                                                }
+                                            });
+
+                                            // Handle escape key to close modals
+                                            document.addEventListener('keydown', function (event) {
+                                                if (event.key === 'Escape') {
+                                                    const openModals = document.querySelectorAll('.modal.show');
+                                                    openModals.forEach(modal => {
+                                                        hideModal(modal.id);
+                                                    });
+                                                }
+                                            });
         </script>
-
-
     </body>
 </html>

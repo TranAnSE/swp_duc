@@ -502,13 +502,33 @@ public class CourseController extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
 
         try {
-            int courseId = Integer.parseInt(request.getParameter("courseId"));
-            int lessonId = Integer.parseInt(request.getParameter("lessonId"));
-            int chapterId = Integer.parseInt(request.getParameter("chapterId"));
-            String lessonType = request.getParameter("lessonType");
+            String courseIdParam = request.getParameter("courseId");
+            String lessonIdParam = request.getParameter("lessonId");
+            String chapterIdParam = request.getParameter("chapterId");
+            String lessonTypeParam = request.getParameter("lessonType");
 
-            if (lessonType == null) {
-                lessonType = "LESSON";
+            System.out.println("addLessonToCourse - courseId: " + courseIdParam
+                    + ", lessonId: " + lessonIdParam
+                    + ", chapterId: " + chapterIdParam);
+
+            if (courseIdParam == null || lessonIdParam == null || chapterIdParam == null) {
+                response.getWriter().write("{\"success\": false, \"message\": \"Missing required parameters\"}");
+                return;
+            }
+
+            int courseId = Integer.parseInt(courseIdParam);
+            int lessonId = Integer.parseInt(lessonIdParam);
+            int chapterId = Integer.parseInt(chapterIdParam);
+            String lessonType = lessonTypeParam != null ? lessonTypeParam : "LESSON";
+
+            // Check if lesson already exists in course using DAO
+            List<Map<String, Object>> existingLessons = courseManagementDAO.getCourseLessons(courseId);
+            boolean lessonExists = existingLessons.stream()
+                    .anyMatch(lesson -> (Integer) lesson.get("lesson_id") == lessonId);
+
+            if (lessonExists) {
+                response.getWriter().write("{\"success\": false, \"message\": \"Lesson already exists in this course\"}");
+                return;
             }
 
             // Get next display order

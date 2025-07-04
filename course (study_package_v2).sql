@@ -121,18 +121,15 @@ LEFT JOIN course_test ct ON sp.id = ct.course_id AND ct.is_active = 1
 WHERE sp.type = 'COURSE'
 GROUP BY sp.id;
 
--- Additional database updates for course workflow
-USE `db-script1`;
-
 -- Update study_package table structure for new course system
 ALTER TABLE study_package 
 MODIFY COLUMN type ENUM('COURSE') DEFAULT 'COURSE',
 MODIFY COLUMN max_students INT DEFAULT 1 COMMENT 'Always 1 for new course system';
 
 -- Ensure all required columns exist
-SET @col_subject_id := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'db-script1' AND TABLE_NAME = 'study_package' AND COLUMN_NAME = 'subject_id');
-SET @col_course_title := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'db-script1' AND TABLE_NAME = 'study_package' AND COLUMN_NAME = 'course_title');
-SET @col_approval_status := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'db-script1' AND TABLE_NAME = 'study_package' AND COLUMN_NAME = 'approval_status');
+SET @col_subject_id := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'db-script' AND TABLE_NAME = 'study_package' AND COLUMN_NAME = 'subject_id');
+SET @col_course_title := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'db-script' AND TABLE_NAME = 'study_package' AND COLUMN_NAME = 'course_title');
+SET @col_approval_status := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'db-script' AND TABLE_NAME = 'study_package' AND COLUMN_NAME = 'approval_status');
 
 -- Add missing columns if they don't exist
 SET @sql := CASE 
@@ -154,7 +151,7 @@ END;
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- Add foreign key for subject_id if it doesn't exist
-SET @fk_subject_exists := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = 'db-script1' AND TABLE_NAME = 'study_package' AND CONSTRAINT_NAME = 'study_package_subject_id_fk');
+SET @fk_subject_exists := (SELECT COUNT(1) FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = 'db-script' AND TABLE_NAME = 'study_package' AND CONSTRAINT_NAME = 'study_package_subject_id_fk');
 SET @sql := IF(@fk_subject_exists = 0 AND @col_subject_id > 0, 'ALTER TABLE study_package ADD CONSTRAINT study_package_subject_id_fk FOREIGN KEY (subject_id) REFERENCES subject(id);', 'SELECT "Foreign key exists or column missing" as message;');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
@@ -173,3 +170,30 @@ CREATE TABLE IF NOT EXISTS course_content_order (
     KEY course_content_order_course_id_fk (course_id),
     CONSTRAINT course_content_order_course_id_fk FOREIGN KEY (course_id) REFERENCES study_package(id)
 );
+
+CREATE TABLE IF NOT EXISTS course_lesson (
+    id INT NOT NULL AUTO_INCREMENT,
+    course_id INT NOT NULL,
+    lesson_id INT NOT NULL,
+    chapter_id INT NOT NULL,
+    display_order INT NOT NULL DEFAULT 1,
+    lesson_type ENUM('LESSON', 'PRACTICE_TEST', 'OFFICIAL_TEST') DEFAULT 'LESSON',
+    is_active BIT(1) DEFAULT b'1',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY course_lesson_course_id_fk (course_id),
+    KEY course_lesson_lesson_id_fk (lesson_id),
+    KEY course_lesson_chapter_id_fk (chapter_id),
+    KEY idx_course_chapter_order (course_id, chapter_id, display_order),
+    CONSTRAINT course_lesson_course_id_fk FOREIGN KEY (course_id) REFERENCES study_package(id),
+    CONSTRAINT course_lesson_lesson_id_fk FOREIGN KEY (lesson_id) REFERENCES lesson(id),
+    CONSTRAINT course_lesson_chapter_id_fk FOREIGN KEY (chapter_id) REFERENCES chapter(id)
+);
+
+-- Remove any conflicting unique constraints
+ALTER TABLE course_lesson DROP INDEX unique_course_lesson;
+
+-- Add a better unique constraint that allows the same lesson in different courses
+-- but prevents duplicate lesson in same course
+ALTER TABLE course_lesson 
+ADD UNIQUE INDEX unique_course_lesson_active (course_id, lesson_id, is_active);
