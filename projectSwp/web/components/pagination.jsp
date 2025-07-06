@@ -23,7 +23,7 @@
     <div class="d-flex gap-3 align-items-center">
         <div class="page-size-selector">
             <label for="pageSizeSelect">Show:</label>
-            <select id="pageSizeSelect" onchange="changePageSize(this.value)">
+            <select id="pageSizeSelect" onchange="changePageSize(this.value)" class="form-select form-select-sm">
                 <option value="5" ${pageSize == 5 ? 'selected' : ''}>5</option>
                 <option value="10" ${pageSize == 10 ? 'selected' : ''}>10</option>
                 <option value="20" ${pageSize == 20 ? 'selected' : ''}>20</option>

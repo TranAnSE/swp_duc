@@ -8,7 +8,8 @@
         <title>Course Management</title>
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/bootstrap.min.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
-
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
         <style>
             body {
                 padding-top: 130px;
@@ -615,10 +616,40 @@
         <!-- JS -->
         <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
-
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <script>
                                 // Initialize page
                                 $(document).ready(function () {
+                                    // Disable nice-select initialization completely
+                                    if (typeof $.fn.niceSelect !== 'undefined') {
+                                        $.fn.niceSelect = function () {
+                                            return this;
+                                        };
+                                    }
+
+                                    // Destroy any existing Select2 instances and nice-select
+                                    $('select').each(function () {
+                                        if ($(this).hasClass('select2-hidden-accessible')) {
+                                            $(this).select2('destroy');
+                                        }
+                                        // Remove nice-select if exists
+                                        if ($(this).next('.nice-select').length) {
+                                            $(this).next('.nice-select').remove();
+                                            $(this).show();
+                                        }
+                                    });
+
+                                    // Initialize Select2 for all select elements
+                                    $('select').select2({
+                                        placeholder: function () {
+                                            return $(this).find('option:first').text() || 'Select...';
+                                        },
+                                        allowClear: true,
+                                        width: '100%',
+                                        dropdownParent: $('body')
+                                    });
+
                                     // Filter subjects based on selected grade on page load
                                     filterSubjectsByGrade();
 
@@ -656,16 +687,24 @@
                                         if (currentOption.length > 0) {
                                             const currentGradeId = currentOption.data('grade-id');
                                             if (currentGradeId && currentGradeId != selectedGradeId) {
-                                                subjectSelect.val('');
+                                                subjectSelect.val('').trigger('change');
                                             }
                                         }
                                     }
+
+                                    // Refresh Select2
+                                    subjectSelect.select2({
+                                        placeholder: 'All Subjects',
+                                        allowClear: true,
+                                        width: '100%',
+                                        dropdownParent: $('body')
+                                    });
                                 }
 
                                 function clearFilters() {
-                                    $('#gradeFilter').val('');
-                                    $('#subjectFilter').val('');
-                                    $('#statusFilter').val('');
+                                    $('#gradeFilter').val('').trigger('change');
+                                    $('#subjectFilter').val('').trigger('change');
+                                    $('#statusFilter').val('').trigger('change');
                                     $('#searchFilter').val('');
                                     $('#filterForm').submit();
                                 }
@@ -701,14 +740,14 @@
 
                                     if (subjectId && subjectId !== '${selectedSubjectId}') {
                                         // If coming from subjects page with subjectId parameter
-                                        $('#subjectFilter').val(subjectId);
+                                        $('#subjectFilter').val(subjectId).trigger('change');
 
                                         // Also set the corresponding grade
                                         const subjectOption = $('#subjectFilter option[value="' + subjectId + '"]');
                                         if (subjectOption.length > 0) {
                                             const gradeId = subjectOption.data('grade-id');
                                             if (gradeId) {
-                                                $('#gradeFilter').val(gradeId);
+                                                $('#gradeFilter').val(gradeId).trigger('change');
                                             }
                                         }
 

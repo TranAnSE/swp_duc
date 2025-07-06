@@ -184,6 +184,77 @@ public class ChapterDAO extends DBContext {
         return null;
     }
 
+    public List<Chapter> findChaptersWithPagination(String name, Integer subjectId, int page, int pageSize) {
+        List<Chapter> list = new ArrayList<>();
+        StringBuilder sql = new StringBuilder("SELECT * FROM chapter WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (name != null && !name.trim().isEmpty()) {
+            sql.append(" AND name LIKE ?");
+            params.add("%" + name.trim() + "%");
+        }
+
+        if (subjectId != null) {
+            sql.append(" AND subject_id = ?");
+            params.add(subjectId);
+        }
+
+        sql.append(" ORDER BY name LIMIT ? OFFSET ?");
+        params.add(pageSize);
+        params.add((page - 1) * pageSize);
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Chapter chapter = new Chapter(
+                            rs.getInt("id"),
+                            rs.getString("name"),
+                            rs.getString("description"),
+                            rs.getInt("subject_id")
+                    );
+                    list.add(chapter);
+                }
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(ChapterDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return list;
+    }
+
+    public int getTotalChaptersCount(String name, Integer subjectId) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM chapter WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (name != null && !name.trim().isEmpty()) {
+            sql.append(" AND name LIKE ?");
+            params.add("%" + name.trim() + "%");
+        }
+
+        if (subjectId != null) {
+            sql.append(" AND subject_id = ?");
+            params.add(subjectId);
+        }
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(ChapterDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return 0;
+    }
+
 //    public static void main(String[] args) {
 //        ChapterDAO daoC = new ChapterDAO();
 //        List<Chapter> list = daoC.getChapter("select * from chapter");

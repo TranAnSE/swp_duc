@@ -11,6 +11,8 @@
         <!-- CSS here -->
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
         <style>
             body {
                 padding-top: 130px;
@@ -578,10 +580,40 @@
         <!-- JS -->
         <script src="${pageContext.request.contextPath}/assets/js/vendor/jquery-1.12.4.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4" crossorigin="anonymous"></script>
-
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <script>
                                 // Initialize page
                                 $(document).ready(function () {
+                                    // Disable nice-select initialization completely
+                                    if (typeof $.fn.niceSelect !== 'undefined') {
+                                        $.fn.niceSelect = function () {
+                                            return this;
+                                        };
+                                    }
+
+                                    // Destroy any existing Select2 instances and nice-select
+                                    $('select').each(function () {
+                                        if ($(this).hasClass('select2-hidden-accessible')) {
+                                            $(this).select2('destroy');
+                                        }
+                                        // Remove nice-select if exists
+                                        if ($(this).next('.nice-select').length) {
+                                            $(this).next('.nice-select').remove();
+                                            $(this).show();
+                                        }
+                                    });
+
+                                    // Initialize Select2 for all select elements
+                                    $('select').select2({
+                                        placeholder: function () {
+                                            return $(this).find('option:first').text() || 'Select...';
+                                        },
+                                        allowClear: true,
+                                        width: '100%',
+                                        dropdownParent: $('body')
+                                    });
+
                                     // Auto-submit form when Enter is pressed in search field
                                     $('#nameFilter').on('keypress', function (e) {
                                         if (e.which === 13) {
@@ -599,7 +631,7 @@
                                 }
 
                                 function clearFilters() {
-                                    $('#gradeFilter').val('');
+                                    $('#gradeFilter').val('').trigger('change');
                                     $('#nameFilter').val('');
                                     $('#filterForm').submit();
                                 }
@@ -625,15 +657,10 @@
                                     }
                                 }, 10000);
 
-                                // Prevent nice-select initialization on page load
-                                $(document).ready(function () {
-                                    // Disable nice-select globally for this page
-                                    if (typeof $.fn.niceSelect !== 'undefined') {
-                                        $.fn.niceSelect = function () {
-                                            return this;
-                                        };
-                                    }
-                                });
+                                // Auto-dismiss alerts after 5 seconds
+                                setTimeout(function () {
+                                    $('.alert').fadeOut('slow');
+                                }, 5000);
         </script>
     </body>
 </html>

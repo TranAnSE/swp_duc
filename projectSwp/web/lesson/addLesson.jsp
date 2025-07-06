@@ -19,9 +19,9 @@
         <link rel="stylesheet" href="/assets/css/fontawesome-all.min.css">
         <link rel="stylesheet" href="/assets/css/themify-icons.css">
         <link rel="stylesheet" href="/assets/css/slick.css">
-        <link rel="stylesheet" href="/assets/css/nice-select.css">
         <link rel="stylesheet" href="/assets/css/style.css">
-
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
         <style>
             html, body {
                 height: 100%;
@@ -51,7 +51,7 @@
             .card {
                 margin-bottom: 40px;
             }
-            
+
             .video-preview {
                 max-width: 100%;
                 margin-top: 10px;
@@ -89,7 +89,7 @@
 
                                     <div class="mb-3">
                                         <label for="chapter_id" class="form-label">Chapter</label>
-                                        <select class="form-select nice-select wide" id="chapter_id" name="chapter_id">
+                                        <select class="form-select wide" id="chapter_id" name="chapter_id">
                                             <option value="">-- Chọn Chapter --</option>
                                             <c:forEach items="${chapterName}" var="chapter">
                                                 <option value="${chapter.id}">${chapter.name}</option>
@@ -118,58 +118,70 @@
         </main>
 
         <jsp:include page="/footer.jsp" />
-
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <script src="assets/js/select2-utils.js"></script>
         <script>
-            function validateForm() {
-                let isValid = true;
-                document.getElementById("nameError").innerText = "";
-                document.getElementById("contentError").innerText = "";
-                document.getElementById("chapterError").innerText = "";
+                                            function validateForm() {
+                                                let isValid = true;
+                                                document.getElementById("nameError").innerText = "";
+                                                document.getElementById("contentError").innerText = "";
+                                                document.getElementById("chapterError").innerText = "";
 
-                const name = document.getElementById("name").value.trim();
-                const content = document.getElementById("content").value.trim();
-                const chapter = document.getElementById("chapter_id").value;
+                                                const name = document.getElementById("name").value.trim();
+                                                const content = document.getElementById("content").value.trim();
+                                                const chapter = document.getElementById("chapter_id").value;
 
-                if (name === "") {
-                    document.getElementById("nameError").innerText = "Vui lòng nhập tên bài học.";
-                    isValid = false;
-                }
+                                                if (name === "") {
+                                                    document.getElementById("nameError").innerText = "Vui lòng nhập tên bài học.";
+                                                    isValid = false;
+                                                }
 
-                if (content === "") {
-                    document.getElementById("contentError").innerText = "Vui lòng nhập nội dung.";
-                    isValid = false;
-                }
+                                                if (content === "") {
+                                                    document.getElementById("contentError").innerText = "Vui lòng nhập nội dung.";
+                                                    isValid = false;
+                                                }
 
-                if (chapter === "") {
-                    document.getElementById("chapterError").innerText = "Vui lòng chọn một chapter.";
-                    isValid = false;
-                }
+                                                if (chapter === "") {
+                                                    document.getElementById("chapterError").innerText = "Vui lòng chọn một chapter.";
+                                                    isValid = false;
+                                                }
 
-                return isValid;
-            }
-            
-            function previewVideo(input) {
-                const videoPreview = document.getElementById('videoPreview');
-                if (input.files && input.files[0]) {
-                    const file = input.files[0];
-                    
-                    // Kiểm tra kích thước file (tối đa 100MB)
-                    if (file.size > 100 * 1024 * 1024) {
-                        alert("File quá lớn. Vui lòng chọn file nhỏ hơn 100MB.");
-                        input.value = "";
-                        videoPreview.style.display = "none";
-                        return;
-                    }
-                    
-                    // Tạo URL cho video preview
-                    const videoURL = URL.createObjectURL(file);
-                    videoPreview.src = videoURL;
-                    videoPreview.style.display = "block";
-                } else {
-                    videoPreview.style.display = "none";
-                }
-            }
+                                                return isValid;
+                                            }
+
+                                            function previewVideo(input) {
+                                                const videoPreview = document.getElementById('videoPreview');
+                                                if (input.files && input.files[0]) {
+                                                    const file = input.files[0];
+
+                                                    // Check file size (max 100MB)
+                                                    if (file.size > 100 * 1024 * 1024) {
+                                                        alert("File quá lớn. Vui lòng chọn file nhỏ hơn 100MB.");
+                                                        input.value = "";
+                                                        videoPreview.style.display = "none";
+                                                        return;
+                                                    }
+
+                                                    // Create URL for video preview
+                                                    const videoURL = URL.createObjectURL(file);
+                                                    videoPreview.src = videoURL;
+                                                    videoPreview.style.display = "block";
+                                                } else {
+                                                    videoPreview.style.display = "none";
+                                                }
+                                            }
+
+                                            $(document).ready(function () {
+                                                initializeSelect2ForElement('#chapter_id', {
+                                                    placeholder: '-- Chọn Chapter --'
+                                                });
+
+                                                // Pre-select chapter if coming from course builder
+            <c:if test="${not empty preSelectedChapterId}">
+                                                $('#chapter_id').val('${preSelectedChapterId}').trigger('change');
+            </c:if>
+                                            });
         </script>
-
     </body>
 </html>

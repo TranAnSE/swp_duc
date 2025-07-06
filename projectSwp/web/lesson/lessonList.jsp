@@ -11,6 +11,8 @@
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
         <link rel="stylesheet" href="/assets/css/style.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
         <style>
             body {
                 padding-top: 130px;
@@ -404,41 +406,71 @@
         <!-- JS -->
         <script src="/assets/js/vendor/jquery-1.12.4.min.js"></script>
         <script src="/assets/js/bootstrap.min.js"></script>
-
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <script>
-                                // Initialize page
-                                $(document).ready(function () {
-                                    // Auto-submit form when Enter is pressed in search field
-                                    $('#nameFilter').on('keypress', function (e) {
-                                        if (e.which === 13) {
-                                            $('#filterForm').submit();
-                                        }
-                                    });
-                                });
+                               // Initialize page
+                               $(document).ready(function () {
+                                   // Disable nice-select initialization completely
+                                   if (typeof $.fn.niceSelect !== 'undefined') {
+                                       $.fn.niceSelect = function () {
+                                           return this;
+                                       };
+                                   }
 
-                                function clearFilters() {
-                                    $('#nameFilter').val('');
-                                    $('#chapterFilter').val('');
-                                    $('#filterForm').submit();
-                                }
+                                   // Destroy any existing Select2 instances and nice-select
+                                   $('select').each(function () {
+                                       if ($(this).hasClass('select2-hidden-accessible')) {
+                                           $(this).select2('destroy');
+                                       }
+                                       // Remove nice-select if exists
+                                       if ($(this).next('.nice-select').length) {
+                                           $(this).next('.nice-select').remove();
+                                           $(this).show();
+                                       }
+                                   });
 
-                                function changePageSize(newPageSize) {
-                                    const form = $('#filterForm');
-                                    form.find('input[name="pageSize"]').val(newPageSize);
-                                    form.find('input[name="page"]').val(1); // Reset to first page
-                                    form.submit();
-                                }
+                                   // Initialize Select2 for all select elements
+                                   $('select').select2({
+                                       placeholder: function () {
+                                           return $(this).find('option:first').text() || 'All Chapters';
+                                       },
+                                       allowClear: true,
+                                       width: '100%',
+                                       dropdownParent: $('body')
+                                   });
 
-                                function goToPage(pageNumber) {
-                                    const form = $('#filterForm');
-                                    form.find('input[name="page"]').val(pageNumber);
-                                    form.submit();
-                                }
+                                   // Auto-submit form when Enter is pressed in search field
+                                   $('#nameFilter').on('keypress', function (e) {
+                                       if (e.which === 13) {
+                                           $('#filterForm').submit();
+                                       }
+                                   });
+                               });
 
-                                // Auto-dismiss alerts after 5 seconds
-                                setTimeout(function () {
-                                    $('.alert').fadeOut('slow');
-                                }, 5000);
+                               function clearFilters() {
+                                   $('#nameFilter').val('');
+                                   $('#chapterFilter').val('').trigger('change');
+                                   $('#filterForm').submit();
+                               }
+
+                               function changePageSize(newPageSize) {
+                                   const form = $('#filterForm');
+                                   form.find('input[name="pageSize"]').val(newPageSize);
+                                   form.find('input[name="page"]').val(1); // Reset to first page
+                                   form.submit();
+                               }
+
+                               function goToPage(pageNumber) {
+                                   const form = $('#filterForm');
+                                   form.find('input[name="page"]').val(pageNumber);
+                                   form.submit();
+                               }
+
+                               // Auto-dismiss alerts after 5 seconds
+                               setTimeout(function () {
+                                   $('.alert').fadeOut('slow');
+                               }, 5000);
         </script>
     </body>
 </html>

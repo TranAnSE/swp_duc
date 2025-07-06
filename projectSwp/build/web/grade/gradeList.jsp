@@ -23,8 +23,11 @@
         <link rel="stylesheet" href="assets/css/fontawesome-all.min.css">
         <link rel="stylesheet" href="assets/css/themify-icons.css">
         <link rel="stylesheet" href="assets/css/slick.css">
-        <link rel="stylesheet" href="assets/css/nice-select.css">
         <link rel="stylesheet" href="assets/css/style.css">
+        <link rel="stylesheet" href="assets/css/pagination.css">
+
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
         <!-- Custom style -->
         <style>
@@ -42,100 +45,6 @@
                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             }
 
-            /* Filter Section */
-            .filter-section {
-                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                border-radius: 8px;
-                padding: 20px;
-                margin-bottom: 25px;
-                border: 1px solid #dee2e6;
-            }
-
-            .filter-row {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 15px;
-                align-items: end;
-            }
-
-            .filter-group {
-                min-width: 200px;
-                flex: 1;
-            }
-
-            .filter-group label {
-                font-weight: 600;
-                color: #495057;
-                margin-bottom: 5px;
-                display: block;
-            }
-
-            .filter-group select,
-            .filter-group input {
-                width: 100%;
-                padding: 8px 12px;
-                border: 1px solid #ced4da;
-                border-radius: 4px;
-                font-size: 14px;
-            }
-
-            .filter-actions {
-                display: flex;
-                gap: 10px;
-                align-items: end;
-            }
-
-            .btn-filter {
-                padding: 8px 20px;
-                border-radius: 4px;
-                border: none;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
-
-            .btn-primary {
-                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-                color: white;
-            }
-
-            .btn-secondary {
-                background: #6c757d;
-                color: white;
-            }
-
-            .btn-filter:hover {
-                transform: translateY(-1px);
-                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            }
-
-            /* Results info */
-            .results-info {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 20px;
-                padding: 15px 0;
-                border-bottom: 1px solid #dee2e6;
-            }
-
-            .results-count {
-                font-weight: 600;
-                color: #495057;
-            }
-
-            .page-size-selector {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-
-            .page-size-selector select {
-                padding: 5px 10px;
-                border: 1px solid #ced4da;
-                border-radius: 4px;
-            }
-
             .search-box {
                 height: 45px;
                 width: 300px;
@@ -147,67 +56,6 @@
                 height: 45px;
                 font-size: 16px;
                 padding: 6px 20px;
-            }
-
-            /* Pagination */
-            .pagination-container {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin-top: 30px;
-                padding-top: 20px;
-                border-top: 1px solid #dee2e6;
-            }
-
-            .pagination {
-                display: flex;
-                align-items: center;
-                gap: 5px;
-            }
-
-            .pagination a,
-            .pagination span {
-                padding: 8px 12px;
-                text-decoration: none;
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                color: #495057;
-                transition: all 0.3s ease;
-            }
-
-            .pagination a:hover {
-                background-color: #e9ecef;
-                color: #495057;
-                text-decoration: none;
-            }
-
-            .pagination .current {
-                background-color: #007bff;
-                color: white;
-                border-color: #007bff;
-            }
-
-            .pagination .disabled {
-                color: #6c757d;
-                background-color: #f8f9fa;
-                cursor: not-allowed;
-            }
-
-            /* Responsive */
-            @media (max-width: 768px) {
-                .filter-row {
-                    flex-direction: column;
-                }
-
-                .filter-group {
-                    min-width: 100%;
-                }
-
-                .results-info {
-                    flex-direction: column;
-                    gap: 10px;
-                    align-items: flex-start;
-                }
             }
         </style>
     </head>
@@ -231,7 +79,7 @@
 
                         <div class="filter-group">
                             <label for="teacherFilter">Teacher:</label>
-                            <select id="teacherFilter" name="teacherId">
+                            <select id="teacherFilter" name="teacherId" class="form-select select2-enabled">
                                 <option value="">All Teachers</option>
                                 <c:forEach var="acc" items="${accounts}">
                                     <option value="${acc.id}" 
@@ -263,43 +111,11 @@
                 <div class="alert alert-danger">${error}</div>
             </c:if>
 
-            <!-- Results Info -->
-            <div class="results-info">
-                <div class="results-count">
-                    <c:choose>
-                        <c:when test="${totalGrades > 0}">
-                            <div class="results-count">
-                                <c:choose>
-                                    <c:when test="${totalGrades > 0}">
-                                        Showing ${displayStart} - ${displayEnd} of ${totalGrades} grades
-                                    </c:when>
-                                    <c:otherwise>
-                                        No grades found
-                                    </c:otherwise>
-                                </c:choose>
-                            </div>
-                        </c:when>
-                        <c:otherwise>
-                            No grades found
-                        </c:otherwise>
-                    </c:choose>
-                </div>
-
-                <div class="d-flex gap-3 align-items-center">
-                    <div class="page-size-selector">
-                        <label for="pageSizeSelect">Show:</label>
-                        <select id="pageSizeSelect" onchange="changePageSize(this.value)">
-                            <option value="5" ${pageSize == 5 ? 'selected' : ''}>5</option>
-                            <option value="10" ${pageSize == 10 ? 'selected' : ''}>10</option>
-                            <option value="20" ${pageSize == 20 ? 'selected' : ''}>20</option>
-                            <option value="50" ${pageSize == 50 ? 'selected' : ''}>50</option>
-                        </select>
-                        <span>per page</span>
-                    </div>
-
-                    <a href="../Grade?action=addForm" class="btn btn-success">Add New Grade</a>
-                </div>
-            </div>
+            <!-- Results Info and Pagination -->
+            <c:set var="totalItems" value="${totalGrades}" scope="request"/>
+            <c:set var="itemType" value="grades" scope="request"/>
+            <c:set var="addNewUrl" value="../Grade?action=addForm" scope="request"/>
+            <jsp:include page="../components/pagination.jsp"/>
 
             <!-- Grade table -->
             <table class="table table-bordered table-striped align-middle">
@@ -328,10 +144,17 @@
                                         </c:forEach>
                                     </td>
                                     <td>
-                                        <a href="../Grade?action=updateForm&id=${gra.id}" class="btn btn-sm btn-warning">Update</a> 
-                                        <a href="../Grade?action=delete&id=${gra.id}" 
-                                           onclick="return confirm('Are you sure to delete grade ID ${gra.id}?');" 
-                                           class="btn btn-sm btn-danger ms-1">Delete</a>
+                                        <div class="btn-group" role="group">
+                                            <a href="../Grade?action=updateForm&id=${gra.id}" 
+                                               class="btn btn-sm btn-warning">
+                                                <i class="fas fa-edit"></i> Update
+                                            </a> 
+                                            <a href="../Grade?action=delete&id=${gra.id}" 
+                                               onclick="return confirm('Are you sure to delete grade ID ${gra.id}?');" 
+                                               class="btn btn-sm btn-danger">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </a>
+                                        </div>
                                     </td>               
                                 </tr>
                             </c:forEach>
@@ -348,7 +171,7 @@
                 </tbody>
             </table>
 
-            <!-- Pagination -->
+            <!-- Pagination at bottom -->
             <c:if test="${totalPages > 1}">
                 <div class="pagination-container">
                     <div class="pagination">
@@ -419,7 +242,6 @@
         <script src="./assets/js/animated.headline.js"></script>
         <script src="./assets/js/jquery.magnific-popup.js"></script>
         <script src="./assets/js/gijgo.min.js"></script>
-        <script src="./assets/js/jquery.nice-select.min.js"></script>
         <script src="./assets/js/jquery.sticky.js"></script>
         <script src="./assets/js/jquery.barfiller.js"></script>
         <script src="./assets/js/jquery.counterup.min.js"></script>
@@ -434,9 +256,41 @@
         <script src="./assets/js/plugins.js"></script>
         <script src="./assets/js/main.js"></script>
 
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
         <script>
                                 // Initialize page
                                 $(document).ready(function () {
+                                    // Disable nice-select initialization completely
+                                    if (typeof $.fn.niceSelect !== 'undefined') {
+                                        $.fn.niceSelect = function () {
+                                            return this;
+                                        };
+                                    }
+
+                                    // Destroy any existing Select2 instances and nice-select
+                                    $('.select2-enabled').each(function () {
+                                        if ($(this).hasClass('select2-hidden-accessible')) {
+                                            $(this).select2('destroy');
+                                        }
+                                        // Remove nice-select if exists
+                                        if ($(this).next('.nice-select').length) {
+                                            $(this).next('.nice-select').remove();
+                                            $(this).show();
+                                        }
+                                    });
+
+                                    // Initialize Select2 for dropdowns
+                                    $('.select2-enabled').select2({
+                                        placeholder: function () {
+                                            return $(this).data('placeholder') || 'All Teachers';
+                                        },
+                                        allowClear: true,
+                                        width: '100%',
+                                        dropdownParent: $('body')
+                                    });
+
                                     // Auto-submit form when Enter is pressed in search field
                                     $('#nameFilter').on('keypress', function (e) {
                                         if (e.which === 13) {
@@ -447,34 +301,14 @@
 
                                 function clearFilters() {
                                     $('#nameFilter').val('');
-                                    $('#teacherFilter').val('');
+                                    $('#teacherFilter').val('').trigger('change');
                                     $('#filterForm').submit();
                                 }
 
-                                function changePageSize(newPageSize) {
-                                    const form = $('#filterForm');
-                                    form.find('input[name="pageSize"]').val(newPageSize);
-                                    form.find('input[name="page"]').val(1); // Reset to first page
-                                    form.submit();
-                                }
-
-                                function goToPage(pageNumber) {
-                                    const form = $('#filterForm');
-                                    form.find('input[name="page"]').val(pageNumber);
-                                    form.submit();
-                                }
-
-                                $(document).ready(function () {
-                                    // Destroy existing nice-select instances
-                                    $('select').niceSelect('destroy');
-
-                                    // Reinitialize nice-select
-                                    $('select').niceSelect();
-
-                                    $('.nice-select').on('click', function () {
-                                        $(this).toggleClass('open');
-                                    });
-                                });
+                                // Auto-dismiss alerts after 5 seconds
+                                setTimeout(function () {
+                                    $('.alert').fadeOut('slow');
+                                }, 5000);
         </script>
 
     </body>

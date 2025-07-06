@@ -19,9 +19,9 @@
         <link rel="stylesheet" href="/assets/css/fontawesome-all.min.css">
         <link rel="stylesheet" href="/assets/css/themify-icons.css">
         <link rel="stylesheet" href="/assets/css/slick.css">
-        <link rel="stylesheet" href="/assets/css/nice-select.css">
         <link rel="stylesheet" href="/assets/css/style.css">
-
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
         <style>
             html, body {
                 height: 100%;
@@ -42,12 +42,12 @@
             footer {
                 flex-shrink: 0;
             }
-            
+
             .video-preview {
                 max-width: 100%;
                 margin-top: 10px;
             }
-            
+
             .current-video {
                 margin-top: 10px;
                 padding: 10px;
@@ -130,29 +130,37 @@
 
             <jsp:include page="/footer.jsp" />
         </div>
-
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <script src="assets/js/select2-utils.js"></script>
         <script>
-            function previewVideo(input) {
-                const videoPreview = document.getElementById('videoPreview');
-                if (input.files && input.files[0]) {
-                    const file = input.files[0];
-                    
-                    // Kiểm tra kích thước file (tối đa 100MB)
-                    if (file.size > 100 * 1024 * 1024) {
-                        alert("File quá lớn. Vui lòng chọn file nhỏ hơn 100MB.");
-                        input.value = "";
-                        videoPreview.style.display = "none";
-                        return;
-                    }
-                    
-                    // Tạo URL cho video preview
-                    const videoURL = URL.createObjectURL(file);
-                    videoPreview.src = videoURL;
-                    videoPreview.style.display = "block";
-                } else {
-                    videoPreview.style.display = "none";
-                }
-            }
+                                            function previewVideo(input) {
+                                                const videoPreview = document.getElementById('videoPreview');
+                                                if (input.files && input.files[0]) {
+                                                    const file = input.files[0];
+
+                                                    // Check file size (max 100MB)
+                                                    if (file.size > 100 * 1024 * 1024) {
+                                                        alert("File quá lớn. Vui lòng chọn file nhỏ hơn 100MB.");
+                                                        input.value = "";
+                                                        videoPreview.style.display = "none";
+                                                        return;
+                                                    }
+
+                                                    // Create URL for video preview
+                                                    const videoURL = URL.createObjectURL(file);
+                                                    videoPreview.src = videoURL;
+                                                    videoPreview.style.display = "block";
+                                                } else {
+                                                    videoPreview.style.display = "none";
+                                                }
+                                            }
+
+                                            $(document).ready(function () {
+                                                initializeSelect2ForElement('#chapter_id', {
+                                                    placeholder: '-- Chọn Chapter --'
+                                                });
+                                            });
         </script>
     </body>
 </html>

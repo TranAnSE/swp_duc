@@ -29,8 +29,12 @@
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/fontawesome-all.min.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/themify-icons.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/slick.css">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/nice-select.css">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/style.css">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/pagination.css">
+
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
         <style>
             .text-danger {
                 color: red;
@@ -51,14 +55,15 @@
             }
             body {
                 padding-top: 130px;
+                background-color: #f8f9fa;
             }
             main {
-                background-color: #f8f9fa;
-                padding: 30px 15px;
-                border-radius: 8px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-                margin: 20px auto;
                 max-width: 1200px;
+                margin: 40px auto;
+                padding: 20px;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             }
             main h2 {
                 text-align: center;
@@ -66,68 +71,6 @@
                 color: #343a40;
                 margin-bottom: 30px;
             }
-            /* Form tìm kiếm */
-            form[method="get"] {
-                display: flex;
-                align-items: center;
-                gap: 15px;
-                flex-wrap: wrap;
-                justify-content: center;
-                margin-bottom: 30px;
-                background: #ffffff;
-                padding: 20px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            }
-            form[method="get"] .form-group {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-bottom: 0;
-            }
-            form[method="get"] label {
-                font-weight: 600;
-                color: #333;
-                white-space: nowrap;
-            }
-            form[method="get"] input[type="text"],
-            form[method="get"] select {
-                width: 200px;
-                padding: 8px 12px;
-                font-size: 14px;
-                border-radius: 6px;
-                border: 1px solid #ced4da;
-                box-sizing: border-box;
-                background-color: #fdfdfd;
-                transition: border-color 0.3s ease;
-            }
-            form[method="get"] input[type="text"]:focus,
-            form[method="get"] select:focus {
-                border-color: #007bff;
-                outline: none;
-            }
-            form[method="get"] input[type="submit"],
-            form[method="get"] a {
-                padding: 8px 15px;
-                font-size: 14px;
-                border-radius: 6px;
-                border: none;
-                text-decoration: none;
-                color: #fff;
-                background-color: #28a745;
-                transition: background-color 0.3s ease;
-            }
-            form[method="get"] a {
-                background-color: #6c757d;
-            }
-            form[method="get"] input[type="submit"]:hover,
-            form[method="get"] a:hover {
-                background-color: #218838;
-            }
-            form[method="get"] a:hover {
-                background-color: #5a6268;
-            }
-            /* Nút thêm mới */
             .add-btn {
                 display: inline-block;
                 margin-bottom: 20px;
@@ -141,8 +84,9 @@
             }
             .add-btn:hover {
                 background-color: #218838;
+                color: #fff;
+                text-decoration: none;
             }
-            /* Bảng */
             table.table {
                 background-color: #fff;
                 border-radius: 6px;
@@ -162,44 +106,11 @@
                 font-size: 14px;
                 padding: 5px 10px;
             }
-            /* Thông báo */
             .text-danger, .text-success {
                 font-size: 0.9em;
                 font-weight: bold;
                 margin: 10px 0;
                 text-align: center;
-            }
-
-            .nice-select {
-                position: relative !important;
-                z-index: 999 !important;
-            }
-
-            .nice-select .list {
-                position: absolute !important;
-                top: 100% !important;
-                left: 0 !important;
-                right: 0 !important;
-                background: white !important;
-                border: 1px solid #ddd !important;
-                border-radius: 4px !important;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
-                max-height: 200px !important;
-                overflow-y: auto !important;
-                display: none !important;
-            }
-
-            .nice-select.open .list {
-                display: block !important;
-            }
-
-            .nice-select .option {
-                padding: 8px 12px !important;
-                cursor: pointer !important;
-            }
-
-            .nice-select .option:hover {
-                background-color: #f8f9fa !important;
             }
         </style>
     </head>
@@ -222,82 +133,178 @@
         <main>
             <h2>Manage Chapter</h2>
 
-            <!-- Thông báo lỗi và thành công -->
+            <!-- Error and success messages -->
             <c:if test="${not empty errorMessage}">
-                <div class="text-danger"><c:out value="${errorMessage}"/></div>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i> ${errorMessage}
+                </div>
             </c:if>
             <c:if test="${not empty message}">
-                <div class="text-success"><c:out value="${message}"/></div>
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> ${message}
+                </div>
             </c:if>
 
-            <!-- Form tìm kiếm -->
-            <form method="get" action="chapter">
-                <input type="hidden" name="service" value="search" />
-                <div class="form-group">
-                    <label for="id">ID:</label>
-                    <input type="text" name="id" id="id" placeholder="Enter ID" value="${param.id != null ? param.id : ''}" />
-                </div>
-                <div class="form-group">
-                    <label for="name">Name:</label>
-                    <input type="text" name="name" id="name" placeholder="Enter Name" value="${param.name != null ? param.name : ''}" />
-                </div>
-                <div class="form-group">
-                    <label for="subject_id">Subject:</label>
-                    <select name="subject_id" id="subject_id">
-                        <option value="">Choose Subject</option>
-                        <c:forEach var="subject" items="${listSubject}">
-                            <option value="${subject.id}" ${param.subject_id == subject.id ? 'selected' : ''}>
-                                <c:out value="${subject.name}"/>
-                            </option>
-                        </c:forEach>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <input type="submit" value="Find" />
-                    <a href="chapter">Clear</a>
-                </div>
-            </form>
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <form method="get" action="chapter" id="filterForm">
+                    <input type="hidden" name="service" value="search" />
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="idFilter">ID:</label>
+                            <input type="text" id="idFilter" name="id" 
+                                   placeholder="Enter ID" 
+                                   value="${param.id}">
+                        </div>
 
-            <!-- Nút thêm chapter mới -->
-            <div style="text-align: center;">
-                <a href="chapter?service=add" class="add-btn">Add new Chapter</a>
+                        <div class="filter-group">
+                            <label for="nameFilter">Name:</label>
+                            <input type="text" id="nameFilter" name="name" 
+                                   placeholder="Enter Name" 
+                                   value="${selectedName}">
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="subjectFilter">Subject:</label>
+                            <select id="subjectFilter" name="subject_id" class="form-select select2-enabled">
+                                <option value="">Choose Subject</option>
+                                <c:forEach var="subject" items="${listSubject}">
+                                    <option value="${subject.id}" 
+                                            ${selectedSubjectId != null && selectedSubjectId == subject.id ? 'selected' : ''}>
+                                        ${subject.name}
+                                    </option>
+                                </c:forEach>
+                            </select>
+                        </div>
+
+                        <div class="filter-actions">
+                            <button type="submit" class="btn-filter btn-primary">
+                                <i class="fas fa-search"></i> Filter
+                            </button>
+                            <button type="button" class="btn-filter btn-secondary" onclick="clearFilters()">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Hidden fields to preserve pagination -->
+                    <input type="hidden" name="page" value="1">
+                    <input type="hidden" name="pageSize" value="${pageSize}">
+                </form>
             </div>
 
-            <!-- Bảng danh sách chapter -->
-            <h2>Chapter</h2>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>Subject</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <c:choose>
-                        <c:when test="${not empty listChapter}">
-                            <c:forEach var="ch" items="${listChapter}">
+            <!-- Add new chapter button -->
+            <div style="text-align: center;">
+                <a href="chapter?service=add" class="add-btn">
+                    <i class="fas fa-plus"></i> Add new Chapter
+                </a>
+            </div>
+
+            <!-- Results Info and Pagination -->
+            <c:set var="totalItems" value="${totalChapters}" scope="request"/>
+            <c:set var="itemType" value="chapters" scope="request"/>
+            <jsp:include page="../components/pagination.jsp"/>
+
+            <!-- Chapter table -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Subject</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <c:choose>
+                            <c:when test="${not empty listChapter}">
+                                <c:forEach var="ch" items="${listChapter}">
+                                    <tr>
+                                        <td>${ch.id}</td>
+                                        <td><strong>${ch.name}</strong></td>
+                                        <td>${ch.description}</td>
+                                        <td>
+                                            <span class="badge bg-primary">
+                                                ${subjectMap[ch.subject_id] != null ? subjectMap[ch.subject_id] : 'Unknown'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="chapter?service=edit&editId=${ch.id}" 
+                                                   class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a>
+                                                <a href="chapter?service=delete&id=${ch.id}" 
+                                                   class="btn btn-danger btn-sm" 
+                                                   onclick="return confirm('Are you sure you want to delete chapter ID ${ch.id}?');">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </c:forEach>
+                            </c:when>
+                            <c:otherwise>
                                 <tr>
-                                    <td><c:out value="${ch.id}"/></td>
-                                    <td><c:out value="${ch.name}"/></td>
-                                    <td><c:out value="${ch.description}"/></td>
-                                    <td><c:out value="${subjectMap[ch.subject_id] != null ? subjectMap[ch.subject_id] : 'Không xác định'}"/></td>
-                                    <td>
-                                        <a href="chapter?service=edit&editId=${ch.id}" class="btn btn-primary btn-sm">Edit</a>
-                                        <a href="chapter?service=delete&id=${ch.id}" class="btn btn-danger btn-sm" 
-                                           onclick="return confirm('Bạn chắc chắn muốn xóa ID ${ch.id}?');">Delete</a>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="fas fa-book fa-3x mb-3"></i>
+                                        <br>No chapters found.
                                     </td>
                                 </tr>
-                            </c:forEach>
-                        </c:when>
-                        <c:otherwise>
-                            <tr><td colspan="5">No data available</td></tr>
-                        </c:otherwise>
-                    </c:choose>
-                </tbody>
-            </table>
+                            </c:otherwise>
+                        </c:choose>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination at bottom -->
+            <c:if test="${totalPages > 1}">
+                <div class="pagination-container">
+                    <div class="pagination">
+                        <!-- First page -->
+                        <c:if test="${currentPage > 1}">
+                            <a href="javascript:void(0)" onclick="goToPage(1)" title="First page">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </c:if>
+
+                        <!-- Previous page -->
+                        <c:if test="${currentPage > 1}">
+                            <a href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" title="Previous page">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </c:if>
+
+                        <!-- Page numbers -->
+                        <c:forEach begin="${startPage}" end="${endPage}" var="pageNum">
+                            <c:choose>
+                                <c:when test="${pageNum == currentPage}">
+                                    <span class="current">${pageNum}</span>
+                                </c:when>
+                                <c:otherwise>
+                                    <a href="javascript:void(0)" onclick="goToPage(${pageNum})">${pageNum}</a>
+                                </c:otherwise>
+                            </c:choose>
+                        </c:forEach>
+
+                        <!-- Next page -->
+                        <c:if test="${currentPage < totalPages}">
+                            <a href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" title="Next page">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </c:if>
+
+                        <!-- Last page -->
+                        <c:if test="${currentPage < totalPages}">
+                            <a href="javascript:void(0)" onclick="goToPage(${totalPages})" title="Last page">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </c:if>
+                    </div>
+                </div>
+            </c:if>
         </main>
 
         <%@include file="../footer.jsp" %>
@@ -317,7 +324,6 @@
         <script src="${pageContext.request.contextPath}/assets/js/animated.headline.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/jquery.magnific-popup.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/gijgo.min.js"></script>
-        <script src="${pageContext.request.contextPath}/assets/js/jquery.nice-select.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/jquery.sticky.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/jquery.barfiller.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/jquery.counterup.min.js"></script>
@@ -331,18 +337,60 @@
         <script src="${pageContext.request.contextPath}/assets/js/jquery.ajaxchimp.min.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/plugins.js"></script>
         <script src="${pageContext.request.contextPath}/assets/js/main.js"></script>
+
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
         <script>
-                                               $(document).ready(function () {
-                                                   // Destroy existing nice-select instances
-                                                   $('select').niceSelect('destroy');
+                                $(document).ready(function () {
+                                    // Disable nice-select initialization completely
+                                    if (typeof $.fn.niceSelect !== 'undefined') {
+                                        $.fn.niceSelect = function () {
+                                            return this;
+                                        };
+                                    }
 
-                                                   // Reinitialize nice-select
-                                                   $('select').niceSelect();
+                                    // Destroy any existing Select2 instances and nice-select
+                                    $('.select2-enabled').each(function () {
+                                        if ($(this).hasClass('select2-hidden-accessible')) {
+                                            $(this).select2('destroy');
+                                        }
+                                        // Remove nice-select if exists
+                                        if ($(this).next('.nice-select').length) {
+                                            $(this).next('.nice-select').remove();
+                                            $(this).show();
+                                        }
+                                    });
 
-                                                   $('.nice-select').on('click', function () {
-                                                       $(this).toggleClass('open');
-                                                   });
-                                               });
+                                    // Initialize Select2 for dropdowns
+                                    $('.select2-enabled').select2({
+                                        placeholder: function () {
+                                            return $(this).data('placeholder') || 'Choose Subject';
+                                        },
+                                        allowClear: true,
+                                        width: '100%',
+                                        dropdownParent: $('body')
+                                    });
+
+                                    // Auto-submit form when Enter is pressed in search fields
+                                    $('#idFilter, #nameFilter').on('keypress', function (e) {
+                                        if (e.which === 13) {
+                                            $('#filterForm').submit();
+                                        }
+                                    });
+                                });
+
+                                function clearFilters() {
+                                    $('#idFilter').val('');
+                                    $('#nameFilter').val('');
+                                    $('#subjectFilter').val('').trigger('change');
+                                    $('#filterForm').submit();
+                                }
+
+                                // Auto-dismiss alerts after 5 seconds
+                                setTimeout(function () {
+                                    $('.alert').fadeOut('slow');
+                                }, 5000);
         </script>
     </body>
 </html>

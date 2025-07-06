@@ -89,13 +89,85 @@ public class ChapterController extends HttpServlet {
 
     private void listChapter(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, Exception {
-        List<Chapter> listChapter = chapterDAO.getChapter("SELECT * FROM chapter");
+
+        // Get pagination parameters
+        int page = 1;
+        int pageSize = 10;
+        String pageParam = request.getParameter("page");
+        String pageSizeParam = request.getParameter("pageSize");
+
+        if (pageParam != null && !pageParam.isEmpty()) {
+            try {
+                page = Integer.parseInt(pageParam);
+                if (page < 1) {
+                    page = 1;
+                }
+            } catch (NumberFormatException e) {
+                page = 1;
+            }
+        }
+
+        if (pageSizeParam != null && !pageSizeParam.isEmpty()) {
+            try {
+                pageSize = Integer.parseInt(pageSizeParam);
+                if (pageSize < 5) {
+                    pageSize = 5;
+                }
+                if (pageSize > 50) {
+                    pageSize = 50;
+                }
+            } catch (NumberFormatException e) {
+                pageSize = 10;
+            }
+        }
+
+        // Get filter parameters
+        String name = request.getParameter("name");
+        String subjectIdParam = request.getParameter("subject_id");
+        Integer subjectId = null;
+
+        if (subjectIdParam != null && !subjectIdParam.isEmpty()) {
+            try {
+                subjectId = Integer.parseInt(subjectIdParam);
+            } catch (NumberFormatException e) {
+                // Ignore invalid subject ID
+            }
+        }
+
+        // Get chapters with pagination
+        List<Chapter> listChapter = chapterDAO.findChaptersWithPagination(name, subjectId, page, pageSize);
+        int totalChapters = chapterDAO.getTotalChaptersCount(name, subjectId);
+
+        // Calculate pagination info
+        int totalPages = (int) Math.ceil((double) totalChapters / pageSize);
+        int startPage = Math.max(1, page - 2);
+        int endPage = Math.min(totalPages, page + 2);
+
+        // Calculate display range
+        int displayStart = (page - 1) * pageSize + 1;
+        int displayEnd = Math.min(page * pageSize, totalChapters);
+
         List<Subject> listSubject = subjectDAO.findAll();
         Map<Integer, String> subjectMap = loadSubjectMap();
 
         request.setAttribute("listChapter", listChapter != null ? listChapter : List.of());
         request.setAttribute("listSubject", listSubject != null ? listSubject : List.of());
         request.setAttribute("subjectMap", subjectMap != null ? subjectMap : new HashMap<>());
+
+        // Pagination attributes
+        request.setAttribute("currentPage", page);
+        request.setAttribute("pageSize", pageSize);
+        request.setAttribute("totalPages", totalPages);
+        request.setAttribute("totalChapters", totalChapters);
+        request.setAttribute("startPage", startPage);
+        request.setAttribute("endPage", endPage);
+        request.setAttribute("displayStart", displayStart);
+        request.setAttribute("displayEnd", displayEnd);
+
+        // Preserve filter parameters
+        request.setAttribute("selectedName", name);
+        request.setAttribute("selectedSubjectId", subjectId);
+
         request.getRequestDispatcher("/chapter/listChapter.jsp").forward(request, response);
     }
 
