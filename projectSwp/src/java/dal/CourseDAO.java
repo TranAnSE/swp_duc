@@ -467,4 +467,259 @@ public class CourseDAO extends DBContext {
             return ps.executeUpdate() > 0;
         }
     }
+
+    public List<Map<String, Object>> getAllCoursesWithFiltersAndPagination(
+            Integer subjectId, Integer gradeId, String status, String searchKeyword,
+            int page, int pageSize) throws SQLException {
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT * FROM course_management_view WHERE 1=1"
+        );
+        List<Object> params = new ArrayList<>();
+
+        // Add filters
+        if (subjectId != null) {
+            sql.append(" AND subject_id = ?");
+            params.add(subjectId);
+        }
+
+        if (gradeId != null) {
+            sql.append(" AND grade_id = ?");
+            params.add(gradeId);
+        }
+
+        if (status != null && !status.isEmpty() && !"all".equals(status)) {
+            sql.append(" AND approval_status = ?");
+            params.add(status);
+        }
+
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            sql.append(" AND (course_title LIKE ? OR description LIKE ?)");
+            String keyword = "%" + searchKeyword.trim() + "%";
+            params.add(keyword);
+            params.add(keyword);
+        }
+
+        sql.append(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+        params.add(pageSize);
+        params.add((page - 1) * pageSize);
+
+        return executeCoursesQuery(sql.toString(), params);
+    }
+
+    public List<Map<String, Object>> getCoursesByTeacherWithFiltersAndPagination(
+            int teacherId, Integer subjectId, Integer gradeId, String status,
+            String searchKeyword, int page, int pageSize) throws SQLException {
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT * FROM course_management_view WHERE created_by = ?"
+        );
+        List<Object> params = new ArrayList<>();
+        params.add(teacherId);
+
+        // Add filters
+        if (subjectId != null) {
+            sql.append(" AND subject_id = ?");
+            params.add(subjectId);
+        }
+
+        if (gradeId != null) {
+            sql.append(" AND grade_id = ?");
+            params.add(gradeId);
+        }
+
+        if (status != null && !status.isEmpty() && !"all".equals(status)) {
+            sql.append(" AND approval_status = ?");
+            params.add(status);
+        }
+
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            sql.append(" AND (course_title LIKE ? OR description LIKE ?)");
+            String keyword = "%" + searchKeyword.trim() + "%";
+            params.add(keyword);
+            params.add(keyword);
+        }
+
+        sql.append(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+        params.add(pageSize);
+        params.add((page - 1) * pageSize);
+
+        return executeCoursesQuery(sql.toString(), params);
+    }
+
+    public List<Map<String, Object>> getApprovedCoursesWithFiltersAndPagination(
+            Integer subjectId, Integer gradeId, String searchKeyword,
+            int page, int pageSize) throws SQLException {
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT * FROM course_management_view WHERE approval_status = 'APPROVED' AND is_active = 1"
+        );
+        List<Object> params = new ArrayList<>();
+
+        // Add filters
+        if (subjectId != null) {
+            sql.append(" AND subject_id = ?");
+            params.add(subjectId);
+        }
+
+        if (gradeId != null) {
+            sql.append(" AND grade_id = ?");
+            params.add(gradeId);
+        }
+
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            sql.append(" AND (course_title LIKE ? OR description LIKE ?)");
+            String keyword = "%" + searchKeyword.trim() + "%";
+            params.add(keyword);
+            params.add(keyword);
+        }
+
+        sql.append(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+        params.add(pageSize);
+        params.add((page - 1) * pageSize);
+
+        return executeCoursesQuery(sql.toString(), params);
+    }
+
+    public int getTotalCoursesCount(Integer subjectId, Integer gradeId, String status, String searchKeyword) throws SQLException {
+        StringBuilder sql = new StringBuilder(
+                "SELECT COUNT(*) FROM course_management_view WHERE 1=1"
+        );
+        List<Object> params = new ArrayList<>();
+
+        // Add filters
+        if (subjectId != null) {
+            sql.append(" AND subject_id = ?");
+            params.add(subjectId);
+        }
+
+        if (gradeId != null) {
+            sql.append(" AND grade_id = ?");
+            params.add(gradeId);
+        }
+
+        if (status != null && !status.isEmpty() && !"all".equals(status)) {
+            sql.append(" AND approval_status = ?");
+            params.add(status);
+        }
+
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            sql.append(" AND (course_title LIKE ? OR description LIKE ?)");
+            String keyword = "%" + searchKeyword.trim() + "%";
+            params.add(keyword);
+            params.add(keyword);
+        }
+
+        return executeCountQuery(sql.toString(), params);
+    }
+
+    public int getTotalCoursesByTeacherCount(int teacherId, Integer subjectId, Integer gradeId, String status, String searchKeyword) throws SQLException {
+        StringBuilder sql = new StringBuilder(
+                "SELECT COUNT(*) FROM course_management_view WHERE created_by = ?"
+        );
+        List<Object> params = new ArrayList<>();
+        params.add(teacherId);
+
+        // Add filters
+        if (subjectId != null) {
+            sql.append(" AND subject_id = ?");
+            params.add(subjectId);
+        }
+
+        if (gradeId != null) {
+            sql.append(" AND grade_id = ?");
+            params.add(gradeId);
+        }
+
+        if (status != null && !status.isEmpty() && !"all".equals(status)) {
+            sql.append(" AND approval_status = ?");
+            params.add(status);
+        }
+
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            sql.append(" AND (course_title LIKE ? OR description LIKE ?)");
+            String keyword = "%" + searchKeyword.trim() + "%";
+            params.add(keyword);
+            params.add(keyword);
+        }
+
+        return executeCountQuery(sql.toString(), params);
+    }
+
+    public int getTotalApprovedCoursesCount(Integer subjectId, Integer gradeId, String searchKeyword) throws SQLException {
+        StringBuilder sql = new StringBuilder(
+                "SELECT COUNT(*) FROM course_management_view WHERE approval_status = 'APPROVED' AND is_active = 1"
+        );
+        List<Object> params = new ArrayList<>();
+
+        // Add filters
+        if (subjectId != null) {
+            sql.append(" AND subject_id = ?");
+            params.add(subjectId);
+        }
+
+        if (gradeId != null) {
+            sql.append(" AND grade_id = ?");
+            params.add(gradeId);
+        }
+
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            sql.append(" AND (course_title LIKE ? OR description LIKE ?)");
+            String keyword = "%" + searchKeyword.trim() + "%";
+            params.add(keyword);
+            params.add(keyword);
+        }
+
+        return executeCountQuery(sql.toString(), params);
+    }
+
+    private List<Map<String, Object>> executeCoursesQuery(String sql, List<Object> params) throws SQLException {
+        List<Map<String, Object>> courses = new ArrayList<>();
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> course = new HashMap<>();
+                course.put("course_id", rs.getInt("course_id"));
+                course.put("course_title", rs.getString("course_title"));
+                course.put("price", rs.getString("price"));
+                course.put("duration_days", rs.getInt("duration_days"));
+                course.put("description", rs.getString("description"));
+                course.put("approval_status", rs.getString("approval_status"));
+                course.put("is_active", rs.getBoolean("is_active"));
+                course.put("grade_name", rs.getString("grade_name"));
+                course.put("subject_name", rs.getString("subject_name"));
+                course.put("subject_id", rs.getInt("subject_id"));
+                course.put("grade_id", rs.getInt("grade_id"));
+                course.put("created_by_name", rs.getString("created_by_name"));
+                course.put("approved_by_name", rs.getString("approved_by_name"));
+                course.put("total_chapters", rs.getInt("total_chapters"));
+                course.put("total_lessons", rs.getInt("total_lessons"));
+                course.put("total_tests", rs.getInt("total_tests"));
+                course.put("created_at", rs.getTimestamp("created_at"));
+                course.put("submitted_at", rs.getTimestamp("submitted_at"));
+                course.put("approved_at", rs.getTimestamp("approved_at"));
+                courses.add(course);
+            }
+        }
+        return courses;
+    }
+
+    private int executeCountQuery(String sql, List<Object> params) throws SQLException {
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 0;
+    }
 }

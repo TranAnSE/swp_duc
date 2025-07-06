@@ -24,6 +24,102 @@
                 border-radius: 12px;
                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             }
+
+            /* Filter Section */
+            .filter-section {
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 25px;
+                border: 1px solid #dee2e6;
+            }
+
+            .filter-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 15px;
+                align-items: end;
+            }
+
+            .filter-group {
+                min-width: 200px;
+                flex: 1;
+            }
+
+            .filter-group label {
+                font-weight: 600;
+                color: #495057;
+                margin-bottom: 5px;
+                display: block;
+            }
+
+            .filter-group select,
+            .filter-group input {
+                width: 100%;
+                padding: 8px 12px;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+
+            .filter-actions {
+                display: flex;
+                gap: 10px;
+                align-items: end;
+            }
+
+            .btn-filter {
+                padding: 8px 20px;
+                border-radius: 4px;
+                border: none;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .btn-primary {
+                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+                color: white;
+            }
+
+            .btn-secondary {
+                background: #6c757d;
+                color: white;
+            }
+
+            .btn-filter:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            }
+
+            /* Results info */
+            .results-info {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+                padding: 15px 0;
+                border-bottom: 1px solid #dee2e6;
+            }
+
+            .results-count {
+                font-weight: 600;
+                color: #495057;
+            }
+
+            .page-size-selector {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .page-size-selector select {
+                padding: 5px 10px;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+            }
+
+            /* Success notification */
             .success-notification {
                 background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
                 border: 1px solid #28a745;
@@ -180,8 +276,66 @@
                 min-width: 220px;
             }
 
+            /* Pagination */
+            .pagination-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid #dee2e6;
+            }
+
+            .pagination {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .pagination a,
+            .pagination span {
+                padding: 8px 12px;
+                text-decoration: none;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                color: #495057;
+                transition: all 0.3s ease;
+            }
+
+            .pagination a:hover {
+                background-color: #e9ecef;
+                color: #495057;
+                text-decoration: none;
+            }
+
+            .pagination .current {
+                background-color: #007bff;
+                color: white;
+                border-color: #007bff;
+            }
+
+            .pagination .disabled {
+                color: #6c757d;
+                background-color: #f8f9fa;
+                cursor: not-allowed;
+            }
+
             /* Responsive adjustments */
             @media (max-width: 768px) {
+                .filter-row {
+                    flex-direction: column;
+                }
+
+                .filter-group {
+                    min-width: 100%;
+                }
+
+                .results-info {
+                    flex-direction: column;
+                    gap: 10px;
+                    align-items: flex-start;
+                }
+
                 .btn-group {
                     flex-direction: column;
                     gap: 4px;
@@ -229,19 +383,80 @@
                 <div class="alert alert-danger">${error}</div>
             </c:if>
 
-            <!-- Search form -->
-            <div class="row mb-4">
-                <div class="col-md-8">
-                    <form method="get" action="subjects" class="d-flex">
-                        <input type="text" name="name" class="form-control me-2" 
-                               placeholder="Search by subject name..." 
-                               value="${param.name}">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Search
-                        </button>
-                    </form>
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <form method="get" action="subjects" id="filterForm">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="gradeFilter">Grade:</label>
+                            <select id="gradeFilter" name="gradeId">
+                                <option value="">All Grades</option>
+                                <c:forEach items="${grades}" var="grade">
+                                    <option value="${grade.id}" 
+                                            ${selectedGradeId != null && selectedGradeId == grade.id ? 'selected' : ''}>
+                                        ${grade.name}
+                                    </option>
+                                </c:forEach>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="nameFilter">Subject Name:</label>
+                            <input type="text" id="nameFilter" name="name" 
+                                   placeholder="Search by subject name..." 
+                                   value="${selectedName}">
+                        </div>
+
+                        <div class="filter-actions">
+                            <button type="submit" class="btn-filter btn-primary">
+                                <i class="fas fa-search"></i> Filter
+                            </button>
+                            <button type="button" class="btn-filter btn-secondary" onclick="clearFilters()">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Hidden fields to preserve pagination -->
+                    <input type="hidden" name="page" value="1">
+                    <input type="hidden" name="pageSize" value="${pageSize}">
+                </form>
+            </div>
+
+            <!-- Results Info -->
+            <div class="results-info">
+                <div class="results-count">
+                    <c:choose>
+                        <c:when test="${totalSubjects > 0}">
+                            <div class="results-count">
+                                <c:choose>
+                                    <c:when test="${totalSubjects > 0}">
+                                        Showing ${displayStart} - ${displayEnd} of ${totalSubjects} subjects
+                                    </c:when>
+                                    <c:otherwise>
+                                        No subjects found
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            No subjects found
+                        </c:otherwise>
+                    </c:choose>
                 </div>
-                <div class="col-md-4 text-end">
+
+                <div class="d-flex gap-3 align-items-center">
+                    <div class="page-size-selector">
+                        <label for="pageSizeSelect">Show:</label>
+                        <select id="pageSizeSelect" onchange="changePageSize(this.value)">
+                            <option value="5" ${pageSize == 5 ? 'selected' : ''}>5</option>
+                            <option value="10" ${pageSize == 10 ? 'selected' : ''}>10</option>
+                            <option value="20" ${pageSize == 20 ? 'selected' : ''}>20</option>
+                            <option value="50" ${pageSize == 50 ? 'selected' : ''}>50</option>
+                        </select>
+                        <span>per page</span>
+                    </div>
+
                     <a href="subjects?action=create" class="btn btn-success">
                         <i class="fas fa-plus"></i> Add New Subject
                     </a>
@@ -279,9 +494,13 @@
                                                    class="btn btn-outline-primary" title="Edit Subject">
                                                     <i class="fas fa-edit"></i> Edit
                                                 </a>
+                                                <a href="${pageContext.request.contextPath}/course?subjectId=${subject.id}" 
+                                                   class="btn btn-outline-success" title="View Courses">
+                                                    <i class="fas fa-graduation-cap"></i> Courses
+                                                </a>
                                                 <a href="${pageContext.request.contextPath}/course?action=create&subjectId=${subject.id}" 
-                                                   class="btn btn-outline-success" title="Create Course">
-                                                    <i class="fas fa-plus"></i> Course
+                                                   class="btn btn-outline-info" title="Create Course">
+                                                    <i class="fas fa-plus"></i> New Course
                                                 </a>
                                                 <a href="subjects?action=delete&id=${subject.id}" 
                                                    class="btn btn-outline-danger" title="Delete Subject"
@@ -305,6 +524,53 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination -->
+            <c:if test="${totalPages > 1}">
+                <div class="pagination-container">
+                    <div class="pagination">
+                        <!-- First page -->
+                        <c:if test="${currentPage > 1}">
+                            <a href="javascript:void(0)" onclick="goToPage(1)" title="First page">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </c:if>
+
+                        <!-- Previous page -->
+                        <c:if test="${currentPage > 1}">
+                            <a href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" title="Previous page">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </c:if>
+
+                        <!-- Page numbers -->
+                        <c:forEach begin="${startPage}" end="${endPage}" var="pageNum">
+                            <c:choose>
+                                <c:when test="${pageNum == currentPage}">
+                                    <span class="current">${pageNum}</span>
+                                </c:when>
+                                <c:otherwise>
+                                    <a href="javascript:void(0)" onclick="goToPage(${pageNum})">${pageNum}</a>
+                                </c:otherwise>
+                            </c:choose>
+                        </c:forEach>
+
+                        <!-- Next page -->
+                        <c:if test="${currentPage < totalPages}">
+                            <a href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" title="Next page">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </c:if>
+
+                        <!-- Last page -->
+                        <c:if test="${currentPage < totalPages}">
+                            <a href="javascript:void(0)" onclick="goToPage(${totalPages})" title="Last page">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </c:if>
+                    </div>
+                </div>
+            </c:if>
         </main>
 
         <%@include file="../footer.jsp" %>
@@ -314,31 +580,60 @@
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4" crossorigin="anonymous"></script>
 
         <script>
-                                                       function dismissNotification() {
-                                                           document.getElementById('courseCreationNotification').style.display = 'none';
-                                                           // Clear session attributes via AJAX
-                                                           fetch('${pageContext.request.contextPath}/subjects?action=clearNotification', {
-                                                               method: 'POST'
-                                                           });
-                                                       }
+                                // Initialize page
+                                $(document).ready(function () {
+                                    // Auto-submit form when Enter is pressed in search field
+                                    $('#nameFilter').on('keypress', function (e) {
+                                        if (e.which === 13) {
+                                            $('#filterForm').submit();
+                                        }
+                                    });
+                                });
 
-                                                       // Auto-dismiss notification after 10 seconds
-                                                       setTimeout(function () {
-                                                           const notification = document.getElementById('courseCreationNotification');
-                                                           if (notification) {
-                                                               notification.style.display = 'none';
-                                                           }
-                                                       }, 10000);
+                                function dismissNotification() {
+                                    document.getElementById('courseCreationNotification').style.display = 'none';
+                                    // Clear session attributes via AJAX
+                                    fetch('${pageContext.request.contextPath}/subjects?action=clearNotification', {
+                                        method: 'POST'
+                                    });
+                                }
 
-                                                       // Prevent nice-select initialization on page load
-                                                       $(document).ready(function () {
-                                                           // Disable nice-select globally for this page
-                                                           if (typeof $.fn.niceSelect !== 'undefined') {
-                                                               $.fn.niceSelect = function () {
-                                                                   return this;
-                                                               };
-                                                           }
-                                                       });
+                                function clearFilters() {
+                                    $('#gradeFilter').val('');
+                                    $('#nameFilter').val('');
+                                    $('#filterForm').submit();
+                                }
+
+                                function changePageSize(newPageSize) {
+                                    const form = $('#filterForm');
+                                    form.find('input[name="pageSize"]').val(newPageSize);
+                                    form.find('input[name="page"]').val(1); // Reset to first page
+                                    form.submit();
+                                }
+
+                                function goToPage(pageNumber) {
+                                    const form = $('#filterForm');
+                                    form.find('input[name="page"]').val(pageNumber);
+                                    form.submit();
+                                }
+
+                                // Auto-dismiss notification after 10 seconds
+                                setTimeout(function () {
+                                    const notification = document.getElementById('courseCreationNotification');
+                                    if (notification) {
+                                        notification.style.display = 'none';
+                                    }
+                                }, 10000);
+
+                                // Prevent nice-select initialization on page load
+                                $(document).ready(function () {
+                                    // Disable nice-select globally for this page
+                                    if (typeof $.fn.niceSelect !== 'undefined') {
+                                        $.fn.niceSelect = function () {
+                                            return this;
+                                        };
+                                    }
+                                });
         </script>
     </body>
 </html>

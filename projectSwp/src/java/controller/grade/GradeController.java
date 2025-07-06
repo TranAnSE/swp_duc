@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.List;
 import util.AuthUtil;
 import util.RoleConstants;
+import java.sql.SQLException;
 
 @WebServlet(name = "GradeController", urlPatterns = {"/Grade"})
 public class GradeController extends HttpServlet {
@@ -23,7 +24,7 @@ public class GradeController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN) && !AuthUtil.hasRole(request, RoleConstants.STUDENT) && !AuthUtil.hasRole(request, RoleConstants.TEACHER) ) {
+        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN) && !AuthUtil.hasRole(request, RoleConstants.STUDENT) && !AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
             response.sendRedirect("/error.jsp");
             return;
         }
@@ -48,17 +49,17 @@ public class GradeController extends HttpServlet {
                         if (grade != null) {
                             request.setAttribute("grade", grade);
 
-                            // Lấy danh sách giáo viên để đưa vào form select
+                            // Get teacher list for form select
                             List<Account> teacher = new AccountDAO().findAll();
                             request.setAttribute("accounts", teacher);
 
                             request.getRequestDispatcher("grade/updateGrade.jsp").forward(request, response);
                             return;
                         } else {
-                            request.setAttribute("error", "Không tìm thấy grade với ID " + id);
+                            request.setAttribute("error", "Grade not found with ID " + id);
                         }
                     } else {
-                        request.setAttribute("error", "ID không hợp lệ");
+                        request.setAttribute("error", "Invalid ID");
                     }
                     break;
 
@@ -71,31 +72,102 @@ public class GradeController extends HttpServlet {
                         response.sendRedirect("Grade");
                         return;
                     } else {
-                        request.setAttribute("error", "ID không hợp lệ để xóa");
+                        request.setAttribute("error", "Invalid ID for deletion");
                     }
                     break;
 
                 default:
-                    String name = request.getParameter("name");
-                    List<Grade> gradeList;
-                    if (name != null && !name.trim().isEmpty()) {
-                        gradeList = gradeDAO.findByName(name.trim());
-                        if (gradeList == null || gradeList.isEmpty()) {
-                            request.setAttribute("error", "Không tìm thấy grade nào với tên " + name.trim());
-                        }
-                    } else {
-                        gradeList = gradeDAO.findAllFromGrade();
-                    }
-                    AccountDAO acc = new AccountDAO();
-                    List<Account> accounts = acc.findAll();
-                    request.setAttribute("accounts", accounts);
-                    request.setAttribute("gradeList", gradeList);
-                    break;
+                    listGradesWithPagination(request, response);
+                    return;
             }
         } catch (Exception e) {
             e.printStackTrace();
-            request.setAttribute("error", "Lỗi khi xử lý yêu cầu: " + e.getMessage());
+            request.setAttribute("error", "Error processing request: " + e.getMessage());
         }
+
+        request.getRequestDispatcher("grade/gradeList.jsp").forward(request, response);
+    }
+
+    private void listGradesWithPagination(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException, SQLException {
+
+        // Get pagination parameters
+        int page = 1;
+        int pageSize = 10;
+        String pageParam = request.getParameter("page");
+        String pageSizeParam = request.getParameter("pageSize");
+
+        if (pageParam != null && !pageParam.isEmpty()) {
+            try {
+                page = Integer.parseInt(pageParam);
+                if (page < 1) {
+                    page = 1;
+                }
+            } catch (NumberFormatException e) {
+                page = 1;
+            }
+        }
+
+        if (pageSizeParam != null && !pageSizeParam.isEmpty()) {
+            try {
+                pageSize = Integer.parseInt(pageSizeParam);
+                if (pageSize < 5) {
+                    pageSize = 5;
+                }
+                if (pageSize > 50) {
+                    pageSize = 50;
+                }
+            } catch (NumberFormatException e) {
+                pageSize = 10;
+            }
+        }
+
+        // Get filter parameters
+        String name = request.getParameter("name");
+        String teacherIdParam = request.getParameter("teacherId");
+        Integer teacherId = null;
+
+        if (teacherIdParam != null && !teacherIdParam.isEmpty()) {
+            try {
+                teacherId = Integer.parseInt(teacherIdParam);
+            } catch (NumberFormatException e) {
+                // Ignore invalid teacher ID
+            }
+        }
+
+        // Get grades with pagination
+        List<Grade> gradeList = gradeDAO.findGradesWithPagination(name, teacherId, page, pageSize);
+        int totalGrades = gradeDAO.getTotalGradesCount(name, teacherId);
+
+        // Calculate pagination info
+        int totalPages = (int) Math.ceil((double) totalGrades / pageSize);
+        int startPage = Math.max(1, page - 2);
+        int endPage = Math.min(totalPages, page + 2);
+
+        // Calculate display range
+        int displayStart = (page - 1) * pageSize + 1;
+        int displayEnd = Math.min(page * pageSize, totalGrades);
+
+        // Load accounts for filter and display
+        AccountDAO acc = new AccountDAO();
+        List<Account> accounts = acc.findAll();
+
+        // Set attributes
+        request.setAttribute("gradeList", gradeList);
+        request.setAttribute("accounts", accounts);
+        request.setAttribute("currentPage", page);
+        request.setAttribute("pageSize", pageSize);
+        request.setAttribute("totalPages", totalPages);
+        request.setAttribute("totalGrades", totalGrades);
+        request.setAttribute("startPage", startPage);
+        request.setAttribute("endPage", endPage);
+
+        request.setAttribute("displayStart", displayStart);
+        request.setAttribute("displayEnd", displayEnd);
+
+        // Preserve filter parameters
+        request.setAttribute("selectedName", name);
+        request.setAttribute("selectedTeacherId", teacherId);
 
         request.getRequestDispatcher("grade/gradeList.jsp").forward(request, response);
     }
@@ -103,7 +175,7 @@ public class GradeController extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN)&&!AuthUtil.hasRole(request, RoleConstants.STUDENT) ) {
+        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN) && !AuthUtil.hasRole(request, RoleConstants.STUDENT)) {
             response.sendRedirect("/error.jsp");
             return;
         }

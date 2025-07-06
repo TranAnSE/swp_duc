@@ -187,20 +187,118 @@ public class CourseController extends HttpServlet {
             HttpSession session = request.getSession();
             Account account = (Account) session.getAttribute("account");
 
-            List<Map<String, Object>> courses;
+            // Get pagination parameters
+            int page = 1;
+            int pageSize = 10;
+            String pageParam = request.getParameter("page");
+            String pageSizeParam = request.getParameter("pageSize");
 
-            if (AuthUtil.hasRole(request, RoleConstants.ADMIN)) {
-                // Admin can see all courses
-                courses = courseManagementDAO.getAllCoursesWithDetails();
-            } else if (AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
-                // Teacher can only see their own courses
-                courses = courseManagementDAO.getCoursesByTeacher(account.getId());
-            } else {
-                // Parent and Student can only see approved and active courses
-                courses = courseManagementDAO.getApprovedCourses();
+            if (pageParam != null && !pageParam.isEmpty()) {
+                try {
+                    page = Integer.parseInt(pageParam);
+                    if (page < 1) {
+                        page = 1;
+                    }
+                } catch (NumberFormatException e) {
+                    page = 1;
+                }
             }
 
+            if (pageSizeParam != null && !pageSizeParam.isEmpty()) {
+                try {
+                    pageSize = Integer.parseInt(pageSizeParam);
+                    if (pageSize < 5) {
+                        pageSize = 5;
+                    }
+                    if (pageSize > 50) {
+                        pageSize = 50;
+                    }
+                } catch (NumberFormatException e) {
+                    pageSize = 10;
+                }
+            }
+
+            // Get filter parameters
+            String subjectIdParam = request.getParameter("subjectId");
+            String gradeIdParam = request.getParameter("gradeId");
+            String statusFilter = request.getParameter("status");
+            String searchKeyword = request.getParameter("search");
+
+            Integer subjectId = null;
+            Integer gradeId = null;
+
+            if (subjectIdParam != null && !subjectIdParam.isEmpty()) {
+                try {
+                    subjectId = Integer.parseInt(subjectIdParam);
+                } catch (NumberFormatException e) {
+                    // Ignore invalid subject ID
+                }
+            }
+
+            if (gradeIdParam != null && !gradeIdParam.isEmpty()) {
+                try {
+                    gradeId = Integer.parseInt(gradeIdParam);
+                } catch (NumberFormatException e) {
+                    // Ignore invalid grade ID
+                }
+            }
+
+            List<Map<String, Object>> courses;
+            int totalCourses = 0;
+
+            if (AuthUtil.hasRole(request, RoleConstants.ADMIN)) {
+                // Admin can see all courses with filters
+                courses = courseManagementDAO.getAllCoursesWithFiltersAndPagination(
+                        subjectId, gradeId, statusFilter, searchKeyword, page, pageSize);
+                totalCourses = courseManagementDAO.getTotalCoursesCount(
+                        subjectId, gradeId, statusFilter, searchKeyword);
+            } else if (AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
+                // Teacher can only see their own courses with filters
+                courses = courseManagementDAO.getCoursesByTeacherWithFiltersAndPagination(
+                        account.getId(), subjectId, gradeId, statusFilter, searchKeyword, page, pageSize);
+                totalCourses = courseManagementDAO.getTotalCoursesByTeacherCount(
+                        account.getId(), subjectId, gradeId, statusFilter, searchKeyword);
+            } else {
+                // Parent and Student can only see approved and active courses
+                courses = courseManagementDAO.getApprovedCoursesWithFiltersAndPagination(
+                        subjectId, gradeId, searchKeyword, page, pageSize);
+                totalCourses = courseManagementDAO.getTotalApprovedCoursesCount(
+                        subjectId, gradeId, searchKeyword);
+            }
+
+            // Calculate pagination info
+            int totalPages = (int) Math.ceil((double) totalCourses / pageSize);
+            int startPage = Math.max(1, page - 2);
+            int endPage = Math.min(totalPages, page + 2);
+
+            // Calculate display range
+            int displayStart = (page - 1) * pageSize + 1;
+            int displayEnd = Math.min(page * pageSize, totalCourses);
+
+            // Load filter options
+            List<Grade> grades = gradeDAO.findAllFromGrade();
+            List<Subject> subjects = subjectDAO.findAll();
+
+            // Set attributes
             request.setAttribute("courses", courses);
+            request.setAttribute("currentPage", page);
+            request.setAttribute("pageSize", pageSize);
+            request.setAttribute("totalPages", totalPages);
+            request.setAttribute("totalCourses", totalCourses);
+            request.setAttribute("startPage", startPage);
+            request.setAttribute("endPage", endPage);
+            request.setAttribute("grades", grades);
+            request.setAttribute("subjects", subjects);
+
+            request.setAttribute("displayStart", displayStart);
+            request.setAttribute("displayEnd", displayEnd);
+
+            // Preserve filter parameters
+            request.setAttribute("selectedSubjectId", subjectId);
+            request.setAttribute("selectedGradeId", gradeId);
+            request.setAttribute("selectedStatus", statusFilter);
+            request.setAttribute("searchKeyword", searchKeyword);
+
             request.getRequestDispatcher("/course/courseList.jsp").forward(request, response);
 
         } catch (Exception e) {

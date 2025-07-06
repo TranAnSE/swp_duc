@@ -1,9 +1,3 @@
-<%-- 
-    Document   : courseList
-    Created on : Jul 3, 2025, 10:36:05 AM
-    Author     : ankha
---%>
-
 <%@ page contentType="text/html; charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
@@ -28,6 +22,102 @@
                 border-radius: 12px;
                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             }
+
+            /* Filter Section */
+            .filter-section {
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 25px;
+                border: 1px solid #dee2e6;
+            }
+
+            .filter-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 15px;
+                align-items: end;
+            }
+
+            .filter-group {
+                min-width: 200px;
+                flex: 1;
+            }
+
+            .filter-group label {
+                font-weight: 600;
+                color: #495057;
+                margin-bottom: 5px;
+                display: block;
+            }
+
+            .filter-group select,
+            .filter-group input {
+                width: 100%;
+                padding: 8px 12px;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+                font-size: 14px;
+            }
+
+            .filter-actions {
+                display: flex;
+                gap: 10px;
+                align-items: end;
+            }
+
+            .btn-filter {
+                padding: 8px 20px;
+                border-radius: 4px;
+                border: none;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .btn-primary {
+                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+                color: white;
+            }
+
+            .btn-secondary {
+                background: #6c757d;
+                color: white;
+            }
+
+            .btn-filter:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            }
+
+            /* Results info */
+            .results-info {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+                padding: 15px 0;
+                border-bottom: 1px solid #dee2e6;
+            }
+
+            .results-count {
+                font-weight: 600;
+                color: #495057;
+            }
+
+            .page-size-selector {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .page-size-selector select {
+                padding: 5px 10px;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+            }
+
+            /* Status badges */
             .status-badge {
                 padding: 6px 12px;
                 border-radius: 20px;
@@ -59,12 +149,8 @@
                 background-color: #f8d7da;
                 color: #721c24;
             }
-            .course-thumbnail {
-                width: 60px;
-                height: 40px;
-                object-fit: cover;
-                border-radius: 4px;
-            }
+
+            /* Course stats */
             .course-stats {
                 font-size: 0.9em;
                 color: #666;
@@ -81,6 +167,71 @@
             .hierarchy-arrow {
                 margin: 0 5px;
                 color: #999;
+            }
+
+            /* Pagination */
+            .pagination-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid #dee2e6;
+            }
+
+            .pagination {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .pagination a,
+            .pagination span {
+                padding: 8px 12px;
+                text-decoration: none;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                color: #495057;
+                transition: all 0.3s ease;
+            }
+
+            .pagination a:hover {
+                background-color: #e9ecef;
+                color: #495057;
+                text-decoration: none;
+            }
+
+            .pagination .current {
+                background-color: #007bff;
+                color: white;
+                border-color: #007bff;
+            }
+
+            .pagination .disabled {
+                color: #6c757d;
+                background-color: #f8f9fa;
+                cursor: not-allowed;
+            }
+
+            /* Responsive */
+            @media (max-width: 768px) {
+                .filter-row {
+                    flex-direction: column;
+                }
+
+                .filter-group {
+                    min-width: 100%;
+                }
+
+                .results-info {
+                    flex-direction: column;
+                    gap: 10px;
+                    align-items: flex-start;
+                }
+
+                .table-responsive {
+                    font-size: 0.9em;
+                }
             }
         </style>
     </head>
@@ -115,6 +266,107 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             </c:if>
+
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <form method="get" action="course" id="filterForm">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="gradeFilter">Grade:</label>
+                            <select id="gradeFilter" name="gradeId" onchange="loadSubjectsByGrade()">
+                                <option value="">All Grades</option>
+                                <c:forEach items="${grades}" var="grade">
+                                    <option value="${grade.id}" 
+                                            ${selectedGradeId != null && selectedGradeId == grade.id ? 'selected' : ''}>
+                                        ${grade.name}
+                                    </option>
+                                </c:forEach>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <label for="subjectFilter">Subject:</label>
+                            <select id="subjectFilter" name="subjectId">
+                                <option value="">All Subjects</option>
+                                <c:forEach items="${subjects}" var="subject">
+                                    <option value="${subject.id}" 
+                                            data-grade-id="${subject.grade_id}"
+                                            ${selectedSubjectId != null && selectedSubjectId == subject.id ? 'selected' : ''}>
+                                        ${subject.name}
+                                    </option>
+                                </c:forEach>
+                            </select>
+                        </div>
+
+                        <c:if test="${sessionScope.account.role == 'admin' || sessionScope.account.role == 'teacher'}">
+                            <div class="filter-group">
+                                <label for="statusFilter">Status:</label>
+                                <select id="statusFilter" name="status">
+                                    <option value="">All Status</option>
+                                    <option value="DRAFT" ${selectedStatus == 'DRAFT' ? 'selected' : ''}>Draft</option>
+                                    <option value="PENDING_APPROVAL" ${selectedStatus == 'PENDING_APPROVAL' ? 'selected' : ''}>Pending Approval</option>
+                                    <option value="APPROVED" ${selectedStatus == 'APPROVED' ? 'selected' : ''}>Approved</option>
+                                    <option value="REJECTED" ${selectedStatus == 'REJECTED' ? 'selected' : ''}>Rejected</option>
+                                </select>
+                            </div>
+                        </c:if>
+
+                        <div class="filter-group">
+                            <label for="searchFilter">Search:</label>
+                            <input type="text" id="searchFilter" name="search" 
+                                   placeholder="Search courses..." 
+                                   value="${searchKeyword}">
+                        </div>
+
+                        <div class="filter-actions">
+                            <button type="submit" class="btn-filter btn-primary">
+                                <i class="fas fa-search"></i> Filter
+                            </button>
+                            <button type="button" class="btn-filter btn-secondary" onclick="clearFilters()">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Hidden fields to preserve pagination -->
+                    <input type="hidden" name="page" value="1">
+                    <input type="hidden" name="pageSize" value="${pageSize}">
+                </form>
+            </div>
+
+            <!-- Results Info -->
+            <div class="results-info">
+                <div class="results-count">
+                    <c:choose>
+                        <c:when test="${totalCourses > 0}">
+                            <div class="results-count">
+                                <c:choose>
+                                    <c:when test="${totalCourses > 0}">
+                                        Showing ${displayStart} - ${displayEnd} of ${totalCourses} courses
+                                    </c:when>
+                                    <c:otherwise>
+                                        No courses found
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            No courses found
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+
+                <div class="page-size-selector">
+                    <label for="pageSizeSelect">Show:</label>
+                    <select id="pageSizeSelect" onchange="changePageSize(this.value)">
+                        <option value="5" ${pageSize == 5 ? 'selected' : ''}>5</option>
+                        <option value="10" ${pageSize == 10 ? 'selected' : ''}>10</option>
+                        <option value="20" ${pageSize == 20 ? 'selected' : ''}>20</option>
+                        <option value="50" ${pageSize == 50 ? 'selected' : ''}>50</option>
+                    </select>
+                    <span>per page</span>
+                </div>
+            </div>
 
             <!-- Course Table -->
             <div class="table-responsive">
@@ -282,6 +534,53 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination -->
+            <c:if test="${totalPages > 1}">
+                <div class="pagination-container">
+                    <div class="pagination">
+                        <!-- First page -->
+                        <c:if test="${currentPage > 1}">
+                            <a href="javascript:void(0)" onclick="goToPage(1)" title="First page">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </c:if>
+
+                        <!-- Previous page -->
+                        <c:if test="${currentPage > 1}">
+                            <a href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" title="Previous page">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </c:if>
+
+                        <!-- Page numbers -->
+                        <c:forEach begin="${startPage}" end="${endPage}" var="pageNum">
+                            <c:choose>
+                                <c:when test="${pageNum == currentPage}">
+                                    <span class="current">${pageNum}</span>
+                                </c:when>
+                                <c:otherwise>
+                                    <a href="javascript:void(0)" onclick="goToPage(${pageNum})">${pageNum}</a>
+                                </c:otherwise>
+                            </c:choose>
+                        </c:forEach>
+
+                        <!-- Next page -->
+                        <c:if test="${currentPage < totalPages}">
+                            <a href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" title="Next page">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </c:if>
+
+                        <!-- Last page -->
+                        <c:if test="${currentPage < totalPages}">
+                            <a href="javascript:void(0)" onclick="goToPage(${totalPages})" title="Last page">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </c:if>
+                    </div>
+                </div>
+            </c:if>
         </main>
 
         <!-- Reject Course Modal -->
@@ -318,16 +617,105 @@
         <script src="${pageContext.request.contextPath}/assets/js/bootstrap.min.js"></script>
 
         <script>
-                                                                       function showRejectModal(courseId) {
-                                                                           document.getElementById('rejectCourseId').value = courseId;
-                                                                           document.getElementById('rejectionReason').value = '';
-                                                                           new bootstrap.Modal(document.getElementById('rejectModal')).show();
-                                                                       }
+                                // Initialize page
+                                $(document).ready(function () {
+                                    // Filter subjects based on selected grade on page load
+                                    filterSubjectsByGrade();
 
-                                                                       // Auto-dismiss alerts after 5 seconds
-                                                                       setTimeout(function () {
-                                                                           $('.alert').fadeOut('slow');
-                                                                       }, 5000);
+                                    // Auto-submit form when Enter is pressed in search field
+                                    $('#searchFilter').on('keypress', function (e) {
+                                        if (e.which === 13) {
+                                            $('#filterForm').submit();
+                                        }
+                                    });
+                                });
+
+                                function loadSubjectsByGrade() {
+                                    filterSubjectsByGrade();
+                                }
+
+                                function filterSubjectsByGrade() {
+                                    const selectedGradeId = $('#gradeFilter').val();
+                                    const subjectSelect = $('#subjectFilter');
+                                    const currentSubjectId = '${selectedSubjectId}';
+
+                                    // Show all subjects first
+                                    subjectSelect.find('option').show();
+
+                                    if (selectedGradeId) {
+                                        // Hide subjects that don't belong to selected grade
+                                        subjectSelect.find('option[data-grade-id]').each(function () {
+                                            const gradeId = $(this).data('grade-id');
+                                            if (gradeId && gradeId != selectedGradeId) {
+                                                $(this).hide();
+                                            }
+                                        });
+
+                                        // Reset subject selection if current subject doesn't match grade
+                                        const currentOption = subjectSelect.find('option[value="' + currentSubjectId + '"]');
+                                        if (currentOption.length > 0) {
+                                            const currentGradeId = currentOption.data('grade-id');
+                                            if (currentGradeId && currentGradeId != selectedGradeId) {
+                                                subjectSelect.val('');
+                                            }
+                                        }
+                                    }
+                                }
+
+                                function clearFilters() {
+                                    $('#gradeFilter').val('');
+                                    $('#subjectFilter').val('');
+                                    $('#statusFilter').val('');
+                                    $('#searchFilter').val('');
+                                    $('#filterForm').submit();
+                                }
+
+                                function changePageSize(newPageSize) {
+                                    const form = $('#filterForm');
+                                    form.find('input[name="pageSize"]').val(newPageSize);
+                                    form.find('input[name="page"]').val(1); // Reset to first page
+                                    form.submit();
+                                }
+
+                                function goToPage(pageNumber) {
+                                    const form = $('#filterForm');
+                                    form.find('input[name="page"]').val(pageNumber);
+                                    form.submit();
+                                }
+
+                                function showRejectModal(courseId) {
+                                    document.getElementById('rejectCourseId').value = courseId;
+                                    document.getElementById('rejectionReason').value = '';
+                                    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+                                }
+
+                                // Auto-dismiss alerts after 5 seconds
+                                setTimeout(function () {
+                                    $('.alert').fadeOut('slow');
+                                }, 5000);
+
+                                // Handle URL parameters for direct linking from subjects page
+                                $(document).ready(function () {
+                                    const urlParams = new URLSearchParams(window.location.search);
+                                    const subjectId = urlParams.get('subjectId');
+
+                                    if (subjectId && subjectId !== '${selectedSubjectId}') {
+                                        // If coming from subjects page with subjectId parameter
+                                        $('#subjectFilter').val(subjectId);
+
+                                        // Also set the corresponding grade
+                                        const subjectOption = $('#subjectFilter option[value="' + subjectId + '"]');
+                                        if (subjectOption.length > 0) {
+                                            const gradeId = subjectOption.data('grade-id');
+                                            if (gradeId) {
+                                                $('#gradeFilter').val(gradeId);
+                                            }
+                                        }
+
+                                        // Submit form to apply filter
+                                        $('#filterForm').submit();
+                                    }
+                                });
         </script>
     </body>
 </html>

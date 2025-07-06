@@ -58,6 +58,20 @@ public class LessonController extends HttpServlet {
                 case "addForm":
                     List<Chapter> chapterName = new ChapterDAO().getChapter("select * from chapter");
                     request.setAttribute("chapterName", chapterName);
+
+                    // Check if coming from course builder
+                    String returnTo = request.getParameter("returnTo");
+                    String courseId = request.getParameter("courseId");
+                    String chapterId = request.getParameter("chapterId");
+
+                    if ("course".equals(returnTo) && courseId != null) {
+                        request.setAttribute("returnToCourse", true);
+                        request.setAttribute("courseId", courseId);
+                        if (chapterId != null) {
+                            request.setAttribute("preSelectedChapterId", chapterId);
+                        }
+                    }
+
                     request.getRequestDispatcher("lesson/addLesson.jsp").forward(request, response);
                     return;
 
@@ -73,10 +87,10 @@ public class LessonController extends HttpServlet {
                             request.getRequestDispatcher("lesson/updateLesson.jsp").forward(request, response);
                             return;
                         } else {
-                            request.setAttribute("error", "Không tìm thấy lesson với ID " + id);
+                            request.setAttribute("error", "Lesson not found with ID " + id);
                         }
                     } else {
-                        request.setAttribute("error", "ID không hợp lệ");
+                        request.setAttribute("error", "Invalid ID");
                     }
                     break;
 
@@ -84,21 +98,21 @@ public class LessonController extends HttpServlet {
                     String delIdStr = request.getParameter("id");
                     if (delIdStr != null) {
                         int delId = Integer.parseInt(delIdStr);
-                        // Lấy thông tin lesson trước khi xóa để xóa video
+                        // Get lesson info before deleting to delete video
                         Lesson lessonToDelete = lessonDAO.getLessonById(delId);
                         if (lessonToDelete != null && lessonToDelete.getVideo_link() != null && !lessonToDelete.getVideo_link().isEmpty()) {
                             try {
-                                // Xóa video trên cloud storage
+                                // Delete video on cloud storage
                                 videoService.deleteOldVideo(lessonToDelete.getVideo_link());
                             } catch (Exception e) {
-                                logger.log(Level.WARNING, "Không thể xóa video khi xóa bài học", e);
+                                logger.log(Level.WARNING, "Cannot delete video when deleting lesson", e);
                             }
                         }
                         lessonDAO.deleteLesson(delId);
                         response.sendRedirect("LessonURL");
                         return;
                     } else {
-                        request.setAttribute("error", "ID không hợp lệ để xóa");
+                        request.setAttribute("error", "Invalid ID for deletion");
                     }
                     break;
 
@@ -110,26 +124,98 @@ public class LessonController extends HttpServlet {
                         response.sendRedirect("/LessonURL");
                     }
                     return;
+
                 default:
-                    String name = request.getParameter("name");
-                    List<Lesson> lessonList;
-                    if (name != null && !name.trim().isEmpty()) {
-                        lessonList = lessonDAO.searchByName(name.trim());
-                        if (lessonList == null || lessonList.isEmpty()) {
-                            request.setAttribute("error", "Không tìm thấy bài học nào với tên: " + name);
-                        }
-                    } else {
-                        lessonList = lessonDAO.getAllLessons();
-                    }
-                    request.setAttribute("lessonList", lessonList);
-                    List<Chapter> chapter = new ChapterDAO().getChapter("select * from chapter");
-                    request.setAttribute("chapter", chapter);
-                    break;
+                    listLessonsWithPagination(request, response);
+                    return;
             }
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "Lỗi xử lý GET request", e);
-            request.setAttribute("error", "Lỗi xử lý yêu cầu: " + e.getMessage());
+            logger.log(Level.SEVERE, "Error processing GET request", e);
+            request.setAttribute("error", "Error processing request: " + e.getMessage());
         }
+
+        request.getRequestDispatcher("lesson/lessonList.jsp").forward(request, response);
+    }
+
+    private void listLessonsWithPagination(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        // Get pagination parameters
+        int page = 1;
+        int pageSize = 10;
+        String pageParam = request.getParameter("page");
+        String pageSizeParam = request.getParameter("pageSize");
+
+        if (pageParam != null && !pageParam.isEmpty()) {
+            try {
+                page = Integer.parseInt(pageParam);
+                if (page < 1) {
+                    page = 1;
+                }
+            } catch (NumberFormatException e) {
+                page = 1;
+            }
+        }
+
+        if (pageSizeParam != null && !pageSizeParam.isEmpty()) {
+            try {
+                pageSize = Integer.parseInt(pageSizeParam);
+                if (pageSize < 5) {
+                    pageSize = 5;
+                }
+                if (pageSize > 50) {
+                    pageSize = 50;
+                }
+            } catch (NumberFormatException e) {
+                pageSize = 10;
+            }
+        }
+
+        // Get filter parameters
+        String name = request.getParameter("name");
+        String chapterIdParam = request.getParameter("chapterId");
+        Integer chapterId = null;
+
+        if (chapterIdParam != null && !chapterIdParam.isEmpty()) {
+            try {
+                chapterId = Integer.parseInt(chapterIdParam);
+            } catch (NumberFormatException e) {
+                // Ignore invalid chapter ID
+            }
+        }
+
+        // Get lessons with pagination
+        List<Lesson> lessonList = lessonDAO.findLessonsWithPagination(name, chapterId, page, pageSize);
+        int totalLessons = lessonDAO.getTotalLessonsCount(name, chapterId);
+
+        // Calculate pagination info
+        int totalPages = (int) Math.ceil((double) totalLessons / pageSize);
+        int startPage = Math.max(1, page - 2);
+        int endPage = Math.min(totalPages, page + 2);
+
+        // Calculate display range
+        int displayStart = (page - 1) * pageSize + 1;
+        int displayEnd = Math.min(page * pageSize, totalLessons);
+
+        // Load chapters for filter and display
+        List<Chapter> chapter = new ChapterDAO().getChapter("select * from chapter");
+
+        // Set attributes
+        request.setAttribute("lessonList", lessonList);
+        request.setAttribute("chapter", chapter);
+        request.setAttribute("currentPage", page);
+        request.setAttribute("pageSize", pageSize);
+        request.setAttribute("totalPages", totalPages);
+        request.setAttribute("totalLessons", totalLessons);
+        request.setAttribute("startPage", startPage);
+        request.setAttribute("endPage", endPage);
+
+        request.setAttribute("displayStart", displayStart);
+        request.setAttribute("displayEnd", displayEnd);
+
+        // Preserve filter parameters
+        request.setAttribute("selectedName", name);
+        request.setAttribute("selectedChapterId", chapterId);
 
         request.getRequestDispatcher("lesson/lessonList.jsp").forward(request, response);
     }

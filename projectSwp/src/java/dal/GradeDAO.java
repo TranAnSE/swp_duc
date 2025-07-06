@@ -59,7 +59,7 @@ public class GradeDAO extends DBContext {
         String sql = "INSERT INTO grade ( name, description, teacher_id) "
                 + "VALUES (?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            
+
             ps.setString(1, grade.getName());
             ps.setString(2, grade.getDescription());
             ps.setInt(3, grade.getTeacher_id());
@@ -108,4 +108,69 @@ public class GradeDAO extends DBContext {
         return null; // nếu không tìm thấy
     }
 
+    public List<Grade> findGradesWithPagination(String name, Integer teacherId, int page, int pageSize) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT * FROM grade WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (name != null && !name.trim().isEmpty()) {
+            sql.append(" AND name LIKE ?");
+            params.add("%" + name.trim() + "%");
+        }
+
+        if (teacherId != null) {
+            sql.append(" AND teacher_id = ?");
+            params.add(teacherId);
+        }
+
+        sql.append(" ORDER BY name LIMIT ? OFFSET ?");
+        params.add(pageSize);
+        params.add((page - 1) * pageSize);
+
+        List<Grade> grades = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Grade gra = new Grade();
+                    gra.setId(rs.getInt("id"));
+                    gra.setName(rs.getString("name"));
+                    gra.setDescription(rs.getString("description"));
+                    gra.setTeacher_id(rs.getInt("teacher_id"));
+                    grades.add(gra);
+                }
+            }
+        }
+        return grades;
+    }
+
+    public int getTotalGradesCount(String name, Integer teacherId) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM grade WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (name != null && !name.trim().isEmpty()) {
+            sql.append(" AND name LIKE ?");
+            params.add("%" + name.trim() + "%");
+        }
+
+        if (teacherId != null) {
+            sql.append(" AND teacher_id = ?");
+            params.add(teacherId);
+        }
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
 }

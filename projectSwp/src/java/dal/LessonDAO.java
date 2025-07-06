@@ -107,4 +107,76 @@ public class LessonDAO extends DBContext {
         }
         return list;
     }
+
+    public List<Lesson> findLessonsWithPagination(String name, Integer chapterId, int page, int pageSize) {
+        List<Lesson> list = new ArrayList<>();
+        StringBuilder sql = new StringBuilder("SELECT * FROM lesson WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (name != null && !name.trim().isEmpty()) {
+            sql.append(" AND name LIKE ?");
+            params.add("%" + name.trim() + "%");
+        }
+
+        if (chapterId != null) {
+            sql.append(" AND chapter_id = ?");
+            params.add(chapterId);
+        }
+
+        sql.append(" ORDER BY name LIMIT ? OFFSET ?");
+        params.add(pageSize);
+        params.add((page - 1) * pageSize);
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Lesson lesson = new Lesson(
+                            rs.getInt("id"),
+                            rs.getString("name"),
+                            rs.getString("content"),
+                            rs.getInt("chapter_id"),
+                            rs.getString("video_link")
+                    );
+                    list.add(lesson);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public int getTotalLessonsCount(String name, Integer chapterId) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM lesson WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (name != null && !name.trim().isEmpty()) {
+            sql.append(" AND name LIKE ?");
+            params.add("%" + name.trim() + "%");
+        }
+
+        if (chapterId != null) {
+            sql.append(" AND chapter_id = ?");
+            params.add(chapterId);
+        }
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
 }

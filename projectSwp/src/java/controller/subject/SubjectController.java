@@ -38,6 +38,7 @@ public class SubjectController extends HttpServlet {
             resp.sendRedirect("/error.jsp");
             return;
         }
+
         try {
             // Load grade map for all requests
             loadGradeMap(req);
@@ -64,11 +65,8 @@ public class SubjectController extends HttpServlet {
                 req.getRequestDispatcher("Subject/addSubject.jsp").forward(req, resp);
 
             } else {
-                String name = req.getParameter("name");
-                List<Subject> subjectList = (name != null && !name.trim().isEmpty())
-                        ? daoSubject.findByNameOfSubject(name) : daoSubject.findAll();
-                req.setAttribute("subjectList", subjectList);
-                req.getRequestDispatcher("Subject/subjectList.jsp").forward(req, resp);
+                // List subjects with pagination
+                listSubjectsWithPagination(req, resp);
             }
 
         } catch (SQLException | NumberFormatException e) {
@@ -76,6 +74,90 @@ public class SubjectController extends HttpServlet {
             req.setAttribute("error", "Error processing data: " + e.getMessage());
             req.getRequestDispatcher("Subject/subjectList.jsp").forward(req, resp);
         }
+    }
+
+    private void listSubjectsWithPagination(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException, SQLException {
+
+        // Get pagination parameters
+        int page = 1;
+        int pageSize = 10;
+        String pageParam = req.getParameter("page");
+        String pageSizeParam = req.getParameter("pageSize");
+
+        if (pageParam != null && !pageParam.isEmpty()) {
+            try {
+                page = Integer.parseInt(pageParam);
+                if (page < 1) {
+                    page = 1;
+                }
+            } catch (NumberFormatException e) {
+                page = 1;
+            }
+        }
+
+        if (pageSizeParam != null && !pageSizeParam.isEmpty()) {
+            try {
+                pageSize = Integer.parseInt(pageSizeParam);
+                if (pageSize < 5) {
+                    pageSize = 5;
+                }
+                if (pageSize > 50) {
+                    pageSize = 50;
+                }
+            } catch (NumberFormatException e) {
+                pageSize = 10;
+            }
+        }
+
+        // Get filter parameters
+        String name = req.getParameter("name");
+        String gradeIdParam = req.getParameter("gradeId");
+        Integer gradeId = null;
+
+        if (gradeIdParam != null && !gradeIdParam.isEmpty()) {
+            try {
+                gradeId = Integer.parseInt(gradeIdParam);
+            } catch (NumberFormatException e) {
+                // Ignore invalid grade ID
+            }
+        }
+
+        // Get subjects with pagination
+        List<Subject> subjectList = daoSubject.findSubjectsWithPagination(name, gradeId, page, pageSize);
+        int totalSubjects = daoSubject.getTotalSubjectsCount(name, gradeId);
+
+        // Calculate pagination info
+        int totalPages = (int) Math.ceil((double) totalSubjects / pageSize);
+        int startPage = Math.max(1, page - 2);
+        int endPage = Math.min(totalPages, page + 2);
+
+        // Calculate display range
+        int displayStart = (page - 1) * pageSize + 1;
+        int displayEnd = Math.min(page * pageSize, totalSubjects);
+
+        // Load grades for filter
+        GradeDAO gradeDAO = new GradeDAO();
+        List<Grade> grades = gradeDAO.findAllFromGrade();
+
+        // Set attributes
+        req.setAttribute("subjectList", subjectList);
+        req.setAttribute("currentPage", page);
+        req.setAttribute("pageSize", pageSize);
+        req.setAttribute("totalPages", totalPages);
+        req.setAttribute("totalSubjects", totalSubjects);
+        req.setAttribute("startPage", startPage);
+        req.setAttribute("endPage", endPage);
+        req.setAttribute("grades", grades);
+
+        req.setAttribute("displayStart", displayStart);
+        req.setAttribute("displayEnd", displayEnd);
+
+        // Preserve filter parameters
+        req.setAttribute("selectedName", name);
+        req.setAttribute("selectedGradeId", gradeId);
+
+        req.getRequestDispatcher("Subject/subjectList.jsp").forward(req, resp);
     }
 
     @Override
