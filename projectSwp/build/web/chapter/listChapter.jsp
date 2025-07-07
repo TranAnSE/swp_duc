@@ -112,6 +112,33 @@
                 margin: 10px 0;
                 text-align: center;
             }
+
+            /* Force hide all nice-select elements */
+            .nice-select {
+                display: none !important;
+            }
+
+            /* Ensure regular select elements are visible */
+            select {
+                display: block !important;
+            }
+
+            /* Style for page size selector */
+            .page-size-selector select {
+                display: inline-block !important;
+                width: auto !important;
+                padding: 4px 8px !important;
+                font-size: 14px !important;
+                border: 1px solid #ced4da !important;
+                border-radius: 4px !important;
+                background-color: white !important;
+                min-width: 60px !important;
+            }
+
+            /* Override any Select2 styling for page size selector */
+            .page-size-selector .select2-container {
+                display: none !important;
+            }
         </style>
     </head>
     <body>
@@ -150,13 +177,6 @@
                 <form method="get" action="chapter" id="filterForm">
                     <input type="hidden" name="service" value="search" />
                     <div class="filter-row">
-                        <div class="filter-group">
-                            <label for="idFilter">ID:</label>
-                            <input type="text" id="idFilter" name="id" 
-                                   placeholder="Enter ID" 
-                                   value="${param.id}">
-                        </div>
-
                         <div class="filter-group">
                             <label for="nameFilter">Name:</label>
                             <input type="text" id="nameFilter" name="name" 
@@ -201,9 +221,31 @@
             </div>
 
             <!-- Results Info and Pagination -->
-            <c:set var="totalItems" value="${totalChapters}" scope="request"/>
-            <c:set var="itemType" value="chapters" scope="request"/>
-            <jsp:include page="../components/pagination.jsp"/>
+            <div class="results-info">
+                <div class="results-count">
+                    <c:choose>
+                        <c:when test="${totalChapters > 0}">
+                            Showing ${displayStart} - ${displayEnd} of ${totalChapters} chapters
+                        </c:when>
+                        <c:otherwise>
+                            No chapters found
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+
+                <div class="d-flex gap-3 align-items-center">
+                    <div class="page-size-selector">
+                        <label for="pageSizeSelect">Show:</label>
+                        <select id="pageSizeSelect" onchange="changePageSize(this.value)" class="page-size-select">
+                            <option value="5" ${pageSize == 5 ? 'selected' : ''}>5</option>
+                            <option value="10" ${pageSize == 10 ? 'selected' : ''}>10</option>
+                            <option value="20" ${pageSize == 20 ? 'selected' : ''}>20</option>
+                            <option value="50" ${pageSize == 50 ? 'selected' : ''}>50</option>
+                        </select>
+                        <span>per page</span>
+                    </div>
+                </div>
+            </div>
 
             <!-- Chapter table -->
             <div class="table-responsive">
@@ -343,14 +385,20 @@
 
         <script>
                                 $(document).ready(function () {
-                                    // Disable nice-select initialization completely
+                                    // Completely disable nice-select initialization
                                     if (typeof $.fn.niceSelect !== 'undefined') {
                                         $.fn.niceSelect = function () {
                                             return this;
                                         };
                                     }
 
-                                    // Destroy any existing Select2 instances and nice-select
+                                    // Remove all existing nice-select elements
+                                    $('.nice-select').remove();
+
+                                    // Show all select elements
+                                    $('select').show();
+
+                                    // Destroy any existing Select2 instances and nice-select for filter selects only
                                     $('.select2-enabled').each(function () {
                                         if ($(this).hasClass('select2-hidden-accessible')) {
                                             $(this).select2('destroy');
@@ -362,7 +410,7 @@
                                         }
                                     });
 
-                                    // Initialize Select2 for dropdowns
+                                    // Initialize Select2 ONLY for filter dropdowns (not page size selector)
                                     $('.select2-enabled').select2({
                                         placeholder: function () {
                                             return $(this).data('placeholder') || 'Choose Subject';
@@ -372,8 +420,18 @@
                                         dropdownParent: $('body')
                                     });
 
+                                    // Ensure page size selector remains as regular select
+                                    $('#pageSizeSelect').removeClass('select2-enabled');
+                                    if ($('#pageSizeSelect').hasClass('select2-hidden-accessible')) {
+                                        $('#pageSizeSelect').select2('destroy');
+                                    }
+                                    $('#pageSizeSelect').show();
+
+                                    // Remove any nice-select wrapper for page size selector
+                                    $('#pageSizeSelect').next('.nice-select').remove();
+
                                     // Auto-submit form when Enter is pressed in search fields
-                                    $('#idFilter, #nameFilter').on('keypress', function (e) {
+                                    $('#nameFilter').on('keypress', function (e) {
                                         if (e.which === 13) {
                                             $('#filterForm').submit();
                                         }
@@ -381,10 +439,49 @@
                                 });
 
                                 function clearFilters() {
-                                    $('#idFilter').val('');
                                     $('#nameFilter').val('');
                                     $('#subjectFilter').val('').trigger('change');
                                     $('#filterForm').submit();
+                                }
+
+                                function goToPage(pageNumber) {
+                                    const form = document.getElementById('filterForm');
+                                    if (form) {
+                                        let pageInput = form.querySelector('input[name="page"]');
+                                        if (!pageInput) {
+                                            pageInput = document.createElement('input');
+                                            pageInput.type = 'hidden';
+                                            pageInput.name = 'page';
+                                            form.appendChild(pageInput);
+                                        }
+                                        pageInput.value = pageNumber;
+                                        form.submit();
+                                    }
+                                }
+
+                                function changePageSize(newPageSize) {
+                                    const form = document.getElementById('filterForm');
+                                    if (form) {
+                                        let pageSizeInput = form.querySelector('input[name="pageSize"]');
+                                        if (!pageSizeInput) {
+                                            pageSizeInput = document.createElement('input');
+                                            pageSizeInput.type = 'hidden';
+                                            pageSizeInput.name = 'pageSize';
+                                            form.appendChild(pageSizeInput);
+                                        }
+                                        pageSizeInput.value = newPageSize;
+
+                                        let pageInput = form.querySelector('input[name="page"]');
+                                        if (!pageInput) {
+                                            pageInput = document.createElement('input');
+                                            pageInput.type = 'hidden';
+                                            pageInput.name = 'page';
+                                            form.appendChild(pageInput);
+                                        }
+                                        pageInput.value = 1; // Reset to first page
+
+                                        form.submit();
+                                    }
                                 }
 
                                 // Auto-dismiss alerts after 5 seconds

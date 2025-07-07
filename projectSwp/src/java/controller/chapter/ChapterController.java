@@ -72,7 +72,8 @@ public class ChapterController extends HttpServlet {
                     deleteChapter(request, response);
                     break;
                 case "search":
-                    searchChapter(request, response);
+                    // Both search and list use the same method now
+                    listChapter(request, response);
                     break;
                 default:
                     listChapter(request, response);
@@ -126,15 +127,24 @@ public class ChapterController extends HttpServlet {
         String subjectIdParam = request.getParameter("subject_id");
         Integer subjectId = null;
 
-        if (subjectIdParam != null && !subjectIdParam.isEmpty()) {
+        // Clean up empty parameters
+        if (name != null && name.trim().isEmpty()) {
+            name = null;
+        }
+        if (subjectIdParam != null && subjectIdParam.trim().isEmpty()) {
+            subjectIdParam = null;
+        }
+
+        if (subjectIdParam != null) {
             try {
                 subjectId = Integer.parseInt(subjectIdParam);
             } catch (NumberFormatException e) {
                 // Ignore invalid subject ID
+                subjectId = null;
             }
         }
 
-        // Get chapters with pagination
+        // Get chapters with pagination and filters
         List<Chapter> listChapter = chapterDAO.findChaptersWithPagination(name, subjectId, page, pageSize);
         int totalChapters = chapterDAO.getTotalChaptersCount(name, subjectId);
 
@@ -144,7 +154,7 @@ public class ChapterController extends HttpServlet {
         int endPage = Math.min(totalPages, page + 2);
 
         // Calculate display range
-        int displayStart = (page - 1) * pageSize + 1;
+        int displayStart = totalChapters > 0 ? (page - 1) * pageSize + 1 : 0;
         int displayEnd = Math.min(page * pageSize, totalChapters);
 
         List<Subject> listSubject = subjectDAO.findAll();
@@ -164,8 +174,8 @@ public class ChapterController extends HttpServlet {
         request.setAttribute("displayStart", displayStart);
         request.setAttribute("displayEnd", displayEnd);
 
-        // Preserve filter parameters
-        request.setAttribute("selectedName", name);
+        // Preserve filter parameters for form
+        request.setAttribute("selectedName", name != null ? name : "");
         request.setAttribute("selectedSubjectId", subjectId);
 
         request.getRequestDispatcher("/chapter/listChapter.jsp").forward(request, response);
@@ -190,15 +200,15 @@ public class ChapterController extends HttpServlet {
     private void addChapter(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, Exception {
         try {
-            int id = Integer.parseInt(request.getParameter("id"));
             String name = request.getParameter("name");
             String description = request.getParameter("description");
             int subjectId = Integer.parseInt(request.getParameter("subject_id"));
 
-            Chapter chapter = new Chapter(id, name, description, subjectId);
-            int result = chapterDAO.addChapter(chapter);
+            // Create chapter without ID (will be auto-generated)
+            Chapter chapter = new Chapter(0, name, description, subjectId);
+            int generatedId = chapterDAO.addChapter(chapter);
 
-            if (result > 0) {
+            if (generatedId > 0) {
                 // Check if should return to course builder
                 String returnTo = request.getParameter("returnTo");
                 String courseId = request.getParameter("courseId");
@@ -213,7 +223,7 @@ public class ChapterController extends HttpServlet {
                 showAddForm(request, response);
             }
         } catch (NumberFormatException e) {
-            request.setAttribute("errorMessage", "Invalid ID or Subject ID format!");
+            request.setAttribute("errorMessage", "Invalid Subject ID format!");
             showAddForm(request, response);
         }
     }
@@ -265,44 +275,6 @@ public class ChapterController extends HttpServlet {
             request.setAttribute("errorMessage", "Invalid ID format!");
         }
         listChapter(request, response);
-    }
-
-    private void searchChapter(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException, Exception {
-        String idParam = request.getParameter("id");
-        String nameParam = request.getParameter("name");
-        String subjectIdParam = request.getParameter("subject_id");
-        List<Subject> listSubject = subjectDAO.findAll();
-        Map<Integer, String> subjectMap = loadSubjectMap();
-        List<Chapter> listChapter;
-
-        if (idParam != null && !idParam.isEmpty()) {
-            try {
-                int id = Integer.parseInt(idParam);
-                Chapter chapter = chapterDAO.findChapterById(id);
-                listChapter = chapter != null ? List.of(chapter) : List.of();
-            } catch (NumberFormatException e) {
-                listChapter = List.of();
-                request.setAttribute("message", "Invalid ID!");
-            }
-        } else if (nameParam != null && !nameParam.isEmpty()) {
-            listChapter = chapterDAO.findChapterByName(nameParam);
-        } else if (subjectIdParam != null && !subjectIdParam.isEmpty()) {
-            try {
-                int subjectId = Integer.parseInt(subjectIdParam);
-                listChapter = chapterDAO.findChapterBySubjectId(subjectId);
-            } catch (NumberFormatException e) {
-                listChapter = List.of();
-                request.setAttribute("message", "Invalid Subject ID!");
-            }
-        } else {
-            listChapter = List.of();
-        }
-
-        request.setAttribute("listChapter", listChapter);
-        request.setAttribute("listSubject", listSubject != null ? listSubject : List.of());
-        request.setAttribute("subjectMap", subjectMap != null ? subjectMap : new HashMap<>());
-        request.getRequestDispatcher("/chapter/listChapter.jsp").forward(request, response);
     }
 
     private Map<Integer, String> loadSubjectMap() {

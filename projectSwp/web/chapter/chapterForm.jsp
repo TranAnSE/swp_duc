@@ -233,7 +233,7 @@
                                 </a>
                             </li>
                             <li class="breadcrumb-item active" aria-current="page" style="color: white;">
-                                <i class="fas fa-plus"></i> Add Chapter
+                                <i class="fas fa-plus"></i> ${chapterToEdit == null ? 'Add Chapter' : 'Edit Chapter'}
                             </li>
                         </ol>
                     </nav>
@@ -268,13 +268,10 @@
                     <input type="hidden" name="courseId" value="${courseId}">
                 </c:if>
 
-                <div class="form-group">
-                    <label for="id">Chapter ID <span class="required">*</span></label>
-                    <input type="number" id="id" name="id" 
-                           value="${chapterToEdit != null ? chapterToEdit.id : ''}" 
-                           ${chapterToEdit != null ? 'readonly' : ''} 
-                           required min="1" max="999999">
-                </div>
+                <!-- Hidden ID field for edit mode only -->
+                <c:if test="${chapterToEdit != null}">
+                    <input type="hidden" name="id" value="${chapterToEdit.id}">
+                </c:if>
 
                 <div class="form-group">
                     <label for="name">Chapter Name <span class="required">*</span></label>
@@ -325,14 +322,21 @@
             <!-- Help Section for Course Builder -->
             <c:if test="${returnToCourse}">
                 <div class="alert alert-info mt-4">
-                    <h5><i class="fas fa-info-circle"></i> Creating Chapter for Course</h5>
-                    <p>You are creating a new chapter that will be available for your course. After creating this chapter, you can:</p>
-                    <ul>
-                        <li>Add it to your course content</li>
-                        <li>Create lessons within this chapter</li>
-                        <li>Organize your course structure</li>
-                    </ul>
-                    <p><strong>Note:</strong> The chapter will be created for the selected subject and can be used in multiple courses.</p>
+                    <h5><i class="fas fa-info-circle"></i> ${chapterToEdit == null ? 'Creating Chapter for Course' : 'Editing Chapter'}</h5>
+                    <c:choose>
+                        <c:when test="${chapterToEdit == null}">
+                            <p>You are creating a new chapter that will be available for your course. After creating this chapter, you can:</p>
+                            <ul>
+                                <li>Add it to your course content</li>
+                                <li>Create lessons within this chapter</li>
+                                <li>Organize your course structure</li>
+                            </ul>
+                            <p><strong>Note:</strong> The chapter will be created for the selected subject and can be used in multiple courses.</p>
+                        </c:when>
+                        <c:otherwise>
+                            <p>You are editing an existing chapter. Changes will be reflected in all courses that use this chapter.</p>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
             </c:if>
         </main>
@@ -399,15 +403,8 @@
 
                 // Form validation
                 document.querySelector('form').addEventListener('submit', function (e) {
-                    const id = document.getElementById('id').value;
                     const name = document.getElementById('name').value.trim();
                     const subjectId = document.getElementById('subject_id').value;
-
-                    if (!id || id <= 0) {
-                        alert('Please enter a valid Chapter ID (positive number).');
-                        e.preventDefault();
-                        return false;
-                    }
 
                     if (!name) {
                         alert('Please enter a chapter name.');
@@ -425,8 +422,8 @@
                 });
 
                 // Auto-focus on first input
-                const firstInput = document.querySelector('input[type="number"], input[type="text"]');
-                if (firstInput && !firstInput.hasAttribute('readonly')) {
+                const firstInput = document.querySelector('input[type="text"]');
+                if (firstInput) {
                     firstInput.focus();
                 }
             });

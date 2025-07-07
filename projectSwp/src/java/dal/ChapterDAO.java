@@ -42,21 +42,26 @@ public class ChapterDAO extends DBContext {
 
     //add them new chapter
     public int addChapter(Chapter chapter) {
-        int n = 0;
-        String sql = "INSERT INTO chapter (id, name, description, subject_id)\n"
-                + "     VALUES\n"
-                + "(?, ?, ?, ?)";
+        int generatedId = 0;
+        String sql = "INSERT INTO chapter (name, description, subject_id) VALUES (?, ?, ?)";
         try {
-            PreparedStatement pre = connection.prepareStatement(sql);
-            pre.setInt(1, chapter.getId());
-            pre.setString(2, chapter.getName());
-            pre.setString(3, chapter.getDescription());
-            pre.setInt(4, chapter.getSubject_id());
-            n = pre.executeUpdate();
+            PreparedStatement pre = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            pre.setString(1, chapter.getName());
+            pre.setString(2, chapter.getDescription());
+            pre.setInt(3, chapter.getSubject_id());
+
+            int affectedRows = pre.executeUpdate();
+            if (affectedRows > 0) {
+                try (ResultSet generatedKeys = pre.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        generatedId = generatedKeys.getInt(1);
+                    }
+                }
+            }
         } catch (SQLException ex) {
             Logger.getLogger(ChapterDAO.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return n;
+        return generatedId;
     }
 
     //edit chapter
