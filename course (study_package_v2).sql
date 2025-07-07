@@ -197,3 +197,38 @@ ALTER TABLE course_lesson DROP INDEX unique_course_lesson;
 -- but prevents duplicate lesson in same course
 ALTER TABLE course_lesson 
 ADD UNIQUE INDEX unique_course_lesson_active (course_id, lesson_id, is_active);
+
+SET @sql = (SELECT IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS 
+     WHERE TABLE_SCHEMA = 'db-script' 
+     AND TABLE_NAME = 'course_lesson' 
+     AND INDEX_NAME = 'unique_course_lesson_active') > 0,
+    'ALTER TABLE course_lesson DROP INDEX unique_course_lesson_active',
+    'SELECT "Index unique_course_lesson_active does not exist" as message'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (SELECT IF(
+    (SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS 
+     WHERE TABLE_SCHEMA = 'db-script' 
+     AND TABLE_NAME = 'course_lesson' 
+     AND INDEX_NAME = 'unique_active_course_lesson') > 0,
+    'ALTER TABLE course_lesson DROP INDEX unique_active_course_lesson',
+    'SELECT "Index unique_active_course_lesson does not exist" as message'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Clean up any duplicate data first
+DELETE cl1 FROM course_lesson cl1
+INNER JOIN course_lesson cl2 
+WHERE cl1.id > cl2.id 
+AND cl1.course_id = cl2.course_id 
+AND cl1.lesson_id = cl2.lesson_id;
+
+-- Add a better constraint that only prevents active duplicates
+ALTER TABLE course_lesson 
+ADD UNIQUE INDEX unique_active_course_lesson (course_id, lesson_id) 
