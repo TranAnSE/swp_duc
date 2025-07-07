@@ -619,16 +619,6 @@ public class CourseController extends HttpServlet {
             int chapterId = Integer.parseInt(chapterIdParam);
             String lessonType = lessonTypeParam != null ? lessonTypeParam : "LESSON";
 
-            // Check if lesson already exists in course using DAO
-            List<Map<String, Object>> existingLessons = courseManagementDAO.getCourseLessons(courseId);
-            boolean lessonExists = existingLessons.stream()
-                    .anyMatch(lesson -> (Integer) lesson.get("lesson_id") == lessonId);
-
-            if (lessonExists) {
-                response.getWriter().write("{\"success\": false, \"message\": \"Lesson already exists in this course\"}");
-                return;
-            }
-
             // Get next display order
             int displayOrder = courseManagementDAO.getNextLessonOrder(courseId, chapterId);
 
@@ -639,8 +629,22 @@ public class CourseController extends HttpServlet {
             } else {
                 response.getWriter().write("{\"success\": false, \"message\": \"Failed to add lesson\"}");
             }
+        } catch (NumberFormatException e) {
+            System.err.println("Number format error in addLessonToCourse: " + e.getMessage());
+            response.getWriter().write("{\"success\": false, \"message\": \"Invalid number format\"}");
+        } catch (SQLException e) {
+            System.err.println("SQL error in addLessonToCourse: " + e.getMessage());
+            e.printStackTrace();
+
+            String errorMessage = e.getMessage();
+            if (errorMessage.contains("Duplicate entry")) {
+                response.getWriter().write("{\"success\": false, \"message\": \"Lesson is already in this course\"}");
+            } else {
+                response.getWriter().write("{\"success\": false, \"message\": \"Database error: " + errorMessage + "\"}");
+            }
         } catch (Exception e) {
             e.printStackTrace();
+            System.err.println("General error in addLessonToCourse: " + e.getMessage());
             response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
         }
     }
@@ -654,15 +658,25 @@ public class CourseController extends HttpServlet {
             int courseId = Integer.parseInt(request.getParameter("courseId"));
             int lessonId = Integer.parseInt(request.getParameter("lessonId"));
 
+            System.out.println("removeLessonFromCourse - courseId: " + courseId + ", lessonId: " + lessonId);
+
             boolean success = courseManagementDAO.removeLessonFromCourse(courseId, lessonId);
 
             if (success) {
                 response.getWriter().write("{\"success\": true, \"message\": \"Lesson removed successfully\"}");
             } else {
-                response.getWriter().write("{\"success\": false, \"message\": \"Failed to remove lesson\"}");
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to remove lesson or lesson not found\"}");
             }
+        } catch (NumberFormatException e) {
+            System.err.println("Number format error in removeLessonFromCourse: " + e.getMessage());
+            response.getWriter().write("{\"success\": false, \"message\": \"Invalid number format\"}");
+        } catch (SQLException e) {
+            System.err.println("SQL error in removeLessonFromCourse: " + e.getMessage());
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Database error: " + e.getMessage() + "\"}");
         } catch (Exception e) {
             e.printStackTrace();
+            System.err.println("General error in removeLessonFromCourse: " + e.getMessage());
             response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
         }
     }

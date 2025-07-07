@@ -293,31 +293,60 @@ public class CourseDAO extends DBContext {
     }
 
     public boolean addChapterToCourse(int courseId, int chapterId, int displayOrder) throws SQLException {
-        String sql = "INSERT INTO course_chapter (course_id, chapter_id, display_order) VALUES (?, ?, ?) "
-                + "ON DUPLICATE KEY UPDATE display_order = ?, is_active = 1";
+        // Check if chapter already exists
+        String checkSql = "SELECT COUNT(*) FROM course_chapter WHERE course_id = ? AND chapter_id = ?";
+        try (PreparedStatement checkPs = connection.prepareStatement(checkSql)) {
+            checkPs.setInt(1, courseId);
+            checkPs.setInt(2, chapterId);
+            ResultSet rs = checkPs.executeQuery();
+            if (rs.next() && rs.getInt(1) > 0) {
+                System.out.println("Chapter already exists in course, updating display order");
+                // Update existing record
+                String updateSql = "UPDATE course_chapter SET display_order = ?, is_active = 1 WHERE course_id = ? AND chapter_id = ?";
+                try (PreparedStatement updatePs = connection.prepareStatement(updateSql)) {
+                    updatePs.setInt(1, displayOrder);
+                    updatePs.setInt(2, courseId);
+                    updatePs.setInt(3, chapterId);
+                    return updatePs.executeUpdate() > 0;
+                }
+            }
+        }
 
+        // Insert new record
+        String sql = "INSERT INTO course_chapter (course_id, chapter_id, display_order, is_active) VALUES (?, ?, ?, 1)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, courseId);
             ps.setInt(2, chapterId);
             ps.setInt(3, displayOrder);
-            ps.setInt(4, displayOrder);
             return ps.executeUpdate() > 0;
         }
     }
 
     public boolean addLessonToCourse(int courseId, int lessonId, int chapterId, int displayOrder, String lessonType) throws SQLException {
-        // First check if lesson already exists
-        String checkSql = "SELECT COUNT(*) FROM course_lesson WHERE course_id = ? AND lesson_id = ? AND is_active = 1";
+        // First check if lesson already exists (active or inactive)
+        String checkSql = "SELECT COUNT(*) FROM course_lesson WHERE course_id = ? AND lesson_id = ?";
         try (PreparedStatement checkPs = connection.prepareStatement(checkSql)) {
             checkPs.setInt(1, courseId);
             checkPs.setInt(2, lessonId);
             ResultSet rs = checkPs.executeQuery();
             if (rs.next() && rs.getInt(1) > 0) {
-                System.out.println("Lesson already exists in course");
-                return false; // Lesson already exists
+                System.out.println("Lesson already exists in course, updating instead of inserting");
+                // Update existing record
+                String updateSql = "UPDATE course_lesson SET chapter_id = ?, display_order = ?, lesson_type = ?, is_active = 1 WHERE course_id = ? AND lesson_id = ?";
+                try (PreparedStatement updatePs = connection.prepareStatement(updateSql)) {
+                    updatePs.setInt(1, chapterId);
+                    updatePs.setInt(2, displayOrder);
+                    updatePs.setString(3, lessonType);
+                    updatePs.setInt(4, courseId);
+                    updatePs.setInt(5, lessonId);
+                    int result = updatePs.executeUpdate();
+                    System.out.println("addLessonToCourse - Updated existing record, result: " + result);
+                    return result > 0;
+                }
             }
         }
 
+        // Insert new record
         String sql = "INSERT INTO course_lesson (course_id, lesson_id, chapter_id, display_order, lesson_type, is_active) "
                 + "VALUES (?, ?, ?, ?, ?, 1)";
 
@@ -329,7 +358,7 @@ public class CourseDAO extends DBContext {
             ps.setString(5, lessonType);
 
             int result = ps.executeUpdate();
-            System.out.println("addLessonToCourse SQL result: " + result);
+            System.out.println("addLessonToCourse - Insert result: " + result);
             return result > 0;
         } catch (SQLException e) {
             System.err.println("Error in addLessonToCourse: " + e.getMessage());
@@ -401,20 +430,47 @@ public class CourseDAO extends DBContext {
     }
 
     public boolean removeChapterFromCourse(int courseId, int chapterId) throws SQLException {
-        String sql = "UPDATE course_chapter SET is_active = 0 WHERE course_id = ? AND chapter_id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, courseId);
-            ps.setInt(2, chapterId);
-            return ps.executeUpdate() > 0;
+        try {
+            connection.setAutoCommit(false);
+
+            // First remove all lessons in this chapter from the course
+            String removeLessonsSql = "DELETE FROM course_lesson WHERE course_id = ? AND chapter_id = ?";
+            try (PreparedStatement ps1 = connection.prepareStatement(removeLessonsSql)) {
+                ps1.setInt(1, courseId);
+                ps1.setInt(2, chapterId);
+                ps1.executeUpdate();
+            }
+
+            // Then remove the chapter from the course
+            String removeChapterSql = "DELETE FROM course_chapter WHERE course_id = ? AND chapter_id = ?";
+            try (PreparedStatement ps2 = connection.prepareStatement(removeChapterSql)) {
+                ps2.setInt(1, courseId);
+                ps2.setInt(2, chapterId);
+                int result = ps2.executeUpdate();
+
+                connection.commit();
+                return result > 0;
+            }
+        } catch (SQLException e) {
+            connection.rollback();
+            throw e;
+        } finally {
+            connection.setAutoCommit(true);
         }
     }
 
     public boolean removeLessonFromCourse(int courseId, int lessonId) throws SQLException {
-        String sql = "UPDATE course_lesson SET is_active = 0 WHERE course_id = ? AND lesson_id = ?";
+        String sql = "DELETE FROM course_lesson WHERE course_id = ? AND lesson_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, courseId);
             ps.setInt(2, lessonId);
-            return ps.executeUpdate() > 0;
+            int result = ps.executeUpdate();
+            System.out.println("removeLessonFromCourse - Deleted " + result + " records for courseId=" + courseId + ", lessonId=" + lessonId);
+            return result > 0;
+        } catch (SQLException e) {
+            System.err.println("Error in removeLessonFromCourse: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
     }
 

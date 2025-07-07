@@ -251,6 +251,59 @@
             .content-item:hover {
                 background-color: #f8f9fa;
             }
+            .position-fixed {
+                position: fixed !important;
+            }
+
+            .alert {
+                padding: 12px 20px;
+                margin-bottom: 20px;
+                border: 1px solid transparent;
+                border-radius: 4px;
+            }
+
+            .alert-success {
+                color: #155724;
+                background-color: #d4edda;
+                border-color: #c3e6cb;
+            }
+
+            .alert-info {
+                color: #0c5460;
+                background-color: #d1ecf1;
+                border-color: #bee5eb;
+            }
+
+            .alert-danger {
+                color: #721c24;
+                background-color: #f8d7da;
+                border-color: #f5c6cb;
+            }
+
+            .alert-dismissible {
+                position: relative;
+                padding-right: 4rem;
+            }
+
+            .alert-dismissible .close {
+                position: absolute;
+                top: 0;
+                right: 0;
+                padding: 12px 20px;
+                color: inherit;
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                cursor: pointer;
+            }
+
+            .fade {
+                transition: opacity 0.15s linear;
+            }
+
+            .show {
+                opacity: 1;
+            }
         </style>
     </head>
     <body>
@@ -659,7 +712,7 @@
                                 console.log('Adding chapter to course:', chapterId);
 
                                 // Use URLSearchParams for proper form encoding
-                                const params = new URLSearchParams();
+                                var params = new URLSearchParams();
                                 params.append('action', 'addChapter');
                                 params.append('courseId', '${courseId}');
                                 params.append('chapterId', chapterId);
@@ -672,7 +725,7 @@
                                     },
                                     body: params.toString()
                                 })
-                                        .then(response => {
+                                        .then(function (response) {
                                             console.log('Response status:', response.status);
                                             console.log('Response headers:', response.headers.get('content-type'));
 
@@ -680,9 +733,9 @@
                                                 throw new Error('Network response was not ok: ' + response.status);
                                             }
 
-                                            const contentType = response.headers.get('content-type');
+                                            var contentType = response.headers.get('content-type');
                                             if (!contentType || !contentType.includes('application/json')) {
-                                                return response.text().then(text => {
+                                                return response.text().then(function (text) {
                                                     console.error('Expected JSON but got:', text.substring(0, 500));
                                                     throw new Error('Server returned HTML instead of JSON');
                                                 });
@@ -690,15 +743,18 @@
 
                                             return response.json();
                                         })
-                                        .then(data => {
+                                        .then(function (data) {
                                             console.log('Response data:', data);
                                             if (data.success) {
-                                                location.reload();
+                                                showTemporaryMessage('Chapter added successfully!', 'success');
+                                                setTimeout(function () {
+                                                    location.reload();
+                                                }, 1000);
                                             } else {
                                                 alert('Failed to add chapter: ' + (data.message || 'Unknown error'));
                                             }
                                         })
-                                        .catch(error => {
+                                        .catch(function (error) {
                                             console.error('Error:', error);
                                             alert('An error occurred while adding the chapter: ' + error.message);
                                         });
@@ -893,7 +949,14 @@
                                     return;
                                 }
 
-                                const params = new URLSearchParams();
+                                // Show loading state
+                                var addButtons = document.querySelectorAll('button[onclick*="addLessonToCourse(' + lessonId + '"]');
+                                for (var i = 0; i < addButtons.length; i++) {
+                                    addButtons[i].disabled = true;
+                                    addButtons[i].innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+                                }
+
+                                var params = new URLSearchParams();
                                 params.append('action', 'addLesson');
                                 params.append('courseId', '${courseId}');
                                 params.append('lessonId', lessonId);
@@ -907,14 +970,14 @@
                                     },
                                     body: params.toString()
                                 })
-                                        .then(response => {
+                                        .then(function (response) {
                                             if (!response.ok) {
-                                                throw new Error('Network response was not ok');
+                                                throw new Error('Network response was not ok: ' + response.status);
                                             }
 
-                                            const contentType = response.headers.get('content-type');
+                                            var contentType = response.headers.get('content-type');
                                             if (!contentType || !contentType.includes('application/json')) {
-                                                return response.text().then(text => {
+                                                return response.text().then(function (text) {
                                                     console.error('Expected JSON but got:', text.substring(0, 500));
                                                     throw new Error('Server returned HTML instead of JSON');
                                                 });
@@ -922,17 +985,37 @@
 
                                             return response.json();
                                         })
-                                        .then(data => {
+                                        .then(function (data) {
+                                            console.log('Add lesson response:', data);
+
+                                            // Reset button states
+                                            for (var i = 0; i < addButtons.length; i++) {
+                                                addButtons[i].disabled = false;
+                                                addButtons[i].innerHTML = '<i class="fas fa-plus"></i> Add';
+                                            }
+
                                             if (data.success) {
                                                 // Close modal using universal hide function
                                                 hideModal('addLessonModal');
-                                                location.reload();
+                                                // Show success message briefly
+                                                showTemporaryMessage('Lesson added successfully!', 'success');
+                                                // Reload page after short delay
+                                                setTimeout(function () {
+                                                    location.reload();
+                                                }, 1000);
                                             } else {
                                                 alert('Failed to add lesson: ' + (data.message || 'Unknown error'));
                                             }
                                         })
-                                        .catch(error => {
-                                            console.error('Error:', error);
+                                        .catch(function (error) {
+                                            console.error('Error adding lesson:', error);
+
+                                            // Reset button states
+                                            for (var i = 0; i < addButtons.length; i++) {
+                                                addButtons[i].disabled = false;
+                                                addButtons[i].innerHTML = '<i class="fas fa-plus"></i> Add';
+                                            }
+
                                             alert('An error occurred while adding the lesson: ' + error.message);
                                         });
                             }
@@ -947,13 +1030,20 @@
                                     return;
                                 }
 
-                                const actionMap = {
+                                // Show loading state on the remove button
+                                var removeButtons = document.querySelectorAll('button[onclick*="removeFromCourse(\'' + type + '\', ' + id + ')"]');
+                                for (var i = 0; i < removeButtons.length; i++) {
+                                    removeButtons[i].disabled = true;
+                                    removeButtons[i].innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                                }
+
+                                var actionMap = {
                                     'chapter': 'removeChapter',
                                     'lesson': 'removeLesson',
                                     'test': 'removeTest'
                                 };
 
-                                const paramMap = {
+                                var paramMap = {
                                     'chapter': 'chapterId',
                                     'lesson': 'lessonId',
                                     'test': 'testId'
@@ -961,10 +1051,15 @@
 
                                 if (!actionMap[type] || !paramMap[type]) {
                                     console.error('Invalid type:', type);
+                                    // Reset button states
+                                    for (var i = 0; i < removeButtons.length; i++) {
+                                        removeButtons[i].disabled = false;
+                                        removeButtons[i].innerHTML = '<i class="fas fa-trash"></i>';
+                                    }
                                     return;
                                 }
 
-                                const params = new URLSearchParams();
+                                var params = new URLSearchParams();
                                 params.append('action', actionMap[type]);
                                 params.append('courseId', '${courseId}');
                                 params.append(paramMap[type], id);
@@ -977,14 +1072,14 @@
                                     },
                                     body: params.toString()
                                 })
-                                        .then(response => {
+                                        .then(function (response) {
                                             if (!response.ok) {
-                                                throw new Error('Network response was not ok');
+                                                throw new Error('Network response was not ok: ' + response.status);
                                             }
 
-                                            const contentType = response.headers.get('content-type');
+                                            var contentType = response.headers.get('content-type');
                                             if (!contentType || !contentType.includes('application/json')) {
-                                                return response.text().then(text => {
+                                                return response.text().then(function (text) {
                                                     console.error('Expected JSON but got:', text.substring(0, 500));
                                                     throw new Error('Server returned HTML instead of JSON');
                                                 });
@@ -992,17 +1087,73 @@
 
                                             return response.json();
                                         })
-                                        .then(data => {
+                                        .then(function (data) {
+                                            console.log('Remove ' + type + ' response:', data);
+
+                                            // Reset button states
+                                            for (var i = 0; i < removeButtons.length; i++) {
+                                                removeButtons[i].disabled = false;
+                                                removeButtons[i].innerHTML = '<i class="fas fa-trash"></i>';
+                                            }
+
                                             if (data.success) {
-                                                location.reload();
+                                                // Show success message briefly
+                                                var capitalizedType = type.charAt(0).toUpperCase() + type.slice(1);
+                                                showTemporaryMessage(capitalizedType + ' removed successfully!', 'success');
+                                                // Reload page after short delay
+                                                setTimeout(function () {
+                                                    location.reload();
+                                                }, 1000);
                                             } else {
                                                 alert('Failed to remove ' + type + ': ' + (data.message || 'Unknown error'));
                                             }
                                         })
-                                        .catch(error => {
-                                            console.error('Error:', error);
+                                        .catch(function (error) {
+                                            console.error('Error removing ' + type + ':', error);
+
+                                            // Reset button states
+                                            for (var i = 0; i < removeButtons.length; i++) {
+                                                removeButtons[i].disabled = false;
+                                                removeButtons[i].innerHTML = '<i class="fas fa-trash"></i>';
+                                            }
+
                                             alert('An error occurred while removing the ' + type + ': ' + error.message);
                                         });
+                            }
+
+                            // Add utility function to show temporary messages
+                            function showTemporaryMessage(message, type) {
+                                if (!type)
+                                    type = 'info';
+
+                                var alertClass = 'alert-info';
+                                var iconClass = 'fa-info-circle';
+
+                                if (type === 'success') {
+                                    alertClass = 'alert-success';
+                                    iconClass = 'fa-check-circle';
+                                } else if (type === 'error') {
+                                    alertClass = 'alert-danger';
+                                    iconClass = 'fa-exclamation-circle';
+                                }
+
+                                var messageDiv = document.createElement('div');
+                                messageDiv.className = 'alert ' + alertClass + ' alert-dismissible fade show position-fixed';
+                                messageDiv.style.cssText = 'top: 100px; right: 20px; z-index: 9999; min-width: 300px;';
+                                messageDiv.innerHTML = '<i class="fas ' + iconClass + ' mr-2"></i>' +
+                                        message +
+                                        '<button type="button" class="close" data-dismiss="alert">' +
+                                        '<span>&times;</span>' +
+                                        '</button>';
+
+                                document.body.appendChild(messageDiv);
+
+                                // Auto-remove after 3 seconds
+                                setTimeout(function () {
+                                    if (messageDiv.parentNode) {
+                                        messageDiv.parentNode.removeChild(messageDiv);
+                                    }
+                                }, 3000);
                             }
 
                             function updateContentOrder(container) {
