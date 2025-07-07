@@ -354,6 +354,148 @@
                     min-width: auto;
                 }
             }
+            .btn-group-vertical {
+                width: 100%;
+            }
+
+            .btn-group-vertical .btn-group {
+                width: 100%;
+            }
+
+            .btn-group-vertical .btn {
+                border-radius: 4px !important;
+                margin: 1px 0;
+                font-size: 0.8rem;
+                padding: 6px 10px;
+                white-space: nowrap;
+            }
+
+            .btn-group .btn {
+                flex: 1;
+                font-size: 0.75rem;
+                padding: 5px 8px;
+            }
+
+            /* Primary action styling */
+            .btn-primary {
+                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+                border: none;
+                font-weight: 600;
+            }
+
+            .btn-primary:hover {
+                background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+            }
+
+            /* Outline button enhancements */
+            .btn-outline-primary:hover,
+            .btn-outline-info:hover,
+            .btn-outline-success:hover,
+            .btn-outline-secondary:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+            /* Dropdown styling */
+            .dropdown-menu {
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                border: 1px solid #e9ecef;
+                padding: 8px 0;
+            }
+
+            .dropdown-item {
+                padding: 8px 16px;
+                font-size: 0.875rem;
+                transition: all 0.2s ease;
+            }
+
+            .dropdown-item:hover {
+                background-color: #f8f9fa;
+                transform: translateX(4px);
+            }
+
+            .dropdown-item i {
+                width: 16px;
+                margin-right: 8px;
+                text-align: center;
+            }
+
+            .dropdown-item.text-danger:hover {
+                background-color: #f8d7da;
+                color: #721c24 !important;
+            }
+
+            /* Action column responsive */
+            .action-column {
+                width: 200px;
+                min-width: 200px;
+            }
+
+            @media (max-width: 768px) {
+                .action-column {
+                    width: auto;
+                    min-width: 160px;
+                }
+
+                .btn-group .btn {
+                    font-size: 0.7rem;
+                    padding: 4px 6px;
+                }
+
+                .btn-group-vertical .btn {
+                    font-size: 0.75rem;
+                    padding: 5px 8px;
+                }
+            }
+
+            /* Success notification enhancements */
+            .success-notification {
+                border-left: 4px solid #28a745;
+                animation: slideInDown 0.5s ease-out;
+            }
+
+            @keyframes slideInDown {
+                from {
+                    transform: translateY(-20px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+
+            .btn-create-course {
+                transition: all 0.3s ease;
+            }
+
+            .btn-create-course:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+            }
+
+            /* Table enhancements */
+            .table tbody tr {
+                transition: background-color 0.2s ease;
+            }
+
+            .table tbody tr:hover {
+                background-color: #f8f9fa;
+            }
+
+            /* Badge enhancements */
+            .badge {
+                font-size: 0.8em;
+                padding: 6px 12px;
+                font-weight: 600;
+            }
+
+            .bg-primary {
+                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+            }
         </style>
     </head>
     <body>
@@ -491,24 +633,69 @@
                                         </td>
                                         <td>${subject.description}</td>
                                         <td class="action-column">
-                                            <div class="btn-group" role="group">
-                                                <a href="subjects?action=edit&id=${subject.id}" 
-                                                   class="btn btn-outline-primary" title="Edit Subject">
-                                                    <i class="fas fa-edit"></i> Edit
-                                                </a>
-                                                <a href="${pageContext.request.contextPath}/course?subjectId=${subject.id}" 
-                                                   class="btn btn-outline-success" title="View Courses">
-                                                    <i class="fas fa-graduation-cap"></i> Courses
-                                                </a>
-                                                <a href="${pageContext.request.contextPath}/course?action=create&subjectId=${subject.id}" 
-                                                   class="btn btn-outline-info" title="Create Course">
-                                                    <i class="fas fa-plus"></i> New Course
-                                                </a>
-                                                <a href="subjects?action=delete&id=${subject.id}" 
-                                                   class="btn btn-outline-danger" title="Delete Subject"
-                                                   onclick="return confirm('Are you sure you want to delete this subject?')">
-                                                    <i class="fas fa-trash"></i> Delete
-                                                </a>
+                                            <div class="btn-group-vertical" role="group" aria-label="Subject actions">
+                                                <!-- Primary Actions -->
+                                                <div class="btn-group mb-1" role="group">
+                                                    <a href="subjects?action=edit&id=${subject.id}" 
+                                                       class="btn btn-outline-primary btn-sm" 
+                                                       title="Edit Subject Details">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </a>
+<!--                                                    <a href="${pageContext.request.contextPath}/course?action=create&subjectId=${subject.id}" 
+                                                       class="btn btn-primary btn-sm" 
+                                                       title="Create New Course for this Subject">
+                                                        <i class="fas fa-plus-circle"></i> New Course
+                                                    </a>-->
+                                                </div>
+
+                                                <!-- Secondary Actions -->
+                                                <div class="btn-group mb-1" role="group">
+                                                    <a href="${pageContext.request.contextPath}/course?subjectId=${subject.id}" 
+                                                       class="btn btn-outline-info btn-sm" 
+                                                       title="View All Courses in this Subject">
+                                                        <i class="fas fa-graduation-cap"></i> View Courses
+                                                    </a>
+                                                </div>
+
+                                                <!-- Management Actions -->
+                                                <div class="btn-group" role="group">
+                                                    <div class="dropdown">
+                                                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
+                                                                type="button" 
+                                                                id="subjectActions${subject.id}" 
+                                                                data-bs-toggle="dropdown" 
+                                                                aria-expanded="false"
+                                                                title="More Actions">
+                                                            <i class="fas fa-cog"></i> More
+                                                        </button>
+                                                        <ul class="dropdown-menu" aria-labelledby="subjectActions${subject.id}">
+                                                            <li>
+                                                                <a class="dropdown-item" href="${pageContext.request.contextPath}/chapter?subject_id=${subject.id}">
+                                                                    <i class="fas fa-list"></i> View Chapters
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a class="dropdown-item" href="${pageContext.request.contextPath}/LessonURL?subjectId=${subject.id}">
+                                                                    <i class="fas fa-play-circle"></i> View Lessons
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a class="dropdown-item" href="${pageContext.request.contextPath}/Question?subjectId=${subject.id}">
+                                                                    <i class="fas fa-question-circle"></i> View Questions
+                                                                </a>
+                                                            </li>
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            <li>
+                                                                <a class="dropdown-item text-danger" 
+                                                                   href="subjects?action=delete&id=${subject.id}"
+                                                                   onclick="return confirmDelete('${subject.name}', ${subject.id})"
+                                                                   title="Delete Subject">
+                                                                    <i class="fas fa-trash"></i> Delete Subject
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -623,7 +810,17 @@
                                 });
 
                                 function dismissNotification() {
-                                    document.getElementById('courseCreationNotification').style.display = 'none';
+                                    const notification = document.getElementById('courseCreationNotification');
+                                    if (notification) {
+                                        notification.style.transition = 'all 0.5s ease';
+                                        notification.style.transform = 'translateY(-20px)';
+                                        notification.style.opacity = '0';
+
+                                        setTimeout(() => {
+                                            notification.style.display = 'none';
+                                        }, 500);
+                                    }
+
                                     // Clear session attributes via AJAX
                                     fetch('${pageContext.request.contextPath}/subjects?action=clearNotification', {
                                         method: 'POST'
@@ -633,34 +830,172 @@
                                 function clearFilters() {
                                     $('#gradeFilter').val('').trigger('change');
                                     $('#nameFilter').val('');
-                                    $('#filterForm').submit();
+
+                                    // Add visual feedback
+                                    const clearBtn = event.target;
+                                    const originalText = clearBtn.innerHTML;
+                                    clearBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Clearing...';
+                                    clearBtn.disabled = true;
+
+                                    setTimeout(() => {
+                                        $('#filterForm').submit();
+                                    }, 300);
                                 }
 
                                 function changePageSize(newPageSize) {
                                     const form = $('#filterForm');
+                                    const pageSizeSelect = $('#pageSizeSelect');
+
+                                    // Add loading state
+                                    pageSizeSelect.prop('disabled', true);
+
                                     form.find('input[name="pageSize"]').val(newPageSize);
                                     form.find('input[name="page"]').val(1); // Reset to first page
-                                    form.submit();
+
+                                    setTimeout(() => {
+                                        form.submit();
+                                    }, 200);
                                 }
 
                                 function goToPage(pageNumber) {
                                     const form = $('#filterForm');
+
+                                    // Add loading overlay
+                                    $('body').append('<div id="pageLoadingOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+
                                     form.find('input[name="page"]').val(pageNumber);
-                                    form.submit();
+
+                                    setTimeout(() => {
+                                        form.submit();
+                                    }, 300);
                                 }
 
-                                // Auto-dismiss notification after 10 seconds
-                                setTimeout(function () {
+                                function confirmDelete(subjectName, subjectId) {
+                                    const modal = `
+        <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-exclamation-triangle"></i> Confirm Deletion
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="text-center mb-3">
+                            <i class="fas fa-trash fa-3x text-danger mb-3"></i>
+                            <h6>Are you sure you want to delete this subject?</h6>
+                        </div>
+                        <div class="alert alert-warning">
+                            <strong>Subject:</strong> ${subjectName}<br>
+                            <strong>Warning:</strong> This action cannot be undone. All related chapters, lessons, and courses will be affected.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="proceedDelete(${subjectId})">
+                            <i class="fas fa-trash"></i> Delete Subject
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+                                    // Remove existing modal if any
+                                    const existingModal = document.getElementById('deleteConfirmModal');
+                                    if (existingModal) {
+                                        existingModal.remove();
+                                    }
+
+                                    // Add modal to body
+                                    document.body.insertAdjacentHTML('beforeend', modal);
+
+                                    // Show modal
+                                    const modalElement = document.getElementById('deleteConfirmModal');
+                                    const bootstrapModal = new bootstrap.Modal(modalElement);
+                                    bootstrapModal.show();
+
+                                    // Clean up modal after hiding
+                                    modalElement.addEventListener('hidden.bs.modal', function () {
+                                        modalElement.remove();
+                                    });
+
+                                    return false; // Prevent default link action
+                                }
+
+                                function proceedDelete(subjectId) {
+                                    // Show loading state
+                                    const deleteBtn = document.querySelector('#deleteConfirmModal .btn-danger');
+                                    const originalText = deleteBtn.innerHTML;
+                                    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+                                    deleteBtn.disabled = true;
+
+                                    // Proceed with deletion
+                                    window.location.href = `subjects?action=delete&id=${subjectId}`;
+                                }
+
+                                $(document).ready(function () {
                                     const notification = document.getElementById('courseCreationNotification');
                                     if (notification) {
-                                        notification.style.display = 'none';
-                                    }
-                                }, 10000);
+                                        let countdown = 10;
+                                        const dismissBtn = notification.querySelector('.btn-dismiss');
+                                        const originalText = dismissBtn.textContent;
 
-                                // Auto-dismiss alerts after 5 seconds
-                                setTimeout(function () {
-                                    $('.alert').fadeOut('slow');
-                                }, 5000);
+                                        const timer = setInterval(() => {
+                                            countdown--;
+                                            dismissBtn.innerHTML = `<i class="fas fa-clock"></i> Auto-dismiss in ${countdown}s`;
+
+                                            if (countdown <= 0) {
+                                                clearInterval(timer);
+                                                dismissNotification();
+                                            }
+                                        }, 1000);
+
+                                        // Stop countdown if user interacts
+                                        notification.addEventListener('mouseenter', () => {
+                                            clearInterval(timer);
+                                            dismissBtn.innerHTML = originalText;
+                                        });
+                                    }
+                                });
+
+                                $(document).ready(function () {
+                                    // Add hover effects to action buttons
+                                    $('.btn-group .btn').hover(
+                                            function () {
+                                                $(this).addClass('shadow-sm');
+                                            },
+                                            function () {
+                                                $(this).removeClass('shadow-sm');
+                                            }
+                                    );
+
+                                    // Add click feedback
+                                    $('.btn').on('click', function () {
+                                        const btn = $(this);
+                                        btn.addClass('btn-clicked');
+                                        setTimeout(() => {
+                                            btn.removeClass('btn-clicked');
+                                        }, 150);
+                                    });
+                                });
+
+// Add CSS for click feedback
+                                const style = document.createElement('style');
+                                style.textContent = `
+    .btn-clicked {
+        transform: scale(0.95) !important;
+        transition: transform 0.1s ease !important;
+    }
+`;
+                                document.head.appendChild(style);
+
+                                $(document).ready(function () {
+                                    $('[title]').tooltip();
+                                });
         </script>
     </body>
 </html>

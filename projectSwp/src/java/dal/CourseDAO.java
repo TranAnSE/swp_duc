@@ -778,4 +778,76 @@ public class CourseDAO extends DBContext {
         }
         return 0;
     }
+
+    public boolean reorderLessonsInChapter(int courseId, int chapterId, String[] lessonIds) throws SQLException {
+        String sql = "UPDATE course_lesson SET display_order = ? WHERE course_id = ? AND chapter_id = ? AND lesson_id = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (int i = 0; i < lessonIds.length; i++) {
+                ps.setInt(1, i + 1);
+                ps.setInt(2, courseId);
+                ps.setInt(3, chapterId);
+                ps.setInt(4, Integer.parseInt(lessonIds[i]));
+                ps.addBatch();
+            }
+            int[] results = ps.executeBatch();
+
+            // Check if all updates were successful
+            for (int result : results) {
+                if (result <= 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    public List<Integer> getAddedChaptersForCourse(int courseId) throws SQLException {
+        List<Integer> chapterIds = new ArrayList<>();
+        String sql = "SELECT chapter_id FROM course_chapter WHERE course_id = ? AND is_active = 1";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                chapterIds.add(rs.getInt("chapter_id"));
+            }
+        }
+
+        return chapterIds;
+    }
+
+    public List<Integer> getAddedLessonsForCourse(int courseId) throws SQLException {
+        List<Integer> lessonIds = new ArrayList<>();
+        String sql = "SELECT lesson_id FROM course_lesson WHERE course_id = ? AND is_active = 1";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                lessonIds.add(rs.getInt("lesson_id"));
+            }
+        }
+
+        return lessonIds;
+    }
+
+    public List<Integer> getAddedLessonsForChapter(int courseId, int chapterId) throws SQLException {
+        List<Integer> lessonIds = new ArrayList<>();
+        String sql = "SELECT lesson_id FROM course_lesson WHERE course_id = ? AND chapter_id = ? AND is_active = 1";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, chapterId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                lessonIds.add(rs.getInt("lesson_id"));
+            }
+        }
+
+        return lessonIds;
+    }
 }

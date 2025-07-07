@@ -90,6 +90,9 @@ public class CourseController extends HttpServlet {
                 case "getLessons":
                     getLessonsByChapter(request, response);
                     return;
+                case "reorderLessons":
+                    reorderLessonsInChapter(request, response);
+                    break;
                 default:
                     listCourses(request, response);
                     break;
@@ -432,11 +435,17 @@ public class CourseController extends HttpServlet {
             Integer subjectId = (Integer) courseDetails.get("subject_id");
             List<Chapter> availableChapters = chapterDAO.findChapterBySubjectId(subjectId);
 
+            // Get added content IDs for filtering
+            List<Integer> addedChapterIds = courseManagementDAO.getAddedChaptersForCourse(courseId);
+            List<Integer> addedLessonIds = courseManagementDAO.getAddedLessonsForCourse(courseId);
+
             request.setAttribute("courseDetails", courseDetails);
             request.setAttribute("courseChapters", courseChapters);
             request.setAttribute("courseLessons", courseLessons);
             request.setAttribute("courseTests", courseTests);
             request.setAttribute("availableChapters", availableChapters);
+            request.setAttribute("addedChapterIds", addedChapterIds);
+            request.setAttribute("addedLessonIds", addedLessonIds);
             request.setAttribute("courseId", courseId);
 
             request.getRequestDispatcher("/course/buildCourse.jsp").forward(request, response);
@@ -972,5 +981,33 @@ public class CourseController extends HttpServlet {
         return "XMLHttpRequest".equals(requestedWith)
                 || (accept != null && accept.contains("application/json"))
                 || (contentType != null && contentType.contains("application/x-www-form-urlencoded"));
+    }
+
+    private void reorderLessonsInChapter(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            int chapterId = Integer.parseInt(request.getParameter("chapterId"));
+            String[] lessonIds = request.getParameterValues("lessonIds");
+
+            if (lessonIds == null || lessonIds.length == 0) {
+                response.getWriter().write("{\"success\": false, \"message\": \"No lessons to reorder\"}");
+                return;
+            }
+
+            boolean success = courseManagementDAO.reorderLessonsInChapter(courseId, chapterId, lessonIds);
+
+            if (success) {
+                response.getWriter().write("{\"success\": true, \"message\": \"Lessons reordered successfully\"}");
+            } else {
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to reorder lessons\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+        }
     }
 }
