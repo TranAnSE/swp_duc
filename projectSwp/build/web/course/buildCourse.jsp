@@ -7,6 +7,8 @@
 <%@ page contentType="text/html; charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+
 <!DOCTYPE html>
 <html>
     <head>
@@ -412,6 +414,41 @@
                 opacity: 0.5;
                 transform: scale(0.95);
             }
+            .lesson-item {
+                background: #ffffff;
+                border-left: 3px solid #28a745;
+                margin-bottom: 5px;
+                padding: 10px;
+                border-radius: 4px;
+            }
+
+            .lesson-item:hover {
+                background-color: #f8f9fa;
+                transform: translateX(2px);
+            }
+
+            .lesson-item .content-type-badge {
+                font-size: 0.7em;
+            }
+
+            .chapter-lessons {
+                margin-top: 10px;
+                padding-left: 15px;
+                border-left: 2px solid #e9ecef;
+            }
+
+            .badge-lesson {
+                background-color: #e8f5e8;
+                color: #388e3c;
+            }
+
+            .text-primary {
+                color: #007bff !important;
+            }
+
+            .small {
+                font-size: 0.875em;
+            }
         </style>
     </head>
     <body>
@@ -504,7 +541,7 @@
                             <c:choose>
                                 <c:when test="${not empty availableChapters}">
                                     <div class="list-group" style="max-height: 200px; overflow-y: auto;">
-                                        <c:forEach items="${availableChapters}" var="chapter">
+                                        <c:forEach items="${availableChapters}" var="chapter" varStatus="status">
                                             <div class="list-group-item d-flex justify-content-between align-items-center">
                                                 <div>
                                                     <strong>${chapter.name}</strong>
@@ -520,7 +557,8 @@
                                                     </c:when>
                                                     <c:otherwise>
                                                         <button class="btn btn-sm btn-outline-primary" 
-                                                                onclick="addChapterToCourse(${chapter.id})">
+                                                                onclick="addChapterToCourse(${chapter.id})"
+                                                                type="button">
                                                             <i class="fas fa-plus"></i> Add
                                                         </button>
                                                     </c:otherwise>
@@ -577,7 +615,7 @@
                                                 </div>
                                                 <div>
                                                     <button class="btn btn-sm btn-outline-success" 
-                                                            onclick="showAddLessonModal(${chapter.chapter_id}, '${chapter.chapter_name}')">
+                                                            onclick="showAddLessonModal(${chapter.chapter_id}, '${fn:escapeXml(chapter.chapter_name)}')">
                                                         <i class="fas fa-plus"></i> Add Lesson
                                                     </button>
                                                     <button class="btn btn-sm btn-outline-danger" 
@@ -592,24 +630,40 @@
 
                                             <!-- Lessons in this chapter -->
                                             <div class="chapter-lessons">
-                                                <c:forEach items="${courseLessons}" var="lesson">
-                                                    <c:if test="${lesson.chapter_id == chapter.chapter_id}">
-                                                        <div class="content-item lesson-item" data-id="${lesson.lesson_id}" data-type="lesson">
-                                                            <div class="content-item-header">
-                                                                <div>
-                                                                    <span class="content-type-badge badge-lesson">Lesson</span>
-                                                                    <strong>${lesson.lesson_name}</strong>
+                                                <c:set var="chapterLessons" value="${chapterLessonsMap[chapter.chapter_id]}" />
+                                                <c:if test="${not empty chapterLessons}">
+                                                    <c:forEach items="${courseLessons}" var="lesson">
+                                                        <c:if test="${lesson.chapter_id == chapter.chapter_id}">
+                                                            <div class="content-item lesson-item" data-id="${lesson.lesson_id}" data-type="lesson">
+                                                                <div class="content-item-header">
+                                                                    <div>
+                                                                        <span class="content-type-badge badge-lesson">Lesson</span>
+                                                                        <strong>${lesson.lesson_name}</strong>
+                                                                        <c:if test="${not empty lesson.video_link}">
+                                                                            <i class="fas fa-video text-primary ml-2" title="Has video"></i>
+                                                                        </c:if>
+                                                                    </div>
+                                                                    <div>
+                                                                        <button class="btn btn-sm btn-outline-danger" 
+                                                                                onclick="removeFromCourse('lesson', ${lesson.lesson_id})">
+                                                                            <i class="fas fa-trash"></i>
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
-                                                                <div>
-                                                                    <button class="btn btn-sm btn-outline-danger" 
-                                                                            onclick="removeFromCourse('lesson', ${lesson.lesson_id})">
-                                                                        <i class="fas fa-trash"></i>
-                                                                    </button>
-                                                                </div>
+                                                                <c:if test="${not empty lesson.lesson_content}">
+                                                                    <p class="text-muted mb-0 small">${fn:substring(lesson.lesson_content, 0, 100)}...</p>
+                                                                </c:if>
                                                             </div>
-                                                        </div>
-                                                    </c:if>
-                                                </c:forEach>
+                                                        </c:if>
+                                                    </c:forEach>
+                                                </c:if>
+
+                                                <!-- Show message if no lessons in chapter -->
+                                                <c:if test="${empty chapterLessons}">
+                                                    <div class="text-muted small mt-2">
+                                                        <i class="fas fa-info-circle"></i> No lessons added to this chapter yet.
+                                                    </div>
+                                                </c:if>
                                             </div>
                                         </div>
                                     </c:forEach>
@@ -751,7 +805,7 @@
                             let currentChapterId = null;
                             let currentChapterName = '';
 
-                            // Initialize when DOM is ready
+// Initialize when DOM is ready
                             document.addEventListener('DOMContentLoaded', function () {
                                 console.log('DOM loaded, initializing...');
 
@@ -775,7 +829,7 @@
                                             new Sortable(list, {
                                                 animation: 150,
                                                 ghostClass: 'sortable-ghost',
-                                                handle: '.content-item', // Allow dragging from entire item
+                                                handle: '.content-item',
                                                 onEnd: function (evt) {
                                                     updateContentOrder(evt.from);
                                                 }
@@ -838,7 +892,6 @@
 
                             function initializeModals() {
                                 try {
-                                    // Check Bootstrap version and availability
                                     if (typeof bootstrap !== 'undefined') {
                                         console.log('Bootstrap is available');
                                     } else if (typeof $ !== 'undefined' && typeof $.fn.modal !== 'undefined') {
@@ -868,8 +921,22 @@
                                     return;
                                 }
 
-                                // Show immediate loading feedback
-                                const addButton = document.querySelector(`button[onclick*="addChapterToCourse(${chapterId})"]`);
+                                console.log('Looking for button for chapter:', chapterId);
+
+                                // Find the button using onclick attribute
+                                let addButton = document.querySelector('button[onclick="addChapterToCourse(' + chapterId + ')"]');
+
+                                if (!addButton) {
+                                    // Try with different quote styles
+                                    addButton = document.querySelector('button[onclick*="addChapterToCourse(' + chapterId + ')"]');
+                                }
+
+                                if (!addButton) {
+                                    console.error('Add button not found for chapter:', chapterId);
+                                    console.log('Available buttons with onclick:', document.querySelectorAll('button[onclick*="addChapterToCourse"]'));
+                                    return;
+                                }
+
                                 const originalText = addButton.innerHTML;
                                 addButton.disabled = true;
                                 addButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
@@ -878,10 +945,10 @@
 
                                 var params = new URLSearchParams();
                                 params.append('action', 'addChapter');
-                                params.append('courseId', '${courseId}');
+                                params.append('courseId', '<c:out value="${courseId}"/>');
                                 params.append('chapterId', chapterId);
 
-                                fetch('${pageContext.request.contextPath}/course', {
+                                fetch('<c:url value="/course"/>', {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -890,6 +957,9 @@
                                     body: params.toString()
                                 })
                                         .then(function (response) {
+                                            console.log('Response status:', response.status);
+                                            console.log('Response headers:', response.headers.get('content-type'));
+
                                             if (!response.ok) {
                                                 throw new Error('Network response was not ok: ' + response.status);
                                             }
@@ -907,30 +977,27 @@
                                         .then(function (data) {
                                             console.log('Response data:', data);
 
-                                            // Reset button immediately
                                             addButton.disabled = false;
 
                                             if (data.success) {
-                                                // Show success state
                                                 addButton.innerHTML = '<i class="fas fa-check"></i> Added!';
                                                 addButton.classList.remove('btn-outline-primary');
                                                 addButton.classList.add('btn-success');
 
-                                                // Hide the chapter from available list after 1 second
                                                 setTimeout(() => {
-                                                    addButton.closest('.list-group-item').style.display = 'none';
+                                                    const listItem = addButton.closest('.list-group-item');
+                                                    if (listItem) {
+                                                        listItem.style.display = 'none';
+                                                    }
                                                 }, 1000);
 
-                                                // Reload page after 1.5 seconds to show updated content
                                                 setTimeout(function () {
                                                     location.reload();
                                                 }, 1500);
                                             } else {
-                                                // Show error state
                                                 addButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
                                                 addButton.classList.add('btn-danger');
 
-                                                // Reset after 2 seconds
                                                 setTimeout(() => {
                                                     addButton.innerHTML = originalText;
                                                     addButton.classList.remove('btn-danger');
@@ -943,12 +1010,10 @@
                                         .catch(function (error) {
                                             console.error('Error:', error);
 
-                                            // Reset button on error
                                             addButton.disabled = false;
                                             addButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
                                             addButton.classList.add('btn-danger');
 
-                                            // Reset after 2 seconds
                                             setTimeout(() => {
                                                 addButton.innerHTML = originalText;
                                                 addButton.classList.remove('btn-danger');
@@ -973,20 +1038,15 @@
                                     chapterInfo.innerHTML = '<strong>Adding lesson to chapter:</strong> ' + escapeHtml(chapterName);
                                 }
 
-                                // Update create lesson button URL
                                 const createLessonBtn = document.getElementById('createLessonBtn');
                                 if (createLessonBtn) {
                                     createLessonBtn.href = '${pageContext.request.contextPath}/LessonURL?action=addForm&returnTo=course&courseId=${courseId}&chapterId=' + chapterId;
                                 }
 
-                                // Load available lessons for this chapter
                                 loadAvailableLessons(chapterId);
-
-                                // Show modal with multiple fallback methods
                                 showModal('addLessonModal');
                             }
 
-                            // Universal modal show function with fallbacks
                             function showModal(modalId) {
                                 const modalElement = document.getElementById(modalId);
                                 if (!modalElement) {
@@ -995,7 +1055,6 @@
                                 }
 
                                 try {
-                                    // Method 1: Bootstrap 5 with getInstance
                                     if (typeof bootstrap !== 'undefined' &&
                                             typeof bootstrap.Modal !== 'undefined' &&
                                             typeof bootstrap.Modal.getInstance === 'function') {
@@ -1008,25 +1067,21 @@
                                         return;
                                     }
 
-                                    // Method 2: Bootstrap 5 without getInstance
                                     if (typeof bootstrap !== 'undefined' && typeof bootstrap.Modal !== 'undefined') {
                                         const modalInstance = new bootstrap.Modal(modalElement);
                                         modalInstance.show();
                                         return;
                                     }
 
-                                    // Method 3: jQuery Bootstrap
                                     if (typeof $ !== 'undefined' && typeof $.fn.modal !== 'undefined') {
                                         $(modalElement).modal('show');
                                         return;
                                     }
 
-                                    // Method 4: Manual fallback
                                     modalElement.style.display = 'block';
                                     modalElement.classList.add('show');
                                     modalElement.setAttribute('aria-hidden', 'false');
 
-                                    // Add backdrop
                                     let backdrop = document.querySelector('.modal-backdrop');
                                     if (!backdrop) {
                                         backdrop = document.createElement('div');
@@ -1034,19 +1089,15 @@
                                         document.body.appendChild(backdrop);
                                     }
 
-                                    // Add modal-open class to body
                                     document.body.classList.add('modal-open');
-
                                     console.log('Modal shown using manual fallback');
 
                                 } catch (error) {
                                     console.error('Error showing modal:', error);
-                                    // Last resort - just show the modal element
                                     modalElement.style.display = 'block';
                                 }
                             }
 
-                            // Universal modal hide function with fallbacks
                             function hideModal(modalId) {
                                 const modalElement = document.getElementById(modalId);
                                 if (!modalElement) {
@@ -1055,7 +1106,6 @@
                                 }
 
                                 try {
-                                    // Method 1: Bootstrap 5 with getInstance
                                     if (typeof bootstrap !== 'undefined' &&
                                             typeof bootstrap.Modal !== 'undefined' &&
                                             typeof bootstrap.Modal.getInstance === 'function') {
@@ -1067,31 +1117,25 @@
                                         }
                                     }
 
-                                    // Method 2: jQuery Bootstrap
                                     if (typeof $ !== 'undefined' && typeof $.fn.modal !== 'undefined') {
                                         $(modalElement).modal('hide');
                                         return;
                                     }
 
-                                    // Method 3: Manual fallback
                                     modalElement.style.display = 'none';
                                     modalElement.classList.remove('show');
                                     modalElement.setAttribute('aria-hidden', 'true');
 
-                                    // Remove backdrop
                                     const backdrop = document.querySelector('.modal-backdrop');
                                     if (backdrop) {
                                         backdrop.remove();
                                     }
 
-                                    // Remove modal-open class from body
                                     document.body.classList.remove('modal-open');
-
                                     console.log('Modal hidden using manual fallback');
 
                                 } catch (error) {
                                     console.error('Error hiding modal:', error);
-                                    // Last resort - just hide the modal element
                                     modalElement.style.display = 'none';
                                 }
                             }
@@ -1105,7 +1149,7 @@
 
                                 container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
 
-                                fetch('${pageContext.request.contextPath}/course?action=getLessons&chapterId=' + chapterId)
+                                fetch('${pageContext.request.contextPath}/course?action=getLessonsForCourse&chapterId=' + chapterId + '&courseId=${courseId}')
                                         .then(response => {
                                             if (!response.ok) {
                                                 throw new Error('Network response was not ok');
@@ -1116,14 +1160,11 @@
                                             if (lessons.length === 0) {
                                                 container.innerHTML = '<p class="text-muted">No lessons available for this chapter. <a href="${pageContext.request.contextPath}/LessonURL?action=addForm&returnTo=course&courseId=${courseId}&chapterId=' + chapterId + '">Create one</a></p>';
                                             } else {
-                                                // Get already added lessons for this course
-                                                const addedLessons = getAddedLessonsForChapter(chapterId);
-
                                                 let html = '<div class="list-group">';
-                                                lessons.forEach(lesson => {
+                                                lessons.forEach((lesson, index) => {
                                                     const lessonName = escapeHtml(lesson.name || '');
                                                     const lessonContent = lesson.content ? escapeHtml(lesson.content.substring(0, 100)) + '...' : '';
-                                                    const isAdded = addedLessons.includes(lesson.id);
+                                                    const isAdded = lesson.isAdded;
 
                                                     html += '<div class="list-group-item d-flex justify-content-between align-items-center">';
                                                     html += '<div>';
@@ -1136,7 +1177,9 @@
                                                     if (isAdded) {
                                                         html += '<span class="badge bg-success"><i class="fas fa-check"></i> Added</span>';
                                                     } else {
-                                                        html += '<button class="btn btn-sm btn-outline-primary" onclick="addLessonToCourse(' + lesson.id + ', ' + chapterId + ')">';
+                                                        html += '<button class="btn btn-sm btn-outline-primary" ';
+                                                        html += 'onclick="addLessonToCourse(' + lesson.id + ', ' + chapterId + ')" ';
+                                                        html += 'data-lesson-id="' + lesson.id + '" data-chapter-id="' + chapterId + '">';
                                                         html += '<i class="fas fa-plus"></i> Add';
                                                         html += '</button>';
                                                     }
@@ -1144,6 +1187,8 @@
                                                 });
                                                 html += '</div>';
                                                 container.innerHTML = html;
+
+                                                console.log('Loaded lessons, buttons created:', container.querySelectorAll('button[onclick*="addLessonToCourse"]').length);
                                             }
                                         })
                                         .catch(error => {
@@ -1152,30 +1197,40 @@
                                         });
                             }
 
-                            function getAddedLessonsForChapter(chapterId) {
-                                // Get lesson IDs that are already added to this chapter in the course
-                                const addedLessons = [];
-                                const chapterElement = document.querySelector(`[data-id="${chapterId}"][data-type="chapter"]`);
-                                if (chapterElement) {
-                                    const lessonElements = chapterElement.querySelectorAll('.lesson-item[data-id]');
-                                    lessonElements.forEach(el => {
-                                        const lessonId = parseInt(el.dataset.id);
-                                        if (lessonId) {
-                                            addedLessons.push(lessonId);
-                                        }
-                                    });
-                                }
-                                return addedLessons;
-                            }
-
                             function addLessonToCourse(lessonId, chapterId) {
                                 if (!lessonId || !chapterId) {
                                     console.error('Lesson ID and Chapter ID are required');
                                     return;
                                 }
 
-                                // Show immediate loading feedback
-                                const addButton = document.querySelector(`button[onclick*="addLessonToCourse(${lessonId}, ${chapterId})"]`);
+                                console.log('Looking for button for lesson:', lessonId, 'in chapter:', chapterId);
+
+                                // Since the button is created dynamically, we need to find it differently
+                                let addButton = null;
+
+                                // First try to find by data attributes (if we set them)
+                                addButton = document.querySelector(`button[data-lesson-id="${lessonId}"][data-chapter-id="${chapterId}"]`);
+
+                                if (!addButton) {
+                                    // Try to find by onclick attribute
+                                    addButton = document.querySelector(`button[onclick*="addLessonToCourse(${lessonId}, ${chapterId})"]`);
+                                }
+
+                                if (!addButton) {
+                                    // Try to find in the modal context
+                                    const modal = document.getElementById('addLessonModal');
+                                    if (modal) {
+                                        addButton = modal.querySelector(`button[onclick*="addLessonToCourse(${lessonId}"]`);
+                                    }
+                                }
+
+                                if (!addButton) {
+                                    console.error('Add button not found for lesson:', lessonId);
+                                    console.log('Available lesson buttons:', document.querySelectorAll('button[onclick*="addLessonToCourse"]'));
+                                    console.log('Modal buttons:', document.querySelectorAll('#addLessonModal button'));
+                                    return;
+                                }
+
                                 const originalText = addButton.innerHTML;
                                 addButton.disabled = true;
                                 addButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
@@ -1213,28 +1268,23 @@
                                             console.log('Add lesson response:', data);
 
                                             if (data.success) {
-                                                // Show success state
                                                 addButton.innerHTML = '<i class="fas fa-check"></i> Added!';
                                                 addButton.classList.remove('btn-outline-primary');
                                                 addButton.classList.add('btn-success');
 
-                                                // Replace button with success badge after 1 second
                                                 setTimeout(() => {
                                                     addButton.outerHTML = '<span class="badge bg-success"><i class="fas fa-check"></i> Added</span>';
                                                 }, 1000);
 
-                                                // Close modal and reload page after 1.5 seconds
                                                 setTimeout(function () {
                                                     hideModal('addLessonModal');
                                                     location.reload();
                                                 }, 1500);
                                             } else {
-                                                // Show error state
                                                 addButton.disabled = false;
                                                 addButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
                                                 addButton.classList.add('btn-danger');
 
-                                                // Reset after 2 seconds
                                                 setTimeout(() => {
                                                     addButton.innerHTML = originalText;
                                                     addButton.classList.remove('btn-danger');
@@ -1247,12 +1297,10 @@
                                         .catch(function (error) {
                                             console.error('Error adding lesson:', error);
 
-                                            // Reset button on error
                                             addButton.disabled = false;
                                             addButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
                                             addButton.classList.add('btn-danger');
 
-                                            // Reset after 2 seconds
                                             setTimeout(() => {
                                                 addButton.innerHTML = originalText;
                                                 addButton.classList.remove('btn-danger');
@@ -1273,7 +1321,6 @@
                                     return;
                                 }
 
-                                // Show loading state on the remove button
                                 var removeButtons = document.querySelectorAll('button[onclick*="removeFromCourse(\'' + type + '\', ' + id + ')"]');
                                 const originalContent = [];
 
@@ -1297,7 +1344,6 @@
 
                                 if (!actionMap[type] || !paramMap[type]) {
                                     console.error('Invalid type:', type);
-                                    // Reset button states
                                     for (var i = 0; i < removeButtons.length; i++) {
                                         removeButtons[i].disabled = false;
                                         removeButtons[i].innerHTML = originalContent[i];
@@ -1337,13 +1383,11 @@
                                             console.log('Remove ' + type + ' response:', data);
 
                                             if (data.success) {
-                                                // Show success animation
                                                 for (var i = 0; i < removeButtons.length; i++) {
                                                     removeButtons[i].innerHTML = '<i class="fas fa-check"></i>';
                                                     removeButtons[i].classList.add('btn-success');
                                                 }
 
-                                                // Fade out the item and reload after animation
                                                 const itemElement = document.querySelector(`[data-id="${id}"][data-type="${type}"]`);
                                                 if (itemElement) {
                                                     itemElement.style.transition = 'opacity 0.5s ease';
@@ -1354,7 +1398,6 @@
                                                     location.reload();
                                                 }, 1000);
                                             } else {
-                                                // Reset button states on error
                                                 for (var i = 0; i < removeButtons.length; i++) {
                                                     removeButtons[i].disabled = false;
                                                     removeButtons[i].innerHTML = originalContent[i];
@@ -1365,7 +1408,6 @@
                                         .catch(function (error) {
                                             console.error('Error removing ' + type + ':', error);
 
-                                            // Reset button states on error
                                             for (var i = 0; i < removeButtons.length; i++) {
                                                 removeButtons[i].disabled = false;
                                                 removeButtons[i].innerHTML = originalContent[i];
@@ -1413,7 +1455,7 @@
                                             if (contentType && contentType.includes('application/json')) {
                                                 return response.json();
                                             } else {
-                                                return {success: true}; // Assume success if not JSON
+                                                return {success: true};
                                             }
                                         })
                                         .then(data => {
@@ -1443,7 +1485,6 @@
                                                 params.append('action', 'saveDraft');
                                                 params.append('courseId', '${courseId}');
 
-                                                // Show saving state
                                                 const saveButtons = document.querySelectorAll('button[onclick*="saveDraft"]');
                                                 const originalTexts = [];
 
@@ -1478,14 +1519,12 @@
                                                         })
                                                         .then(data => {
                                                             if (data.success) {
-                                                                // Show success feedback
                                                                 saveButtons.forEach((btn, index) => {
                                                                     btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
                                                                     btn.classList.remove('btn-success');
                                                                     btn.classList.add('btn-outline-success');
                                                                     btn.disabled = false;
 
-                                                                    // Reset after 2 seconds
                                                                     setTimeout(() => {
                                                                         btn.innerHTML = originalTexts[index];
                                                                         btn.classList.remove('btn-outline-success');
@@ -1493,7 +1532,6 @@
                                                                     }, 2000);
                                                                 });
                                                             } else {
-                                                                // Reset on error
                                                                 saveButtons.forEach((btn, index) => {
                                                                     btn.innerHTML = originalTexts[index];
                                                                     btn.disabled = false;
@@ -1504,7 +1542,6 @@
                                                         .catch(error => {
                                                             console.error('Error:', error);
 
-                                                            // Reset on error
                                                             saveButtons.forEach((btn, index) => {
                                                                 btn.innerHTML = originalTexts[index];
                                                                 btn.disabled = false;
@@ -1553,6 +1590,35 @@
                                                         hideModal(modal.id);
                                                     });
                                                 }
+                                            });
+
+                                            // Debug function to check what buttons are available
+                                            function debugButtons() {
+                                                console.log('=== DEBUG INFO ===');
+                                                console.log('Chapter buttons with onclick:', document.querySelectorAll('button[onclick*="addChapterToCourse"]'));
+                                                console.log('Lesson buttons with onclick:', document.querySelectorAll('button[onclick*="addLessonToCourse"]'));
+                                                console.log('All buttons with onclick:', document.querySelectorAll('button[onclick]'));
+
+                                                // Log all chapter buttons with their data
+                                                document.querySelectorAll('button[onclick*="addChapterToCourse"]').forEach((btn, index) => {
+                                                    console.log(`Chapter button ${index}:`, {
+                                                        element: btn,
+                                                        onclick: btn.getAttribute('onclick'),
+                                                        text: btn.textContent
+                                                    });
+                                                });
+
+                                                // Log lesson buttons in modal
+                                                const modal = document.getElementById('addLessonModal');
+                                                if (modal) {
+                                                    console.log('Lesson buttons in modal:', modal.querySelectorAll('button[onclick*="addLessonToCourse"]'));
+                                                }
+                                            }
+
+
+                                            // Call debug function after DOM is ready
+                                            document.addEventListener('DOMContentLoaded', function () {
+                                                setTimeout(debugButtons, 1000); // Wait 1 second then debug
                                             });
         </script>
     </body>

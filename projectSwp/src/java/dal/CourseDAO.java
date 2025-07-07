@@ -780,17 +780,21 @@ public class CourseDAO extends DBContext {
     }
 
     public boolean reorderLessonsInChapter(int courseId, int chapterId, String[] lessonIds) throws SQLException {
-        String sql = "UPDATE course_lesson SET display_order = ? WHERE course_id = ? AND chapter_id = ? AND lesson_id = ?";
+        String sql = "UPDATE course_lesson SET display_order = ? WHERE course_id = ? AND chapter_id = ? AND lesson_id = ? AND is_active = 1";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            connection.setAutoCommit(false);
+
             for (int i = 0; i < lessonIds.length; i++) {
-                ps.setInt(1, i + 1);
+                ps.setInt(1, i + 1); // display_order starts from 1
                 ps.setInt(2, courseId);
                 ps.setInt(3, chapterId);
                 ps.setInt(4, Integer.parseInt(lessonIds[i]));
                 ps.addBatch();
             }
+
             int[] results = ps.executeBatch();
+            connection.commit();
 
             // Check if all updates were successful
             for (int result : results) {
@@ -798,7 +802,13 @@ public class CourseDAO extends DBContext {
                     return false;
                 }
             }
+
             return true;
+        } catch (SQLException e) {
+            connection.rollback();
+            throw e;
+        } finally {
+            connection.setAutoCommit(true);
         }
     }
 
@@ -849,5 +859,37 @@ public class CourseDAO extends DBContext {
         }
 
         return lessonIds;
+    }
+
+    public boolean isLessonInCourse(int courseId, int lessonId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM course_lesson WHERE course_id = ? AND lesson_id = ? AND is_active = 1";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, lessonId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        }
+
+        return false;
+    }
+
+    public boolean isChapterInCourse(int courseId, int chapterId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM course_chapter WHERE course_id = ? AND chapter_id = ? AND is_active = 1";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, chapterId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        }
+
+        return false;
     }
 }

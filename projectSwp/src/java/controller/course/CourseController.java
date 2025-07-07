@@ -90,9 +90,12 @@ public class CourseController extends HttpServlet {
                 case "getLessons":
                     getLessonsByChapter(request, response);
                     return;
+                case "getLessonsForCourse":
+                    getLessonsByChapterForCourse(request, response);
+                    return;
                 case "reorderLessons":
                     reorderLessonsInChapter(request, response);
-                    break;
+                    return;
                 default:
                     listCourses(request, response);
                     break;
@@ -150,6 +153,9 @@ public class CourseController extends HttpServlet {
                     break;
                 case "reorderContent":
                     reorderCourseContent(request, response);
+                    break;
+                case "reorderLessons":
+                    reorderLessonsInChapter(request, response);
                     break;
                 case "saveDraft":
                     saveDraft(request, response);
@@ -439,6 +445,14 @@ public class CourseController extends HttpServlet {
             List<Integer> addedChapterIds = courseManagementDAO.getAddedChaptersForCourse(courseId);
             List<Integer> addedLessonIds = courseManagementDAO.getAddedLessonsForCourse(courseId);
 
+            // Create a map of chapter -> added lessons for easier access in JSP
+            Map<Integer, List<Integer>> chapterLessonsMap = new HashMap<>();
+            for (Map<String, Object> chapter : courseChapters) {
+                Integer chapterId = (Integer) chapter.get("chapter_id");
+                List<Integer> chapterLessonIds = courseManagementDAO.getAddedLessonsForChapter(courseId, chapterId);
+                chapterLessonsMap.put(chapterId, chapterLessonIds);
+            }
+
             request.setAttribute("courseDetails", courseDetails);
             request.setAttribute("courseChapters", courseChapters);
             request.setAttribute("courseLessons", courseLessons);
@@ -446,6 +460,7 @@ public class CourseController extends HttpServlet {
             request.setAttribute("availableChapters", availableChapters);
             request.setAttribute("addedChapterIds", addedChapterIds);
             request.setAttribute("addedLessonIds", addedLessonIds);
+            request.setAttribute("chapterLessonsMap", chapterLessonsMap);
             request.setAttribute("courseId", courseId);
 
             request.getRequestDispatcher("/course/buildCourse.jsp").forward(request, response);
@@ -1008,6 +1023,44 @@ public class CourseController extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+        }
+    }
+
+    private void getLessonsByChapterForCourse(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int chapterId = Integer.parseInt(request.getParameter("chapterId"));
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+
+            List<Lesson> allLessons = lessonDAO.getAllLessons();
+            List<Integer> addedLessonIds = courseManagementDAO.getAddedLessonsForChapter(courseId, chapterId);
+
+            StringBuilder json = new StringBuilder("[");
+            boolean first = true;
+            for (Lesson lesson : allLessons) {
+                if (lesson.getChapter_id() == chapterId) {
+                    if (!first) {
+                        json.append(",");
+                    }
+                    boolean isAdded = addedLessonIds.contains(lesson.getId());
+
+                    json.append("{\"id\":").append(lesson.getId())
+                            .append(",\"name\":\"").append(escapeJson(lesson.getName()))
+                            .append("\",\"content\":\"").append(escapeJson(lesson.getContent() != null ? lesson.getContent().substring(0, Math.min(100, lesson.getContent().length())) : ""))
+                            .append("\",\"isAdded\":").append(isAdded)
+                            .append("}");
+                    first = false;
+                }
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("[]");
         }
     }
 }
