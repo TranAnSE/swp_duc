@@ -8,7 +8,6 @@ public class Test {
     private String name;
     private String description;
     private boolean is_practice;
-    private int category_id;
     private int duration_minutes;
     private int num_questions;
     private Integer course_id;
@@ -25,13 +24,12 @@ public class Test {
         this.test_order = 1;
     }
 
-    public Test(int id, String name, String description, boolean is_practice, int category_id) {
+    public Test(int id, String name, String description, boolean is_practice) {
         this();
         this.id = id;
         this.name = name;
         this.description = description;
         this.is_practice = is_practice;
-        this.category_id = category_id;
     }
 
     // New constructor for course-integrated tests
@@ -80,14 +78,6 @@ public class Test {
 
     public void setIs_practice(boolean is_practice) {
         this.is_practice = is_practice;
-    }
-
-    public int getCategory_id() {
-        return category_id;
-    }
-
-    public void setCategory_id(int category_id) {
-        this.category_id = category_id;
     }
 
     public int getDuration_minutes() {

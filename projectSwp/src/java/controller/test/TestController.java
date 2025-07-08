@@ -5,7 +5,6 @@
 package controller.Test;
 
 import dal.TestDAO;
-import dal.CategoryDAO;
 import dal.QuestionDAO;
 import dal.TestQuestionDAO;
 import dal.GradeDAO;
@@ -21,7 +20,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import model.Test;
-import model.Category;
 import model.Question;
 import model.Grade;
 import model.Subject;
@@ -238,9 +236,6 @@ public class TestController extends HttpServlet {
         int displayStart = (page - 1) * pageSize + 1;
         int displayEnd = Math.min(page * pageSize, totalTests);
 
-        // Get category map for backward compatibility
-        Map<Integer, String> categoryMap = getCategoryMap();
-
         // Get courses for filter dropdown
         CourseDAO courseDAO = new CourseDAO();
         List<Map<String, Object>> courses = new ArrayList<>();
@@ -255,7 +250,6 @@ public class TestController extends HttpServlet {
         }
 
         request.setAttribute("testList", testList);
-        request.setAttribute("categoryMap", categoryMap);
         request.setAttribute("courses", courses);
         request.setAttribute("currentPage", page);
         request.setAttribute("pageSize", pageSize);
@@ -286,8 +280,6 @@ public class TestController extends HttpServlet {
     private void showCreateForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         request.setAttribute("test", new Test());
-        Map<Integer, String> categoryMap = getCategoryMap();
-        request.setAttribute("categoryMap", categoryMap);
 
         // Load hierarchy data for test creation
         try {
@@ -319,9 +311,6 @@ public class TestController extends HttpServlet {
                 return;
             }
             request.setAttribute("test", test);
-
-            Map<Integer, String> categoryMap = getCategoryMap();
-            request.setAttribute("categoryMap", categoryMap);
 
             // Get selected question IDs for this test
             List<Integer> selectedQuestionIds = testQuestionDAO.getQuestionIdsByTest(id);
@@ -444,10 +433,6 @@ public class TestController extends HttpServlet {
                     test.setTest_order(Integer.parseInt(testOrderParam));
                 }
             } else {
-                // Legacy test with category
-                int categoryId = Integer.parseInt(request.getParameter("categoryId"));
-                test.setCategory_id(categoryId);
-
                 // Set default values for new fields
                 test.setDuration_minutes(30);
                 test.setNum_questions(10);
@@ -494,7 +479,6 @@ public class TestController extends HttpServlet {
     private void updateTest(HttpServletRequest request, HttpServletResponse response)
             throws IOException, ServletException {
         TestDAO testDAO = new TestDAO();
-        CategoryDAO categoryDAO = new CategoryDAO();
         TestQuestionDAO testQuestionDAO = new TestQuestionDAO();
 
         // Check if user has admin or teacher role
@@ -508,18 +492,9 @@ public class TestController extends HttpServlet {
             String name = request.getParameter("name");
             String description = request.getParameter("description");
             boolean practice = "true".equals(request.getParameter("practice"));
-            int categoryId = Integer.parseInt(request.getParameter("categoryId"));
-
-            // Validate category exists
-            Category category = categoryDAO.getCategoryById(categoryId);
-            if (category == null) {
-                request.setAttribute("error", "Category does not exist");
-                showEditForm(request, response);
-                return;
-            }
-
+            
             // Update test information
-            Test test = new Test(id, name, description, practice, categoryId);
+            Test test = new Test(id, name, description, practice);
             testDAO.updateTest(test);
 
             // Remove all old questions from test
@@ -540,7 +515,7 @@ public class TestController extends HttpServlet {
 
             request.setAttribute("message", "Test updated successfully");
         } catch (NumberFormatException e) {
-            request.setAttribute("error", "Invalid ID or category");
+            request.setAttribute("error", "Invalid ID");
         } catch (Exception e) {
             request.setAttribute("error", "Error updating test: " + e.getMessage());
         }
@@ -579,9 +554,6 @@ public class TestController extends HttpServlet {
             int id = Integer.parseInt(request.getParameter("id"));
             Test test = testDAO.getTestById(id);
             request.setAttribute("testList", test != null ? List.of(test) : List.of());
-
-            Map<Integer, String> categoryMap = getCategoryMap();
-            request.setAttribute("categoryMap", categoryMap);
 
             RequestDispatcher dispatcher = request.getRequestDispatcher("/Test/testList.jsp");
             dispatcher.forward(request, response);
@@ -962,17 +934,6 @@ public class TestController extends HttpServlet {
         } catch (Exception e) {
             out.print("{\"success\": false, \"error\": \"" + e.getMessage() + "\"}");
         }
-    }
-
-    // Helper method to get category map
-    private Map<Integer, String> getCategoryMap() {
-        CategoryDAO categoryDAO = new CategoryDAO();
-        Map<Integer, String> categoryMap = new HashMap<>();
-        List<Category> categoryList = categoryDAO.getAllCategories();
-        for (Category c : categoryList) {
-            categoryMap.put(c.getId(), c.getName());
-        }
-        return categoryMap;
     }
 
     private void handleGetLessonHierarchy(HttpServletRequest request, HttpServletResponse response)

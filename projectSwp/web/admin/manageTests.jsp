@@ -87,7 +87,6 @@
                         <th>Tên</th>
                         <th>Mô tả</th>
                         <th>Loại</th>
-                        <th>Danh mục</th>
                         <th>Hành động</th>
                     </tr>
                 </thead>
@@ -98,9 +97,8 @@
                             <td>${test.name}</td>
                             <td>${test.description}</td>
                             <td><c:choose><c:when test="${test.is_practice}">Practice</c:when><c:otherwise>Official</c:otherwise></c:choose></td>
-                            <td>${categoryMap[test.category_id]}</td>
-                            <td>
-                                <a class="action-link btn btn-sm btn-warning" href="${pageContext.request.contextPath}/test?action=edit&id=${test.id}">Sửa</a>
+                                    <td>
+                                            <a class="action-link btn btn-sm btn-warning" href="${pageContext.request.contextPath}/test?action=edit&id=${test.id}">Sửa</a>
                                 <a class="action-link btn btn-sm btn-danger" href="${pageContext.request.contextPath}/test?action=delete&id=${test.id}" onclick="return confirm('Bạn chắc chắn muốn xoá?');">Xoá</a>
                             </td>
                         </tr>
@@ -108,8 +106,8 @@
                 </tbody>
             </table>
         </div>
-            <jsp:include page="../footer.jsp" />
-            <!-- JS -->
+        <jsp:include page="../footer.jsp" />
+        <!-- JS -->
         <script src="/assets/js/bootstrap.bundle.min.js"></script>
     </body>
 </html> 

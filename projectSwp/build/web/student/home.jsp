@@ -500,7 +500,6 @@
                                         <div class="d-flex justify-content-between align-items-center">
                                             <div class="flex-grow-1">
                                                 <h6 class="mb-1">${test.testName}</h6>
-                                                <small class="text-muted">${test.categoryName} • ${test.duration} minutes</small>
                                                 <c:if test="${not empty test.description}">
                                                     <p class="mb-0 mt-1 small">${test.description}</p>
                                                 </c:if>

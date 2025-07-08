@@ -133,14 +133,7 @@
                                                 </div>
 
                                                 <p class="card-text text-muted">${test.description}</p>
-
-                                                <div class="test-info">
-                                                    <small class="text-muted">
-                                                        <i class="fa fa-folder"></i> 
-                                                        Danh mục: ${categoryMap[test.category_id]}
-                                                    </small>
-                                                </div>
-
+                                                
                                                 <a href="${pageContext.request.contextPath}/student/taketest?action=start&testId=${test.id}" 
                                                    class="btn btn-success btn-start">
                                                     <i class="fa fa-play"></i> Bắt đầu luyện tập
@@ -181,13 +174,6 @@
                                                 </div>
 
                                                 <p class="card-text text-muted">${test.description}</p>
-
-                                                <div class="test-info">
-                                                    <small class="text-muted">
-                                                        <i class="fa fa-folder"></i> 
-                                                        Danh mục: ${categoryMap[test.category_id]}
-                                                    </small>
-                                                </div>
 
                                                 <c:choose>
                                                     <c:when test="${takenTests[test.id]}">

@@ -41,7 +41,6 @@ public class TakeTestController extends HttpServlet {
     private QuestionDAO questionDAO;
     private QuestionOptionDAO questionOptionDAO;
     private QuestionRecordDAO questionRecordDAO;
-    private CategoryDAO categoryDAO;
 
     @Override
     public void init() {
@@ -50,7 +49,6 @@ public class TakeTestController extends HttpServlet {
         questionDAO = new QuestionDAO();
         questionOptionDAO = new QuestionOptionDAO();
         questionRecordDAO = new QuestionRecordDAO();
-        categoryDAO = new CategoryDAO();
 
         // Khởi tạo dữ liệu test nếu cần
         questionRecordDAO.initializeTestDataIfNeeded();
@@ -120,7 +118,6 @@ public class TakeTestController extends HttpServlet {
 
             List<Test> practiceTests = testDAO.getTestsByType(true);
             List<Test> officialTests = testDAO.getTestsByType(false);
-            Map<Integer, String> categoryMap = getCategoryMap();
 
             // Check which official tests student has already taken
             Map<Integer, Boolean> takenTests = new HashMap<>();
@@ -131,7 +128,6 @@ public class TakeTestController extends HttpServlet {
 
             request.setAttribute("practiceTests", practiceTests);
             request.setAttribute("officialTests", officialTests);
-            request.setAttribute("categoryMap", categoryMap);
             request.setAttribute("takenTests", takenTests);
 
             RequestDispatcher dispatcher = request.getRequestDispatcher("/student/testList.jsp");
@@ -281,17 +277,6 @@ public class TakeTestController extends HttpServlet {
                         System.out.println("Error getting duration from test table: " + sqlEx.getMessage());
                     }
 
-                    // Fallback to category if test duration is not set
-                    if (duration <= 0) {
-                        Category category = categoryDAO.getCategoryById(test.getCategory_id());
-                        if (category != null && category.getDuration() > 0) {
-                            duration = category.getDuration();
-                            System.out.println("Fallback to category duration: " + duration + " minutes (category_id=" + test.getCategory_id() + ")");
-                        } else {
-                            System.out.println("No valid duration found, using default: 30 minutes");
-                            duration = 30; // Default 30 minutes for official tests
-                        }
-                    }
                 } catch (Exception e) {
                     System.out.println("Error getting test duration: " + e.getMessage());
                     duration = 30; // Default 30 minutes if error occurs
@@ -595,18 +580,5 @@ public class TakeTestController extends HttpServlet {
             RequestDispatcher dispatcher = request.getRequestDispatcher("/student/testHistory.jsp");
             dispatcher.forward(request, response);
         }
-    }
-
-    private Map<Integer, String> getCategoryMap() {
-        Map<Integer, String> categoryMap = new HashMap<>();
-        try {
-            List<Category> categories = categoryDAO.getAllCategories();
-            for (Category category : categories) {
-                categoryMap.put(category.getId(), category.getName());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return categoryMap;
     }
 }

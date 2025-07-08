@@ -700,12 +700,6 @@
                                     <span>Add Package</span>
                                 </a>
                             </div>
-                            <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-3">
-                                <a href="/category?action=addForm" class="btn btn-dark quick-action-btn">
-                                    <i class="fas fa-tags"></i>
-                                    <span>Add Category</span>
-                                </a>
-                            </div>
                         </div>
                     </div>
                 </div>

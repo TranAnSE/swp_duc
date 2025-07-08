@@ -742,14 +742,6 @@
                                 <input type="checkbox" name="practice" value="true" /> 
                                 Practice Test (uncheck for official test)
                             </label>
-
-                            <label for="category">Category:</label>
-                            <select id="category" name="categoryId" required>
-                                <option value="" disabled selected>-- Select Category --</option>
-                                <c:forEach var="entry" items="${categoryMap}">
-                                    <option value="${entry.key}">${entry.value}</option>
-                                </c:forEach>
-                            </select>
                         </div>
                     </div>
 

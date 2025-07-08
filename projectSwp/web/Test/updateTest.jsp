@@ -987,15 +987,7 @@
                                        Practice Test (uncheck for official test)
                                 </label>
 
-                                <label for="category">Category:</label>
-                                <select id="category" name="categoryId" required>
-                                    <option value="" disabled>-- Select Category --</option>
-                                <c:forEach var="entry" items="${categoryMap}">
-                                    <option value="${entry.key}" ${test.category_id == entry.key ? 'selected' : ''}>${entry.value}</option>
-                                </c:forEach>
-                            </select>
-
-                            <!-- Context Information -->
+                                <!-- Context Information -->
                             <c:if test="${not empty contextInfo}">
                                 <div class="context-info">
                                     <i class="fas fa-map-marker-alt"></i>

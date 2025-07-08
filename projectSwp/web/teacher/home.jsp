@@ -341,9 +341,6 @@
                                     <a href="${pageContext.request.contextPath}/chapter" class="quick-action-btn">
                                         <i class="fas fa-book"></i> Chapters
                                     </a>
-                                    <a href="${pageContext.request.contextPath}/category" class="quick-action-btn">
-                                        <i class="fas fa-tags"></i> Categories
-                                    </a>
                                 </div>
                             </div>
                         </div>

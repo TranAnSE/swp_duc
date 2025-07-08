@@ -32,13 +32,12 @@ public class TestDAO extends DBContext {
         }
 
         // Otherwise, use legacy method for backward compatibility
-        String sql = "INSERT INTO test (name, description, is_practice, category_id, "
+        String sql = "INSERT INTO test (name, description, is_practice, "
                 + "duration_minutes, num_questions, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, test.getName());
             ps.setString(2, test.getDescription());
             ps.setBoolean(3, test.isIs_practice());
-            ps.setInt(4, test.getCategory_id());
             ps.setInt(5, test.getDuration_minutes());
             ps.setInt(6, test.getNum_questions());
 
@@ -151,7 +150,6 @@ public class TestDAO extends DBContext {
                 test.setName(rs.getString("name"));
                 test.setDescription(rs.getString("description"));
                 test.setIs_practice(rs.getBoolean("is_practice"));
-                test.setCategory_id(rs.getInt("category_id"));
                 test.setDuration_minutes(rs.getInt("duration_minutes"));
                 test.setNum_questions(rs.getInt("num_questions"));
                 test.setCourse_id(rs.getObject("course_id", Integer.class));
@@ -213,7 +211,6 @@ public class TestDAO extends DBContext {
                 test.setName(rs.getString("name"));
                 test.setDescription(rs.getString("description"));
                 test.setIs_practice(rs.getBoolean("is_practice"));
-                test.setCategory_id(rs.getInt("category_id"));
                 test.setDuration_minutes(rs.getInt("duration_minutes"));
                 test.setNum_questions(rs.getInt("num_questions"));
                 test.setCourse_id(rs.getObject("course_id", Integer.class));
@@ -241,7 +238,6 @@ public class TestDAO extends DBContext {
                 test.setName(rs.getString("name"));
                 test.setDescription(rs.getString("description"));
                 test.setIs_practice(rs.getBoolean("is_practice"));
-                test.setCategory_id(rs.getInt("category_id"));
                 test.setDuration_minutes(rs.getInt("duration_minutes"));
                 test.setNum_questions(rs.getInt("num_questions"));
                 test.setCourse_id(rs.getObject("course_id", Integer.class));
@@ -249,28 +245,6 @@ public class TestDAO extends DBContext {
                 test.setTest_order(rs.getInt("test_order"));
                 test.setCreated_by(rs.getObject("created_by", Integer.class));
                 list.add(test);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return list;
-    }
-
-    // Lấy tests theo category
-    public List<Test> getTestsByCategory(int categoryId) {
-        List<Test> list = new ArrayList<>();
-        String sql = "SELECT * FROM test WHERE category_id = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, categoryId);
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                list.add(new Test(
-                        rs.getInt("id"),
-                        rs.getString("name"),
-                        rs.getString("description"),
-                        rs.getBoolean("is_practice"),
-                        rs.getInt("category_id")
-                ));
             }
         } catch (SQLException e) {
             e.printStackTrace();

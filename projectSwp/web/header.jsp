@@ -22,11 +22,12 @@
                                         <li><a href="/">Home</a></li>
                                         <li><a href="#">Courses</a>
                                             <ul class="submenu">
+                                                <li><a href="/Grade">Grade</a></li>
                                                 <li><a href="/subjects">Subjects</a></li>
+                                                <li><a href="/course">Courses</a></li>
                                                 <li><a href="/LessonURL">Lessons</a></li>
                                                 <li><a href="/chapter">Chapters</a></li>
                                                 <li><a href="/study_package">Study Packages</a></li>
-
                                             </ul>
                                         </li>
 
@@ -39,7 +40,6 @@
                                                     <li><a href="/test">Manage Tests</a></li>
                                                     <li><a href="/student">Manage Student</a></li>
                                                     <li><a href="/invoice">Invoices</a></li>
-                                                    <li><a href="/category">Test Categories</a></li>
                                                     <li><a href="/study_package?service=manageAssignments">Manage Assignments</a></li>
                                                     <li><a href="/study_package?service=assignToParent">Assign to Parent</a></li>
                                                     <li><a href="/packageSubjectURL">Package Subjects</a></li>
@@ -56,7 +56,6 @@
                                                     <li><a href="/Question">Question Bank</a></li>
                                                     <li><a href="/test">Manage Tests</a></li>
                                                     <li><a href="/chapter">Chapters</a></li>
-                                                    <li><a href="/category">Test Categories</a></li>
                                                 </ul>
                                             </li>
                                         </c:if>
