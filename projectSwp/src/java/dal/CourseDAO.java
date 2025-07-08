@@ -215,7 +215,8 @@ public class CourseDAO extends DBContext {
     }
 
     public List<Map<String, Object>> getCourseTests(int courseId) throws SQLException {
-        String sql = "SELECT ct.*, t.name as test_name, t.description as test_description, c.name as chapter_name "
+        String sql = "SELECT ct.*, t.name as test_name, t.description as test_description, "
+                + "t.is_practice, t.duration_minutes, t.num_questions, c.name as chapter_name "
                 + "FROM course_test ct "
                 + "JOIN test t ON ct.test_id = t.id "
                 + "LEFT JOIN chapter c ON ct.chapter_id = c.id "
@@ -233,9 +234,42 @@ public class CourseDAO extends DBContext {
                 test.put("test_id", rs.getInt("test_id"));
                 test.put("test_name", rs.getString("test_name"));
                 test.put("test_description", rs.getString("test_description"));
+                test.put("is_practice", rs.getBoolean("is_practice"));
+                test.put("duration_minutes", rs.getInt("duration_minutes"));
+                test.put("num_questions", rs.getInt("num_questions"));
+                test.put("chapter_id", rs.getObject("chapter_id"));
                 test.put("chapter_name", rs.getString("chapter_name"));
                 test.put("test_type", rs.getString("test_type"));
                 test.put("display_order", rs.getInt("display_order"));
+                tests.add(test);
+            }
+        }
+        return tests;
+    }
+
+    public List<Map<String, Object>> getAvailableTestsForCourse(int courseId, int subjectId) throws SQLException {
+        String sql = "SELECT t.*, "
+                + "CASE WHEN ct.test_id IS NOT NULL THEN 1 ELSE 0 END as is_in_course "
+                + "FROM test t "
+                + "LEFT JOIN course_test ct ON t.id = ct.test_id AND ct.course_id = ? AND ct.is_active = 1 "
+                + "WHERE (t.course_id IS NULL OR t.course_id = ?) "
+                + "ORDER BY t.name";
+
+        List<Map<String, Object>> tests = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> test = new HashMap<>();
+                test.put("id", rs.getInt("id"));
+                test.put("name", rs.getString("name"));
+                test.put("description", rs.getString("description"));
+                test.put("is_practice", rs.getBoolean("is_practice"));
+                test.put("duration_minutes", rs.getInt("duration_minutes"));
+                test.put("num_questions", rs.getInt("num_questions"));
+                test.put("is_in_course", rs.getBoolean("is_in_course"));
                 tests.add(test);
             }
         }
@@ -368,8 +402,33 @@ public class CourseDAO extends DBContext {
     }
 
     public boolean addTestToCourse(int courseId, int testId, Integer chapterId, int displayOrder, String testType) throws SQLException {
-        String sql = "INSERT INTO course_test (course_id, test_id, chapter_id, display_order, test_type) "
-                + "VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE display_order = ?, test_type = ?, is_active = 1";
+        // Check if test already exists
+        String checkSql = "SELECT COUNT(*) FROM course_test WHERE course_id = ? AND test_id = ?";
+        try (PreparedStatement checkPs = connection.prepareStatement(checkSql)) {
+            checkPs.setInt(1, courseId);
+            checkPs.setInt(2, testId);
+            ResultSet rs = checkPs.executeQuery();
+            if (rs.next() && rs.getInt(1) > 0) {
+                // Update existing record
+                String updateSql = "UPDATE course_test SET chapter_id = ?, display_order = ?, test_type = ?, is_active = 1 WHERE course_id = ? AND test_id = ?";
+                try (PreparedStatement updatePs = connection.prepareStatement(updateSql)) {
+                    if (chapterId != null) {
+                        updatePs.setInt(1, chapterId);
+                    } else {
+                        updatePs.setNull(1, Types.INTEGER);
+                    }
+                    updatePs.setInt(2, displayOrder);
+                    updatePs.setString(3, testType);
+                    updatePs.setInt(4, courseId);
+                    updatePs.setInt(5, testId);
+                    return updatePs.executeUpdate() > 0;
+                }
+            }
+        }
+
+        // Insert new record
+        String sql = "INSERT INTO course_test (course_id, test_id, chapter_id, display_order, test_type, is_active) "
+                + "VALUES (?, ?, ?, ?, ?, 1)";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, courseId);
@@ -381,10 +440,38 @@ public class CourseDAO extends DBContext {
             }
             ps.setInt(4, displayOrder);
             ps.setString(5, testType);
-            ps.setInt(6, displayOrder);
-            ps.setString(7, testType);
             return ps.executeUpdate() > 0;
         }
+    }
+
+    public boolean removeTestFromCourse(int courseId, int testId) throws SQLException {
+        String sql = "DELETE FROM course_test WHERE course_id = ? AND test_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, testId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public int getNextTestOrder(int courseId, Integer chapterId) throws SQLException {
+        String sql;
+        if (chapterId != null) {
+            sql = "SELECT COALESCE(MAX(display_order), 0) + 1 FROM course_test WHERE course_id = ? AND chapter_id = ? AND is_active = 1";
+        } else {
+            sql = "SELECT COALESCE(MAX(display_order), 0) + 1 FROM course_test WHERE course_id = ? AND chapter_id IS NULL AND is_active = 1";
+        }
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            if (chapterId != null) {
+                ps.setInt(2, chapterId);
+            }
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 1;
     }
 
     public boolean updateCourse(int courseId, String courseTitle, String price,
@@ -892,4 +979,255 @@ public class CourseDAO extends DBContext {
 
         return false;
     }
+
+    public List<Map<String, Object>> getCourseContentStructure(int courseId) throws SQLException {
+        String sql = """
+        SELECT 
+            'chapter' as content_type,
+            cc.chapter_id as content_id,
+            c.name as content_name,
+            c.description as content_description,
+            cc.display_order,
+            0 as parent_id
+        FROM course_chapter cc
+        JOIN chapter c ON cc.chapter_id = c.id
+        WHERE cc.course_id = ? AND cc.is_active = 1
+        
+        UNION ALL
+        
+        SELECT 
+            'lesson' as content_type,
+            cl.lesson_id as content_id,
+            l.name as content_name,
+            l.content as content_description,
+            cl.display_order,
+            cl.chapter_id as parent_id
+        FROM course_lesson cl
+        JOIN lesson l ON cl.lesson_id = l.id
+        WHERE cl.course_id = ? AND cl.is_active = 1
+        
+        ORDER BY parent_id, display_order
+        """;
+
+        List<Map<String, Object>> content = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, courseId);
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("content_type", rs.getString("content_type"));
+                item.put("content_id", rs.getInt("content_id"));
+                item.put("content_name", rs.getString("content_name"));
+                item.put("content_description", rs.getString("content_description"));
+                item.put("display_order", rs.getInt("display_order"));
+                item.put("parent_id", rs.getInt("parent_id"));
+                content.add(item);
+            }
+        }
+        return content;
+    }
+
+    public Map<String, Object> getCourseStructureForViewer(int courseId) throws SQLException {
+        Map<String, Object> courseStructure = new HashMap<>();
+
+        // Get course details
+        Map<String, Object> courseDetails = getCourseDetails(courseId);
+        if (courseDetails == null) {
+            return null;
+        }
+
+        courseStructure.put("course", courseDetails);
+
+        // Get chapters with lessons
+        String sql = """
+        SELECT 
+            cc.chapter_id,
+            c.name as chapter_name,
+            c.description as chapter_description,
+            cc.display_order as chapter_order
+        FROM course_chapter cc
+        JOIN chapter c ON cc.chapter_id = c.id
+        WHERE cc.course_id = ? AND cc.is_active = 1
+        ORDER BY cc.display_order
+        """;
+
+        List<Map<String, Object>> chapters = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> chapter = new HashMap<>();
+                chapter.put("chapter_id", rs.getInt("chapter_id"));
+                chapter.put("chapter_name", rs.getString("chapter_name"));
+                chapter.put("chapter_description", rs.getString("chapter_description"));
+                chapter.put("chapter_order", rs.getInt("chapter_order"));
+
+                // Get lessons for this chapter
+                List<Map<String, Object>> lessons = getCourseLessonsForChapter(courseId, rs.getInt("chapter_id"));
+                chapter.put("lessons", lessons);
+
+                chapters.add(chapter);
+            }
+        }
+
+        courseStructure.put("chapters", chapters);
+        return courseStructure;
+    }
+
+    public List<Map<String, Object>> getCourseLessonsForChapter(int courseId, int chapterId) throws SQLException {
+        String sql = """
+        SELECT 
+            cl.lesson_id,
+            l.name as lesson_name,
+            l.content as lesson_content,
+            l.video_link,
+            cl.display_order,
+            cl.lesson_type
+        FROM course_lesson cl
+        JOIN lesson l ON cl.lesson_id = l.id
+        WHERE cl.course_id = ? AND cl.chapter_id = ? AND cl.is_active = 1
+        ORDER BY cl.display_order
+        """;
+
+        List<Map<String, Object>> lessons = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, chapterId);
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> lesson = new HashMap<>();
+                lesson.put("lesson_id", rs.getInt("lesson_id"));
+                lesson.put("lesson_name", rs.getString("lesson_name"));
+                lesson.put("lesson_content", rs.getString("lesson_content"));
+                lesson.put("video_link", rs.getString("video_link"));
+                lesson.put("display_order", rs.getInt("display_order"));
+                lesson.put("lesson_type", rs.getString("lesson_type"));
+                lessons.add(lesson);
+            }
+        }
+        return lessons;
+    }
+
+    public Map<String, Object> getFirstLessonInCourse(int courseId) throws SQLException {
+        String sql = """
+        SELECT 
+            cl.lesson_id,
+            l.name as lesson_name,
+            l.content as lesson_content,
+            l.video_link,
+            cl.chapter_id,
+            c.name as chapter_name
+        FROM course_lesson cl
+        JOIN lesson l ON cl.lesson_id = l.id
+        JOIN chapter c ON cl.chapter_id = c.id
+        JOIN course_chapter cc ON cl.chapter_id = cc.chapter_id AND cl.course_id = cc.course_id
+        WHERE cl.course_id = ? AND cl.is_active = 1 AND cc.is_active = 1
+        ORDER BY cc.display_order, cl.display_order
+        LIMIT 1
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                Map<String, Object> lesson = new HashMap<>();
+                lesson.put("lesson_id", rs.getInt("lesson_id"));
+                lesson.put("lesson_name", rs.getString("lesson_name"));
+                lesson.put("lesson_content", rs.getString("lesson_content"));
+                lesson.put("video_link", rs.getString("video_link"));
+                lesson.put("chapter_id", rs.getInt("chapter_id"));
+                lesson.put("chapter_name", rs.getString("chapter_name"));
+                return lesson;
+            }
+        }
+        return null;
+    }
+
+    public Map<String, Object> getLessonInCourse(int courseId, int lessonId) throws SQLException {
+        String sql = """
+        SELECT 
+            cl.lesson_id,
+            l.name as lesson_name,
+            l.content as lesson_content,
+            l.video_link,
+            cl.chapter_id,
+            c.name as chapter_name,
+            cl.display_order as lesson_order,
+            cc.display_order as chapter_order
+        FROM course_lesson cl
+        JOIN lesson l ON cl.lesson_id = l.id
+        JOIN chapter c ON cl.chapter_id = c.id
+        JOIN course_chapter cc ON cl.chapter_id = cc.chapter_id AND cl.course_id = cc.course_id
+        WHERE cl.course_id = ? AND cl.lesson_id = ? AND cl.is_active = 1 AND cc.is_active = 1
+        """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, lessonId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                Map<String, Object> lesson = new HashMap<>();
+                lesson.put("lesson_id", rs.getInt("lesson_id"));
+                lesson.put("lesson_name", rs.getString("lesson_name"));
+                lesson.put("lesson_content", rs.getString("lesson_content"));
+                lesson.put("video_link", rs.getString("video_link"));
+                lesson.put("chapter_id", rs.getInt("chapter_id"));
+                lesson.put("chapter_name", rs.getString("chapter_name"));
+                lesson.put("lesson_order", rs.getInt("lesson_order"));
+                lesson.put("chapter_order", rs.getInt("chapter_order"));
+                return lesson;
+            }
+        }
+        return null;
+    }
+
+    public List<Map<String, Object>> getNextPreviousLessons(int courseId, int currentLessonId) throws SQLException {
+        String sql = """
+        WITH lesson_sequence AS (
+            SELECT 
+                cl.lesson_id,
+                l.name as lesson_name,
+                ROW_NUMBER() OVER (ORDER BY cc.display_order, cl.display_order) as sequence_num
+            FROM course_lesson cl
+            JOIN lesson l ON cl.lesson_id = l.id
+            JOIN course_chapter cc ON cl.chapter_id = cc.chapter_id AND cl.course_id = cc.course_id
+            WHERE cl.course_id = ? AND cl.is_active = 1 AND cc.is_active = 1
+        ),
+        current_lesson AS (
+            SELECT sequence_num FROM lesson_sequence WHERE lesson_id = ?
+        )
+        SELECT 
+            ls.lesson_id,
+            ls.lesson_name,
+            CASE 
+                WHEN ls.sequence_num = (SELECT sequence_num FROM current_lesson) - 1 THEN 'previous'
+                WHEN ls.sequence_num = (SELECT sequence_num FROM current_lesson) + 1 THEN 'next'
+            END as position
+        FROM lesson_sequence ls, current_lesson cl
+        WHERE ls.sequence_num IN (cl.sequence_num - 1, cl.sequence_num + 1)
+        """;
+
+        List<Map<String, Object>> navigation = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, currentLessonId);
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> nav = new HashMap<>();
+                nav.put("lesson_id", rs.getInt("lesson_id"));
+                nav.put("lesson_name", rs.getString("lesson_name"));
+                nav.put("position", rs.getString("position"));
+                navigation.add(nav);
+            }
+        }
+        return navigation;
+    }
+
 }

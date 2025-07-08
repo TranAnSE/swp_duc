@@ -11,6 +11,7 @@ import dal.TestQuestionDAO;
 import dal.GradeDAO;
 import dal.DAOSubject;
 import dal.ChapterDAO;
+import dal.CourseDAO;
 import dal.LessonDAO;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
@@ -18,6 +19,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import model.Test;
 import model.Category;
 import model.Question;
@@ -35,6 +37,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import model.Account;
 import util.AuthUtil;
 import util.RoleConstants;
 
@@ -69,6 +72,12 @@ public class TestController extends HttpServlet {
                     break;
                 case "generateQuestions":
                     generateQuestionsForTest(request, response);
+                    break;
+                case "addToCourse":
+                    addTestToCourse(request, response);
+                    break;
+                case "removeFromCourse":
+                    removeTestFromCourse(request, response);
                     break;
                 default:
                     response.sendRedirect("test");
@@ -143,6 +152,12 @@ public class TestController extends HttpServlet {
                     case "getAllQuestionsByChapter":
                         handleGetAllQuestionsByChapter(request, response);
                         return;
+                    case "createForCourse":
+                        showCreateFormForCourse(request, response);
+                        break;
+                    case "courseTests":
+                        showCourseTests(request, response);
+                        break;
                     default:
                         listTests(request, response);
                         break;
@@ -156,11 +171,106 @@ public class TestController extends HttpServlet {
 
     private void listTests(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
+        // Get pagination parameters
+        int page = 1;
+        int pageSize = 10;
+        String pageParam = request.getParameter("page");
+        String pageSizeParam = request.getParameter("pageSize");
+
+        if (pageParam != null && !pageParam.isEmpty()) {
+            try {
+                page = Integer.parseInt(pageParam);
+                if (page < 1) {
+                    page = 1;
+                }
+            } catch (NumberFormatException e) {
+                page = 1;
+            }
+        }
+
+        if (pageSizeParam != null && !pageSizeParam.isEmpty()) {
+            try {
+                pageSize = Integer.parseInt(pageSizeParam);
+                if (pageSize < 5) {
+                    pageSize = 5;
+                }
+                if (pageSize > 50) {
+                    pageSize = 50;
+                }
+            } catch (NumberFormatException e) {
+                pageSize = 10;
+            }
+        }
+
+        // Get filter parameters
+        String searchKeyword = request.getParameter("search");
+        String testType = request.getParameter("testType");
+        String courseIdParam = request.getParameter("courseId");
+        Integer courseId = null;
+
+        if (courseIdParam != null && !courseIdParam.isEmpty()) {
+            try {
+                courseId = Integer.parseInt(courseIdParam);
+            } catch (NumberFormatException e) {
+                // Ignore invalid course ID
+            }
+        }
+
+        // Get current user for filtering
+        HttpSession session = request.getSession();
+        Account account = (Account) session.getAttribute("account");
+        Integer createdBy = null;
+
+        if (AuthUtil.hasRole(request, RoleConstants.TEACHER) && !AuthUtil.hasRole(request, RoleConstants.ADMIN)) {
+            createdBy = account.getId(); // Teachers only see their own tests
+        }
+
         TestDAO testDAO = new TestDAO();
-        List<Test> testList = testDAO.getAllTests();
+        List<Map<String, Object>> testList = testDAO.getTestsWithPaginationAndFilters(
+                searchKeyword, testType, courseId, createdBy, page, pageSize);
+        int totalTests = testDAO.getTotalTestsCountWithFilters(searchKeyword, testType, courseId, createdBy);
+
+        // Calculate pagination info
+        int totalPages = (int) Math.ceil((double) totalTests / pageSize);
+        int startPage = Math.max(1, page - 2);
+        int endPage = Math.min(totalPages, page + 2);
+        int displayStart = (page - 1) * pageSize + 1;
+        int displayEnd = Math.min(page * pageSize, totalTests);
+
+        // Get category map for backward compatibility
         Map<Integer, String> categoryMap = getCategoryMap();
+
+        // Get courses for filter dropdown
+        CourseDAO courseDAO = new CourseDAO();
+        List<Map<String, Object>> courses = new ArrayList<>();
+        try {
+            if (AuthUtil.hasRole(request, RoleConstants.ADMIN)) {
+                courses = courseDAO.getAllCoursesWithDetails();
+            } else if (AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
+                courses = courseDAO.getCoursesByTeacher(account.getId());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         request.setAttribute("testList", testList);
         request.setAttribute("categoryMap", categoryMap);
+        request.setAttribute("courses", courses);
+        request.setAttribute("currentPage", page);
+        request.setAttribute("pageSize", pageSize);
+        request.setAttribute("totalPages", totalPages);
+        request.setAttribute("totalTests", totalTests);
+        request.setAttribute("startPage", startPage);
+        request.setAttribute("endPage", endPage);
+        request.setAttribute("displayStart", displayStart);
+        request.setAttribute("displayEnd", displayEnd);
+
+        // Preserve filter parameters
+        request.setAttribute("searchKeyword", searchKeyword);
+        request.setAttribute("selectedTestType", testType);
+        request.setAttribute("selectedCourseId", courseId);
+
         if (AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
             RequestDispatcher dispatcher = request.getRequestDispatcher("/teacher/manageTests.jsp");
             dispatcher.forward(request, response);
@@ -289,30 +399,96 @@ public class TestController extends HttpServlet {
             throws IOException {
         TestDAO testDAO = new TestDAO();
         TestQuestionDAO testQuestionDAO = new TestQuestionDAO();
-        String name = request.getParameter("name");
-        String description = request.getParameter("description");
-        boolean practice = "true".equals(request.getParameter("practice"));
-        int categoryId = Integer.parseInt(request.getParameter("categoryId"));
 
-        // Create and save new test
-        Test test = new Test(0, name, description, practice, categoryId);
-        int testId = testDAO.addTest(test);
+        try {
+            HttpSession session = request.getSession();
+            Account account = (Account) session.getAttribute("account");
 
-        // Handle question selection
-        String[] questionIds = request.getParameterValues("questionIds");
-        if (questionIds != null && questionIds.length > 0) {
-            // Save selected questions to test_question table
-            for (String questionIdStr : questionIds) {
-                try {
-                    int questionId = Integer.parseInt(questionIdStr);
-                    testQuestionDAO.addTestQuestion(testId, questionId);
-                } catch (NumberFormatException e) {
-                    // Skip invalid question IDs
+            String name = request.getParameter("name");
+            String description = request.getParameter("description");
+            boolean practice = "true".equals(request.getParameter("practice"));
+
+            // Check if this is a course-integrated test
+            String courseIdParam = request.getParameter("courseId");
+            String chapterIdParam = request.getParameter("chapterId");
+            String durationParam = request.getParameter("duration");
+            String numQuestionsParam = request.getParameter("numQuestions");
+            String testOrderParam = request.getParameter("testOrder");
+
+            Test test = new Test();
+            test.setName(name);
+            test.setDescription(description);
+            test.setIs_practice(practice);
+
+            if (account != null) {
+                test.setCreated_by(account.getId());
+            }
+
+            if (courseIdParam != null && !courseIdParam.isEmpty()) {
+                // Course-integrated test
+                test.setCourse_id(Integer.parseInt(courseIdParam));
+
+                if (chapterIdParam != null && !chapterIdParam.isEmpty()) {
+                    test.setChapter_id(Integer.parseInt(chapterIdParam));
+                }
+
+                if (durationParam != null && !durationParam.isEmpty()) {
+                    test.setDuration_minutes(Integer.parseInt(durationParam));
+                }
+
+                if (numQuestionsParam != null && !numQuestionsParam.isEmpty()) {
+                    test.setNum_questions(Integer.parseInt(numQuestionsParam));
+                }
+
+                if (testOrderParam != null && !testOrderParam.isEmpty()) {
+                    test.setTest_order(Integer.parseInt(testOrderParam));
+                }
+            } else {
+                // Legacy test with category
+                int categoryId = Integer.parseInt(request.getParameter("categoryId"));
+                test.setCategory_id(categoryId);
+
+                // Set default values for new fields
+                test.setDuration_minutes(30);
+                test.setNum_questions(10);
+            }
+
+            int testId = testDAO.addTest(test);
+
+            if (testId > 0) {
+                // Handle question selection
+                String[] questionIds = request.getParameterValues("questionIds");
+                if (questionIds != null && questionIds.length > 0) {
+                    for (String questionIdStr : questionIds) {
+                        try {
+                            int questionId = Integer.parseInt(questionIdStr);
+                            testQuestionDAO.addTestQuestion(testId, questionId);
+                        } catch (NumberFormatException e) {
+                            // Skip invalid question IDs
+                        }
+                    }
+                }
+
+                // Redirect based on test type
+                if (test.getCourse_id() != null) {
+                    response.sendRedirect("course?action=build&id=" + test.getCourse_id());
+                } else {
+                    response.sendRedirect("test");
+                }
+            } else {
+                request.setAttribute("error", "Failed to create test");
+                if (test.getCourse_id() != null) {
+                    showCreateFormForCourse(request, response);
+                } else {
+                    showCreateForm(request, response);
                 }
             }
-        }
 
-        response.sendRedirect("test");
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Error creating test: " + e.getMessage());
+            response.sendRedirect("test");
+        }
     }
 
     private void updateTest(HttpServletRequest request, HttpServletResponse response)
@@ -1080,6 +1256,218 @@ public class TestController extends HttpServlet {
             e.printStackTrace();
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.getWriter().write("[]");
+        }
+    }
+
+    private void showCreateFormForCourse(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            String chapterIdParam = request.getParameter("chapterId");
+            Integer chapterId = null;
+
+            if (chapterIdParam != null && !chapterIdParam.isEmpty()) {
+                chapterId = Integer.parseInt(chapterIdParam);
+            }
+
+            // Get course details
+            CourseDAO courseDAO = new CourseDAO();
+            Map<String, Object> courseDetails = courseDAO.getCourseDetails(courseId);
+
+            if (courseDetails == null) {
+                request.setAttribute("error", "Course not found!");
+                response.sendRedirect("course");
+                return;
+            }
+
+            // Get course chapters for chapter selection
+            List<Map<String, Object>> courseChapters = courseDAO.getCourseChapters(courseId);
+
+            // Create new test object with course context
+            Test test = new Test();
+            test.setCourse_id(courseId);
+            test.setChapter_id(chapterId);
+
+            // Get next test order
+            TestDAO testDAO = new TestDAO();
+            int nextOrder = testDAO.getNextTestOrder(courseId, chapterId);
+            test.setTest_order(nextOrder);
+
+            request.setAttribute("test", test);
+            request.setAttribute("courseDetails", courseDetails);
+            request.setAttribute("courseChapters", courseChapters);
+            request.setAttribute("isForCourse", true);
+            request.setAttribute("selectedChapterId", chapterId);
+
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/Test/addTestForCourse.jsp");
+            dispatcher.forward(request, response);
+
+        } catch (NumberFormatException e) {
+            request.setAttribute("error", "Invalid course or chapter ID");
+            response.sendRedirect("course");
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Error loading course test form: " + e.getMessage());
+            response.sendRedirect("course");
+        }
+    }
+
+    private void showCourseTests(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+
+            // Get pagination parameters
+            int page = 1;
+            int pageSize = 10;
+            String pageParam = request.getParameter("page");
+            String pageSizeParam = request.getParameter("pageSize");
+
+            if (pageParam != null && !pageParam.isEmpty()) {
+                try {
+                    page = Integer.parseInt(pageParam);
+                    if (page < 1) {
+                        page = 1;
+                    }
+                } catch (NumberFormatException e) {
+                    page = 1;
+                }
+            }
+
+            if (pageSizeParam != null && !pageSizeParam.isEmpty()) {
+                try {
+                    pageSize = Integer.parseInt(pageSizeParam);
+                    if (pageSize < 5) {
+                        pageSize = 5;
+                    }
+                    if (pageSize > 50) {
+                        pageSize = 50;
+                    }
+                } catch (NumberFormatException e) {
+                    pageSize = 10;
+                }
+            }
+
+            // Get course details
+            CourseDAO courseDAO = new CourseDAO();
+            Map<String, Object> courseDetails = courseDAO.getCourseDetails(courseId);
+
+            if (courseDetails == null) {
+                request.setAttribute("error", "Course not found!");
+                response.sendRedirect("course");
+                return;
+            }
+
+            // Get tests with pagination
+            TestDAO testDAO = new TestDAO();
+            List<Map<String, Object>> tests = testDAO.getTestsByCourseWithPagination(courseId, page, pageSize);
+            int totalTests = testDAO.getTotalTestsByCourseCount(courseId);
+
+            // Calculate pagination info
+            int totalPages = (int) Math.ceil((double) totalTests / pageSize);
+            int startPage = Math.max(1, page - 2);
+            int endPage = Math.min(totalPages, page + 2);
+            int displayStart = (page - 1) * pageSize + 1;
+            int displayEnd = Math.min(page * pageSize, totalTests);
+
+            // Get course chapters for context
+            List<Map<String, Object>> courseChapters = courseDAO.getCourseChapters(courseId);
+
+            request.setAttribute("courseDetails", courseDetails);
+            request.setAttribute("tests", tests);
+            request.setAttribute("courseChapters", courseChapters);
+            request.setAttribute("currentPage", page);
+            request.setAttribute("pageSize", pageSize);
+            request.setAttribute("totalPages", totalPages);
+            request.setAttribute("totalTests", totalTests);
+            request.setAttribute("startPage", startPage);
+            request.setAttribute("endPage", endPage);
+            request.setAttribute("displayStart", displayStart);
+            request.setAttribute("displayEnd", displayEnd);
+
+            RequestDispatcher dispatcher = request.getRequestDispatcher("/Test/courseTestList.jsp");
+            dispatcher.forward(request, response);
+
+        } catch (NumberFormatException e) {
+            request.setAttribute("error", "Invalid course ID");
+            response.sendRedirect("course");
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Error loading course tests: " + e.getMessage());
+            response.sendRedirect("course");
+        }
+    }
+
+    private void addTestToCourse(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            int testId = Integer.parseInt(request.getParameter("testId"));
+            String chapterIdParam = request.getParameter("chapterId");
+            Integer chapterId = null;
+
+            if (chapterIdParam != null && !chapterIdParam.isEmpty()) {
+                chapterId = Integer.parseInt(chapterIdParam);
+            }
+
+            // Get test details to determine type
+            TestDAO testDAO = new TestDAO();
+            Test test = testDAO.getTestById(testId);
+
+            if (test == null) {
+                response.getWriter().write("{\"success\": false, \"message\": \"Test not found\"}");
+                return;
+            }
+
+            // Get next display order
+            CourseDAO courseDAO = new CourseDAO();
+            int displayOrder = courseDAO.getNextTestOrder(courseId, chapterId);
+            String testType = test.isIs_practice() ? "PRACTICE" : "OFFICIAL";
+
+            boolean success = courseDAO.addTestToCourse(courseId, testId, chapterId, displayOrder, testType);
+
+            if (success) {
+                response.getWriter().write("{\"success\": true, \"message\": \"Test added to course successfully\"}");
+            } else {
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to add test to course\"}");
+            }
+
+        } catch (NumberFormatException e) {
+            response.getWriter().write("{\"success\": false, \"message\": \"Invalid number format\"}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+        }
+    }
+
+    private void removeTestFromCourse(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            int testId = Integer.parseInt(request.getParameter("testId"));
+
+            CourseDAO courseDAO = new CourseDAO();
+            boolean success = courseDAO.removeTestFromCourse(courseId, testId);
+
+            if (success) {
+                response.getWriter().write("{\"success\": true, \"message\": \"Test removed from course successfully\"}");
+            } else {
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to remove test from course\"}");
+            }
+
+        } catch (NumberFormatException e) {
+            response.getWriter().write("{\"success\": false, \"message\": \"Invalid number format\"}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
         }
     }
 }

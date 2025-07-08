@@ -1,24 +1,32 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package model;
 
-/**
- *
- * @author BuiNgocLinh
- */
+import java.time.LocalDateTime;
+
 public class Test {
+
     private int id;
     private String name;
     private String description;
     private boolean is_practice;
     private int category_id;
+    private int duration_minutes;
+    private int num_questions;
+    private Integer course_id;
+    private Integer chapter_id;
+    private int test_order;
+    private Integer created_by;
+    private LocalDateTime created_at;
+    private LocalDateTime updated_at;
 
+    // Constructors
     public Test() {
+        this.duration_minutes = 30; // Default 30 minutes
+        this.num_questions = 10; // Default 10 questions
+        this.test_order = 1;
     }
 
     public Test(int id, String name, String description, boolean is_practice, int category_id) {
+        this();
         this.id = id;
         this.name = name;
         this.description = description;
@@ -26,6 +34,22 @@ public class Test {
         this.category_id = category_id;
     }
 
+    // New constructor for course-integrated tests
+    public Test(String name, String description, boolean is_practice,
+            int duration_minutes, int num_questions, Integer course_id,
+            Integer chapter_id, Integer created_by) {
+        this();
+        this.name = name;
+        this.description = description;
+        this.is_practice = is_practice;
+        this.duration_minutes = duration_minutes;
+        this.num_questions = num_questions;
+        this.course_id = course_id;
+        this.chapter_id = chapter_id;
+        this.created_by = created_by;
+    }
+
+    // Getters and Setters
     public int getId() {
         return id;
     }
@@ -65,6 +89,91 @@ public class Test {
     public void setCategory_id(int category_id) {
         this.category_id = category_id;
     }
-    
-    
+
+    public int getDuration_minutes() {
+        return duration_minutes;
+    }
+
+    public void setDuration_minutes(int duration_minutes) {
+        this.duration_minutes = duration_minutes;
+    }
+
+    public int getNum_questions() {
+        return num_questions;
+    }
+
+    public void setNum_questions(int num_questions) {
+        this.num_questions = num_questions;
+    }
+
+    public Integer getCourse_id() {
+        return course_id;
+    }
+
+    public void setCourse_id(Integer course_id) {
+        this.course_id = course_id;
+    }
+
+    public Integer getChapter_id() {
+        return chapter_id;
+    }
+
+    public void setChapter_id(Integer chapter_id) {
+        this.chapter_id = chapter_id;
+    }
+
+    public int getTest_order() {
+        return test_order;
+    }
+
+    public void setTest_order(int test_order) {
+        this.test_order = test_order;
+    }
+
+    public Integer getCreated_by() {
+        return created_by;
+    }
+
+    public void setCreated_by(Integer created_by) {
+        this.created_by = created_by;
+    }
+
+    public LocalDateTime getCreated_at() {
+        return created_at;
+    }
+
+    public void setCreated_at(LocalDateTime created_at) {
+        this.created_at = created_at;
+    }
+
+    public LocalDateTime getUpdated_at() {
+        return updated_at;
+    }
+
+    public void setUpdated_at(LocalDateTime updated_at) {
+        this.updated_at = updated_at;
+    }
+
+    // Helper methods
+    public boolean isCourseIntegrated() {
+        return course_id != null && course_id > 0;
+    }
+
+    public boolean isChapterSpecific() {
+        return chapter_id != null && chapter_id > 0;
+    }
+
+    public String getTestType() {
+        return is_practice ? "Practice Test" : "Official Test";
+    }
+
+    public String getTestScope() {
+        if (isChapterSpecific()) {
+            return "Chapter Test";
+        } else if (isCourseIntegrated()) {
+            return "Course Test";
+        } else {
+            return "General Test";
+        }
+    }
 }

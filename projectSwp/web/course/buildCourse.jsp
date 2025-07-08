@@ -526,7 +526,7 @@
                            class="btn-custom btn-warning-custom">
                             <i class="fas fa-question-circle"></i> Create Questions
                         </a>
-                        <a href="${pageContext.request.contextPath}/test?action=create&returnTo=course&courseId=${courseId}" 
+                        <a href="${pageContext.request.contextPath}/test?action=createForCourse&courseId=${courseId}"
                            class="btn-custom btn-info-custom">
                             <i class="fas fa-clipboard-check"></i> Create Test
                         </a>
@@ -665,6 +665,45 @@
                                                     </div>
                                                 </c:if>
                                             </div>
+                                        </div>
+                                    </c:forEach>
+                                </div>
+                            </c:if>
+
+                            <!-- Tests Section -->
+                            <c:if test="${not empty courseTests}">
+                                <h5><i class="fas fa-clipboard-check"></i> Tests (${courseTests.size()})</h5>
+                                <div id="testsList" class="sortable-list">
+                                    <c:forEach items="${courseTests}" var="test">
+                                        <div class="content-item" data-id="${test.test_id}" data-type="test">
+                                            <div class="content-item-header">
+                                                <div>
+                                                    <span class="content-type-badge badge-test">
+                                                        ${test.is_practice ? 'Practice' : 'Official'} Test
+                                                    </span>
+                                                    <strong>${test.test_name}</strong>
+                                                    <c:if test="${not empty test.chapter_name}">
+                                                        <small class="text-muted">(${test.chapter_name})</small>
+                                                    </c:if>
+                                                    <span class="text-info ml-2">
+                                                        <i class="fas fa-clock"></i> ${test.duration_minutes}min
+                                                        <i class="fas fa-question-circle ml-1"></i> ${test.num_questions}q
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <button class="btn btn-sm btn-outline-primary" 
+                                                            onclick="editTest(${test.test_id})">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger" 
+                                                            onclick="removeFromCourse('test', ${test.test_id})">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <c:if test="${not empty test.test_description}">
+                                                <p class="text-muted mb-0">${test.test_description}</p>
+                                            </c:if>
                                         </div>
                                     </c:forEach>
                                 </div>
@@ -1620,6 +1659,15 @@
                                             document.addEventListener('DOMContentLoaded', function () {
                                                 setTimeout(debugButtons, 1000); // Wait 1 second then debug
                                             });
+
+                                            function showTestModal() {
+                                                // Implementation for showing available tests modal
+                                                alert('Test selection modal - to be implemented');
+                                            }
+
+                                            function editTest(testId) {
+                                                window.open('${pageContext.request.contextPath}/test?action=edit&id=' + testId, '_blank');
+                                            }
         </script>
     </body>
 </html>

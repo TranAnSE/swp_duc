@@ -33,9 +33,9 @@ import java.util.Set;
  *
  * @author Na
  */
-
 @WebServlet("/student/taketest")
 public class TakeTestController extends HttpServlet {
+
     private TestDAO testDAO;
     private TestRecordDAO testRecordDAO;
     private QuestionDAO questionDAO;
@@ -51,7 +51,7 @@ public class TakeTestController extends HttpServlet {
         questionOptionDAO = new QuestionOptionDAO();
         questionRecordDAO = new QuestionRecordDAO();
         categoryDAO = new CategoryDAO();
-        
+
         // Khởi tạo dữ liệu test nếu cần
         questionRecordDAO.initializeTestDataIfNeeded();
     }
@@ -112,7 +112,7 @@ public class TakeTestController extends HttpServlet {
         try {
             HttpSession session = request.getSession();
             Student student = (Student) session.getAttribute("student");
-            
+
             if (student == null) {
                 response.sendRedirect("/login.jsp");
                 return;
@@ -165,7 +165,7 @@ public class TakeTestController extends HttpServlet {
                 showTestList(request, response);
                 return;
             }
-            
+
             // Debug test info
             testDAO.debugTestInfo(testId);
 
@@ -200,9 +200,9 @@ public class TakeTestController extends HttpServlet {
             session.setAttribute("currentTestId", testId);
             session.setAttribute("currentTestRecordId", testRecordId);
             session.setAttribute("currentQuestionIndex", 0);
-            
-            System.out.println("Session updated with testId=" + testId + 
-                              ", testRecordId=" + testRecordId + ", questionIndex=0");
+
+            System.out.println("Session updated with testId=" + testId
+                    + ", testRecordId=" + testRecordId + ", questionIndex=0");
             System.out.println("===== START TEST COMPLETED =====\n");
 
             // Redirect to first question
@@ -226,83 +226,80 @@ public class TakeTestController extends HttpServlet {
             HttpSession session = request.getSession();
             Integer testId = (Integer) session.getAttribute("currentTestId");
             Integer testRecordId = (Integer) session.getAttribute("currentTestRecordId");
-            
+
             if (testId == null || testRecordId == null) {
                 response.sendRedirect("taketest");
                 return;
             }
-            
+
             Test test = testDAO.getTestById(testId);
             if (test == null) {
                 response.sendRedirect("taketest");
                 return;
             }
-            
+
             // Lấy danh sách câu hỏi
             List<Question> questions = questionDAO.getQuestionsByTest(testId);
-            
+
             // Lấy các câu trả lời đã lưu (nếu có)
             Map<Integer, Integer> previousAnswers = new HashMap<>();
             List<QuestionRecord> records = questionRecordDAO.getQuestionRecordsByTestRecord(testRecordId);
             for (QuestionRecord record : records) {
                 previousAnswers.put(record.getQuestion_id(), record.getOption_id());
             }
-            
+
             // Lấy options cho mỗi câu hỏi
             Map<Integer, List<QuestionOption>> allOptions = new HashMap<>();
             for (Question question : questions) {
                 List<QuestionOption> options = questionOptionDAO.getOptionsByQuestion(question.getId());
                 allOptions.put(question.getId(), options);
             }
-            
+
             // Lấy danh sách hình ảnh cho câu hỏi
             ImageDAO imageDAO = new ImageDAO(this.questionDAO.getDBConnection());
             List<Image> images = imageDAO.findAll();
-            
+
             // Xử lý thời gian làm bài
             int duration = 0; // Mặc định không có thời gian
-            
+
             // Nếu là bài test thực sự (không phải luyện tập), mới cần thời gian
             if (!test.isIs_practice()) {
                 try {
-                    // Debug: In ra SQL trực tiếp
-                    System.out.println("DEBUG SQL: SELECT * FROM Category WHERE id = " + test.getCategory_id());
-                    
-                    // Lấy trực tiếp từ database thay vì qua DAO để debug
-                    try (Connection conn = new DBContext().getConnection();
-                         PreparedStatement ps = conn.prepareStatement("SELECT * FROM Category WHERE id = ?")) {
-                        ps.setInt(1, test.getCategory_id());
+                    // First try to get duration from test table directly
+                    String durationSql = "SELECT duration_minutes FROM test WHERE id = ?";
+                    try (Connection conn = new DBContext().getConnection(); PreparedStatement ps = conn.prepareStatement(durationSql)) {
+                        ps.setInt(1, testId);
                         try (ResultSet rs = ps.executeQuery()) {
                             if (rs.next()) {
-                                duration = rs.getInt("duration");
-                                System.out.println("Truy vấn SQL trực tiếp: Lấy được duration = " + duration + " phút (category_id=" + test.getCategory_id() + ")");
+                                duration = rs.getInt("duration_minutes");
+                                System.out.println("Got duration from test table: " + duration + " minutes (test_id=" + testId + ")");
                             } else {
-                                System.out.println("Truy vấn SQL trực tiếp: Không tìm thấy Category với id = " + test.getCategory_id());
+                                System.out.println("Test ID " + testId + " not found in test table");
                             }
                         }
                     } catch (Exception sqlEx) {
-                        System.out.println("Lỗi SQL trực tiếp: " + sqlEx.getMessage());
+                        System.out.println("Error getting duration from test table: " + sqlEx.getMessage());
                     }
-                    
-                    // Thử cách thông thường nếu trên không được
+
+                    // Fallback to category if test duration is not set
                     if (duration <= 0) {
                         Category category = categoryDAO.getCategoryById(test.getCategory_id());
                         if (category != null && category.getDuration() > 0) {
                             duration = category.getDuration();
-                            System.out.println("Lấy được duration từ Category thông qua DAO: " + duration + " phút (category_id=" + test.getCategory_id() + ")");
+                            System.out.println("Fallback to category duration: " + duration + " minutes (category_id=" + test.getCategory_id() + ")");
                         } else {
-                            System.out.println("Không tìm thấy Category hoặc duration = 0, sử dụng mặc định: 30 phút");
-                            duration = 30; // Mặc định 30 phút cho bài test thực sự
+                            System.out.println("No valid duration found, using default: 30 minutes");
+                            duration = 30; // Default 30 minutes for official tests
                         }
                     }
                 } catch (Exception e) {
-                    System.out.println("Lỗi khi lấy duration từ Category: " + e.getMessage());
-                    duration = 30; // Mặc định 30 phút cho bài test thực sự nếu có lỗi
+                    System.out.println("Error getting test duration: " + e.getMessage());
+                    duration = 30; // Default 30 minutes if error occurs
                 }
             } else {
-                System.out.println("Bài test " + testId + " là bài luyện tập (is_practice=true), không áp dụng thời gian giới hạn");
+                System.out.println("Test " + testId + " is practice test (is_practice=true), no time limit applied");
             }
-            
+
             // Lấy thời gian bắt đầu làm bài từ TestRecord hoặc thiết lập thời gian bắt đầu mới
             Long startTime = (Long) session.getAttribute("testStartTime");
             if (startTime == null) {
@@ -323,9 +320,9 @@ public class TakeTestController extends HttpServlet {
             } else {
                 System.out.println("Lấy startTime từ session: " + new java.util.Date(startTime));
             }
-            
+
             System.out.println("Test ID: " + testId + ", Is Practice: " + test.isIs_practice() + ", Duration: " + duration + " minutes, Start Time: " + new java.util.Date(startTime));
-            
+
             // Đặt dữ liệu vào request
             request.setAttribute("test", test);
             request.setAttribute("questions", questions);
@@ -336,13 +333,13 @@ public class TakeTestController extends HttpServlet {
             request.setAttribute("startTime", Long.toString(startTime)); // Truyền thời gian bắt đầu dưới dạng String
             request.setAttribute("isPractice", test.isIs_practice()); // Thêm thông tin về loại bài test
             request.setAttribute("images", images); // Thêm danh sách hình ảnh
-            
+
             // Hiển thị lỗi nếu có
             String error = (String) request.getAttribute("error");
             if (error != null) {
                 request.setAttribute("error", error);
             }
-            
+
             // Chuyển hướng đến trang hiển thị tất cả câu hỏi
             RequestDispatcher dispatcher = request.getRequestDispatcher("/student/takeTest.jsp");
             dispatcher.forward(request, response);
@@ -351,7 +348,7 @@ public class TakeTestController extends HttpServlet {
             response.sendRedirect("taketest");
         }
     }
-    
+
     // Phương thức xử lý nộp bài với tất cả câu hỏi
     private void submitAllAnswers(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
@@ -419,14 +416,14 @@ public class TakeTestController extends HttpServlet {
             if (testRecordId != null) {
                 // Clear test timing information from session
                 session.removeAttribute("testStartTime");
-                
+
                 // Check question records
                 List<QuestionRecord> records = questionRecordDAO.getQuestionRecordsByTestRecord(testRecordId);
                 System.out.println("Number of question records: " + records.size());
-                
+
                 // Lấy danh sách câu hỏi
                 List<Question> questions = questionDAO.getQuestionsByTest(testId);
-                
+
                 // Kiểm tra xem đã trả lời đủ câu hỏi chưa
                 Set<Integer> answeredQuestions = new HashSet<>();
                 for (QuestionRecord record : records) {
@@ -439,17 +436,17 @@ public class TakeTestController extends HttpServlet {
                     response.sendRedirect("taketest?action=question");
                     return;
                 }
-                
+
                 // Tính điểm thực tế dựa trên câu trả lời
                 double score = questionRecordDAO.calculateScore(testRecordId);
                 System.out.println("ACTUAL SCORE CALCULATION: " + score);
-                
+
                 try {
                     // Attempt to save score
                     System.out.println("Calling finishTestRecord with testRecordId=" + testRecordId + ", score=" + score);
                     testRecordDAO.finishTestRecord(testRecordId, score);
                     System.out.println("finishTestRecord completed successfully");
-                    
+
                     // Verify score was saved
                     TestRecord record = testRecordDAO.getTestRecordById(testRecordId);
                     if (record != null) {
@@ -466,7 +463,7 @@ public class TakeTestController extends HttpServlet {
                 session.removeAttribute("currentTestId");
                 session.removeAttribute("currentTestRecordId");
                 session.removeAttribute("currentQuestionIndex");
-                
+
                 System.out.println("Redirecting to result page: taketest?action=result&testRecordId=" + testRecordId);
                 // Redirect to result page with valid testRecordId
                 response.sendRedirect("taketest?action=result&testRecordId=" + testRecordId);
@@ -494,10 +491,10 @@ public class TakeTestController extends HttpServlet {
                 response.sendRedirect("taketest");
                 return;
             }
-            
+
             int testRecordId = Integer.parseInt(testRecordIdParam);
             TestRecord testRecord = testRecordDAO.getTestRecordById(testRecordId);
-            
+
             if (testRecord == null) {
                 request.setAttribute("error", "Không tìm thấy kết quả test!");
                 showTestList(request, response);
@@ -505,37 +502,37 @@ public class TakeTestController extends HttpServlet {
             }
 
             Test test = testDAO.getTestById(testRecord.getTest_id());
-            
+
             // Lấy tất cả câu trả lời từ bảng question_record
             List<QuestionRecord> questionRecords = questionRecordDAO.getQuestionRecordsByTestRecord(testRecordId);
-            
+
             // Tạo map questionId -> List<QuestionRecord> để hiển thị mỗi câu hỏi 1 lần
             Map<Integer, List<QuestionRecord>> questionRecordMap = new HashMap<>();
             for (QuestionRecord record : questionRecords) {
                 questionRecordMap.computeIfAbsent(record.getQuestion_id(), k -> new java.util.ArrayList<>()).add(record);
             }
             request.setAttribute("questionRecordMap", questionRecordMap);
-            
+
             // Lấy thông tin chi tiết của các câu hỏi
             Map<Integer, Question> questionMap = new HashMap<>();
             Map<Integer, List<QuestionOption>> optionsMap = new HashMap<>();
-            
+
             for (QuestionRecord record : questionRecords) {
                 int questionId = record.getQuestion_id();
-                
+
                 // Chỉ lấy thông tin câu hỏi nếu chưa có trong map
                 if (!questionMap.containsKey(questionId)) {
                     Question question = questionDAO.getQuestionById(questionId);
                     if (question != null) {
                         questionMap.put(questionId, question);
-                        
+
                         // Lấy tất cả các lựa chọn của câu hỏi
                         List<QuestionOption> options = questionOptionDAO.getOptionsByQuestion(questionId);
                         optionsMap.put(questionId, options);
                     }
                 }
             }
-            
+
             // Lấy danh sách hình ảnh cho câu hỏi (giống takeTest.jsp)
             ImageDAO imageDAO = new ImageDAO(this.questionDAO.getDBConnection());
             List<Image> images = imageDAO.findAll();
@@ -574,7 +571,7 @@ public class TakeTestController extends HttpServlet {
             System.out.println("DEBUG: Getting test records for student ID: " + student.getId());
             List<TestRecord> testRecords = testRecordDAO.getTestRecordsByStudent(student.getId());
             System.out.println("DEBUG: Found " + testRecords.size() + " test records");
-            
+
             Map<Integer, String> testMap = new HashMap<>();
 
             for (TestRecord record : testRecords) {
@@ -612,4 +609,4 @@ public class TakeTestController extends HttpServlet {
         }
         return categoryMap;
     }
-} 
+}

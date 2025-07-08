@@ -7,11 +7,13 @@ package dal;
 import model.Test;
 import java.sql.*;
 import java.util.*;
+
 /**
  *
  * @author Na
  */
 public class TestDAO extends DBContext {
+
     private Connection conn;
 
     // ✅ Constructor khởi tạo kết nối
@@ -24,15 +26,30 @@ public class TestDAO extends DBContext {
     }
 
     public int addTest(Test test) {
-        String sql = "INSERT INTO test (name, description, is_practice, category_id) VALUES (?, ?, ?, ?)";
+        // If this is a course-integrated test, use the new method
+        if (test.getCourse_id() != null) {
+            return addCourseTest(test);
+        }
+
+        // Otherwise, use legacy method for backward compatibility
+        String sql = "INSERT INTO test (name, description, is_practice, category_id, "
+                + "duration_minutes, num_questions, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, test.getName());
             ps.setString(2, test.getDescription());
             ps.setBoolean(3, test.isIs_practice());
             ps.setInt(4, test.getCategory_id());
+            ps.setInt(5, test.getDuration_minutes());
+            ps.setInt(6, test.getNum_questions());
+
+            if (test.getCreated_by() != null) {
+                ps.setInt(7, test.getCreated_by());
+            } else {
+                ps.setNull(7, Types.INTEGER);
+            }
+
             ps.executeUpdate();
-            
-            // Lấy ID của test vừa tạo
+
             ResultSet rs = ps.getGeneratedKeys();
             if (rs.next()) {
                 return rs.getInt(1);
@@ -40,17 +57,34 @@ public class TestDAO extends DBContext {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return -1; // Trả về -1 nếu có lỗi
+        return -1;
     }
 
     public void updateTest(Test test) {
-        String sql = "UPDATE test SET name = ?, description = ?, is_practice = ?, category_id = ? WHERE id = ?";
+        String sql = "UPDATE test SET name = ?, description = ?, is_practice = ?, "
+                + "duration_minutes = ?, num_questions = ?, course_id = ?, chapter_id = ?, "
+                + "test_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, test.getName());
             ps.setString(2, test.getDescription());
             ps.setBoolean(3, test.isIs_practice());
-            ps.setInt(4, test.getCategory_id());
-            ps.setInt(5, test.getId());
+            ps.setInt(4, test.getDuration_minutes());
+            ps.setInt(5, test.getNum_questions());
+
+            if (test.getCourse_id() != null) {
+                ps.setInt(6, test.getCourse_id());
+            } else {
+                ps.setNull(6, Types.INTEGER);
+            }
+
+            if (test.getChapter_id() != null) {
+                ps.setInt(7, test.getChapter_id());
+            } else {
+                ps.setNull(7, Types.INTEGER);
+            }
+
+            ps.setInt(8, test.getTest_order());
+            ps.setInt(9, test.getId());
             ps.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -59,34 +93,38 @@ public class TestDAO extends DBContext {
 
     public void deleteTest(int id) {
         try {
-            // Start a transaction
             conn.setAutoCommit(false);
-            
-            // First delete related records in test_question table
+
+            // Delete from course_test table first
+            String deleteCourseTest = "DELETE FROM course_test WHERE test_id = ?";
+            try (PreparedStatement ps = conn.prepareStatement(deleteCourseTest)) {
+                ps.setInt(1, id);
+                ps.executeUpdate();
+            }
+
+            // Delete related records in test_question table
             String deleteTestQuestions = "DELETE FROM test_question WHERE test_id = ?";
             try (PreparedStatement ps = conn.prepareStatement(deleteTestQuestions)) {
                 ps.setInt(1, id);
                 ps.executeUpdate();
             }
-            
-            // Then delete related records in test_record table
+
+            // Delete related records in test_record table
             String deleteTestRecords = "DELETE FROM test_record WHERE test_id = ?";
             try (PreparedStatement ps = conn.prepareStatement(deleteTestRecords)) {
                 ps.setInt(1, id);
                 ps.executeUpdate();
             }
-            
+
             // Finally delete the test itself
             String deleteTest = "DELETE FROM test WHERE id = ?";
             try (PreparedStatement ps = conn.prepareStatement(deleteTest)) {
                 ps.setInt(1, id);
                 ps.executeUpdate();
             }
-            
-            // Commit the transaction
+
             conn.commit();
         } catch (SQLException e) {
-            // Rollback in case of error
             try {
                 conn.rollback();
             } catch (SQLException ex) {
@@ -94,7 +132,6 @@ public class TestDAO extends DBContext {
             }
             e.printStackTrace();
         } finally {
-            // Reset auto-commit
             try {
                 conn.setAutoCommit(true);
             } catch (SQLException e) {
@@ -109,13 +146,30 @@ public class TestDAO extends DBContext {
             ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
-                return new Test(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("description"),
-                    rs.getBoolean("is_practice"),
-                    rs.getInt("category_id")
-                );
+                Test test = new Test();
+                test.setId(rs.getInt("id"));
+                test.setName(rs.getString("name"));
+                test.setDescription(rs.getString("description"));
+                test.setIs_practice(rs.getBoolean("is_practice"));
+                test.setCategory_id(rs.getInt("category_id"));
+                test.setDuration_minutes(rs.getInt("duration_minutes"));
+                test.setNum_questions(rs.getInt("num_questions"));
+                test.setCourse_id(rs.getObject("course_id", Integer.class));
+                test.setChapter_id(rs.getObject("chapter_id", Integer.class));
+                test.setTest_order(rs.getInt("test_order"));
+                test.setCreated_by(rs.getObject("created_by", Integer.class));
+
+                Timestamp createdAt = rs.getTimestamp("created_at");
+                if (createdAt != null) {
+                    test.setCreated_at(createdAt.toLocalDateTime());
+                }
+
+                Timestamp updatedAt = rs.getTimestamp("updated_at");
+                if (updatedAt != null) {
+                    test.setUpdated_at(updatedAt.toLocalDateTime());
+                }
+
+                return test;
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -123,19 +177,50 @@ public class TestDAO extends DBContext {
         return null;
     }
 
+    // Get next test order for course
+    public int getNextTestOrder(int courseId, Integer chapterId) {
+        String sql;
+        if (chapterId != null) {
+            sql = "SELECT COALESCE(MAX(test_order), 0) + 1 FROM test WHERE course_id = ? AND chapter_id = ?";
+        } else {
+            sql = "SELECT COALESCE(MAX(test_order), 0) + 1 FROM test WHERE course_id = ? AND chapter_id IS NULL";
+        }
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            if (chapterId != null) {
+                ps.setInt(2, chapterId);
+            }
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 1;
+    }
+
     public List<Test> getAllTests() {
         List<Test> list = new ArrayList<>();
-        String sql = "SELECT * FROM test";
+        String sql = "SELECT * FROM test ORDER BY created_at DESC";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
-                list.add(new Test(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("description"),
-                    rs.getBoolean("is_practice"),
-                    rs.getInt("category_id")
-                ));
+                Test test = new Test();
+                test.setId(rs.getInt("id"));
+                test.setName(rs.getString("name"));
+                test.setDescription(rs.getString("description"));
+                test.setIs_practice(rs.getBoolean("is_practice"));
+                test.setCategory_id(rs.getInt("category_id"));
+                test.setDuration_minutes(rs.getInt("duration_minutes"));
+                test.setNum_questions(rs.getInt("num_questions"));
+                test.setCourse_id(rs.getObject("course_id", Integer.class));
+                test.setChapter_id(rs.getObject("chapter_id", Integer.class));
+                test.setTest_order(rs.getInt("test_order"));
+                test.setCreated_by(rs.getObject("created_by", Integer.class));
+                list.add(test);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -146,18 +231,24 @@ public class TestDAO extends DBContext {
     // Lấy tests theo practice/official
     public List<Test> getTestsByType(boolean isPractice) {
         List<Test> list = new ArrayList<>();
-        String sql = "SELECT * FROM test WHERE is_practice = ?";
+        String sql = "SELECT * FROM test WHERE is_practice = ? ORDER BY created_at DESC";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setBoolean(1, isPractice);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
-                list.add(new Test(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("description"),
-                    rs.getBoolean("is_practice"),
-                    rs.getInt("category_id")
-                ));
+                Test test = new Test();
+                test.setId(rs.getInt("id"));
+                test.setName(rs.getString("name"));
+                test.setDescription(rs.getString("description"));
+                test.setIs_practice(rs.getBoolean("is_practice"));
+                test.setCategory_id(rs.getInt("category_id"));
+                test.setDuration_minutes(rs.getInt("duration_minutes"));
+                test.setNum_questions(rs.getInt("num_questions"));
+                test.setCourse_id(rs.getObject("course_id", Integer.class));
+                test.setChapter_id(rs.getObject("chapter_id", Integer.class));
+                test.setTest_order(rs.getInt("test_order"));
+                test.setCreated_by(rs.getObject("created_by", Integer.class));
+                list.add(test);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -174,11 +265,11 @@ public class TestDAO extends DBContext {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 list.add(new Test(
-                    rs.getInt("id"),
-                    rs.getString("name"),
-                    rs.getString("description"),
-                    rs.getBoolean("is_practice"),
-                    rs.getInt("category_id")
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("description"),
+                        rs.getBoolean("is_practice"),
+                        rs.getInt("category_id")
                 ));
             }
         } catch (SQLException e) {
@@ -190,10 +281,14 @@ public class TestDAO extends DBContext {
     // Kiểm tra và hiển thị thông tin test chi tiết
     public void debugTestInfo(int testId) {
         System.out.println("\n===== DEBUG TEST INFO: ID=" + testId + " =====");
-        
+
         try {
-            // 1. Lấy thông tin cơ bản của test
-            String testSql = "SELECT * FROM test WHERE id = ?";
+            String testSql = "SELECT t.*, sp.course_title, c.name as chapter_name "
+                    + "FROM test t "
+                    + "LEFT JOIN study_package sp ON t.course_id = sp.id "
+                    + "LEFT JOIN chapter c ON t.chapter_id = c.id "
+                    + "WHERE t.id = ?";
+
             try (PreparedStatement ps = conn.prepareStatement(testSql)) {
                 ps.setInt(1, testId);
                 ResultSet rs = ps.executeQuery();
@@ -203,36 +298,36 @@ public class TestDAO extends DBContext {
                     System.out.println("  Name: " + rs.getString("name"));
                     System.out.println("  Description: " + rs.getString("description"));
                     System.out.println("  Is Practice: " + rs.getBoolean("is_practice"));
-                    System.out.println("  Category ID: " + rs.getInt("category_id"));
-                    
-                    // Kiểm tra xem có lesson_id không
-                    if (rs.getObject("lesson_id") != null) {
-                        int lessonId = rs.getInt("lesson_id");
-                        System.out.println("  Lesson ID: " + lessonId);
-                        
-                        // Lấy thông tin lesson
-                        String lessonSql = "SELECT * FROM lesson WHERE id = ?";
-                        try (PreparedStatement psLesson = conn.prepareStatement(lessonSql)) {
-                            psLesson.setInt(1, lessonId);
-                            ResultSet rsLesson = psLesson.executeQuery();
-                            if (rsLesson.next()) {
-                                System.out.println("  Lesson Info:");
-                                System.out.println("    Title: " + rsLesson.getString("title"));
-                                System.out.println("    Chapter ID: " + rsLesson.getInt("chapter_id"));
-                            } else {
-                                System.out.println("  WARNING: Lesson ID " + lessonId + " does not exist in database!");
-                            }
-                        }
+                    System.out.println("  Duration (minutes): " + rs.getInt("duration_minutes"));
+                    System.out.println("  Number of Questions: " + rs.getInt("num_questions"));
+                    System.out.println("  Test Order: " + rs.getInt("test_order"));
+
+                    Integer courseId = rs.getObject("course_id", Integer.class);
+                    if (courseId != null) {
+                        System.out.println("  Course ID: " + courseId);
+                        System.out.println("  Course Title: " + rs.getString("course_title"));
                     } else {
-                        System.out.println("  No lesson linked to this test (lesson_id is NULL)");
+                        System.out.println("  Course: Not assigned to any course");
                     }
+
+                    Integer chapterId = rs.getObject("chapter_id", Integer.class);
+                    if (chapterId != null) {
+                        System.out.println("  Chapter ID: " + chapterId);
+                        System.out.println("  Chapter Name: " + rs.getString("chapter_name"));
+                    } else {
+                        System.out.println("  Chapter: Course-level test");
+                    }
+
+                    System.out.println("  Created By: " + rs.getObject("created_by"));
+                    System.out.println("  Created At: " + rs.getTimestamp("created_at"));
+                    System.out.println("  Updated At: " + rs.getTimestamp("updated_at"));
                 } else {
                     System.out.println("Test ID " + testId + " not found!");
                     return;
                 }
             }
-            
-            // 2. Kiểm tra số lượng câu hỏi trong test
+
+            // Check number of questions in test
             String questionCountSql = "SELECT COUNT(*) as count FROM test_question WHERE test_id = ?";
             try (PreparedStatement ps = conn.prepareStatement(questionCountSql)) {
                 ps.setInt(1, testId);
@@ -240,8 +335,7 @@ public class TestDAO extends DBContext {
                 if (rs.next()) {
                     int count = rs.getInt("count");
                     System.out.println("Questions in test: " + count);
-                    
-                    // Lấy chi tiết các câu hỏi
+
                     if (count > 0) {
                         String questionsSql = """
                             SELECT q.id, q.question, q.lesson_id, COUNT(qo.id) as option_count
@@ -254,22 +348,22 @@ public class TestDAO extends DBContext {
                         try (PreparedStatement psQ = conn.prepareStatement(questionsSql)) {
                             psQ.setInt(1, testId);
                             ResultSet rsQ = psQ.executeQuery();
-                            
+
                             System.out.println("Question details:");
                             int i = 1;
                             while (rsQ.next()) {
-                                System.out.println("  " + i + ". ID: " + rsQ.getInt("id") + 
-                                                 ", Options: " + rsQ.getInt("option_count") +
-                                                 ", Lesson ID: " + rsQ.getInt("lesson_id") +
-                                                 ", Text: '" + rsQ.getString("question").substring(0, Math.min(30, rsQ.getString("question").length())) + "...'");
+                                System.out.println("  " + i + ". ID: " + rsQ.getInt("id")
+                                        + ", Options: " + rsQ.getInt("option_count")
+                                        + ", Lesson ID: " + rsQ.getInt("lesson_id")
+                                        + ", Text: '" + rsQ.getString("question").substring(0, Math.min(30, rsQ.getString("question").length())) + "...'");
                                 i++;
                             }
                         }
                     }
                 }
             }
-            
-            // 3. Kiểm tra các bản ghi test đã làm
+
+            // Check test records
             String testRecordSql = "SELECT COUNT(*) as count FROM test_record WHERE test_id = ?";
             try (PreparedStatement ps = conn.prepareStatement(testRecordSql)) {
                 ps.setInt(1, testId);
@@ -278,16 +372,15 @@ public class TestDAO extends DBContext {
                     System.out.println("Test records: " + rs.getInt("count"));
                 }
             }
-            
+
         } catch (SQLException e) {
             System.out.println("ERROR in debugTestInfo: " + e.getMessage());
             e.printStackTrace();
         }
-        
+
         System.out.println("===== END DEBUG TEST =====\n");
     }
-    
-    // Thêm phương thức để lấy lesson_id của test
+
     public int getLessonIdByTest(int testId) {
         String sql = "SELECT lesson_id FROM test WHERE id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -300,5 +393,256 @@ public class TestDAO extends DBContext {
             e.printStackTrace();
         }
         return -1; // Trả về -1 nếu không tìm thấy
+    }
+
+    public int addCourseTest(Test test) {
+        String sql = "INSERT INTO test (name, description, is_practice, duration_minutes, "
+                + "num_questions, course_id, chapter_id, test_order, created_by) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, test.getName());
+            ps.setString(2, test.getDescription());
+            ps.setBoolean(3, test.isIs_practice());
+            ps.setInt(4, test.getDuration_minutes());
+            ps.setInt(5, test.getNum_questions());
+
+            if (test.getCourse_id() != null) {
+                ps.setInt(6, test.getCourse_id());
+            } else {
+                ps.setNull(6, Types.INTEGER);
+            }
+
+            if (test.getChapter_id() != null) {
+                ps.setInt(7, test.getChapter_id());
+            } else {
+                ps.setNull(7, Types.INTEGER);
+            }
+
+            ps.setInt(8, test.getTest_order());
+
+            if (test.getCreated_by() != null) {
+                ps.setInt(9, test.getCreated_by());
+            } else {
+                ps.setNull(9, Types.INTEGER);
+            }
+
+            ps.executeUpdate();
+
+            ResultSet rs = ps.getGeneratedKeys();
+            if (rs.next()) {
+                int testId = rs.getInt(1);
+
+                // If this is a course test, also add to course_test table
+                if (test.getCourse_id() != null) {
+                    addTestToCourse(testId, test.getCourse_id(), test.getChapter_id(), test.getTest_order());
+                }
+
+                return testId;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+    private void addTestToCourse(int testId, int courseId, Integer chapterId, int displayOrder) {
+        String sql = "INSERT INTO course_test (course_id, test_id, chapter_id, display_order, "
+                + "test_type, is_active) VALUES (?, ?, ?, ?, ?, 1) "
+                + "ON DUPLICATE KEY UPDATE display_order = ?, is_active = 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, testId);
+
+            if (chapterId != null) {
+                ps.setInt(3, chapterId);
+            } else {
+                ps.setNull(3, Types.INTEGER);
+            }
+
+            ps.setInt(4, displayOrder);
+            ps.setString(5, "PRACTICE"); // Will be updated based on test type
+            ps.setInt(6, displayOrder);
+
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Get tests by course with pagination
+    public List<Map<String, Object>> getTestsByCourseWithPagination(int courseId, int page, int pageSize) {
+        List<Map<String, Object>> tests = new ArrayList<>();
+        String sql = "SELECT * FROM test_management_view WHERE course_id = ? "
+                + "ORDER BY test_order, created_at DESC LIMIT ? OFFSET ?";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, pageSize);
+            ps.setInt(3, (page - 1) * pageSize);
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> test = new HashMap<>();
+                test.put("test_id", rs.getInt("test_id"));
+                test.put("test_name", rs.getString("test_name"));
+                test.put("test_description", rs.getString("test_description"));
+                test.put("is_practice", rs.getBoolean("is_practice"));
+                test.put("duration_minutes", rs.getInt("duration_minutes"));
+                test.put("num_questions", rs.getInt("num_questions"));
+                test.put("test_order", rs.getInt("test_order"));
+                test.put("course_id", rs.getInt("course_id"));
+                test.put("course_name", rs.getString("course_name"));
+                test.put("chapter_id", rs.getObject("chapter_id"));
+                test.put("chapter_name", rs.getString("chapter_name"));
+                test.put("subject_name", rs.getString("subject_name"));
+                test.put("grade_name", rs.getString("grade_name"));
+                test.put("created_by_name", rs.getString("created_by_name"));
+                test.put("total_questions_assigned", rs.getInt("total_questions_assigned"));
+                test.put("created_at", rs.getTimestamp("created_at"));
+                test.put("updated_at", rs.getTimestamp("updated_at"));
+                tests.add(test);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return tests;
+    }
+
+    // Get total tests count by course
+    public int getTotalTestsByCourseCount(int courseId) {
+        String sql = "SELECT COUNT(*) FROM test WHERE course_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    // Get tests with pagination and filters
+    public List<Map<String, Object>> getTestsWithPaginationAndFilters(
+            String searchKeyword, String testType, Integer courseId, Integer createdBy,
+            int page, int pageSize) {
+
+        List<Map<String, Object>> tests = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(
+                "SELECT * FROM test_management_view WHERE 1=1"
+        );
+        List<Object> params = new ArrayList<>();
+
+        // Add filters
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            sql.append(" AND (test_name LIKE ? OR test_description LIKE ?)");
+            String keyword = "%" + searchKeyword.trim() + "%";
+            params.add(keyword);
+            params.add(keyword);
+        }
+
+        if (testType != null && !testType.isEmpty() && !"all".equals(testType)) {
+            if ("practice".equals(testType)) {
+                sql.append(" AND is_practice = 1");
+            } else if ("official".equals(testType)) {
+                sql.append(" AND is_practice = 0");
+            }
+        }
+
+        if (courseId != null) {
+            sql.append(" AND course_id = ?");
+            params.add(courseId);
+        }
+
+        if (createdBy != null) {
+            sql.append(" AND created_by = ?");
+            params.add(createdBy);
+        }
+
+        sql.append(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+        params.add(pageSize);
+        params.add((page - 1) * pageSize);
+
+        try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> test = new HashMap<>();
+                test.put("test_id", rs.getInt("test_id"));
+                test.put("test_name", rs.getString("test_name"));
+                test.put("test_description", rs.getString("test_description"));
+                test.put("is_practice", rs.getBoolean("is_practice"));
+                test.put("duration_minutes", rs.getInt("duration_minutes"));
+                test.put("num_questions", rs.getInt("num_questions"));
+                test.put("test_order", rs.getInt("test_order"));
+                test.put("course_id", rs.getObject("course_id"));
+                test.put("course_name", rs.getString("course_name"));
+                test.put("chapter_id", rs.getObject("chapter_id"));
+                test.put("chapter_name", rs.getString("chapter_name"));
+                test.put("subject_name", rs.getString("subject_name"));
+                test.put("grade_name", rs.getString("grade_name"));
+                test.put("created_by_name", rs.getString("created_by_name"));
+                test.put("total_questions_assigned", rs.getInt("total_questions_assigned"));
+                test.put("created_at", rs.getTimestamp("created_at"));
+                test.put("updated_at", rs.getTimestamp("updated_at"));
+                tests.add(test);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return tests;
+    }
+
+    // Get total tests count with filters
+    public int getTotalTestsCountWithFilters(String searchKeyword, String testType,
+            Integer courseId, Integer createdBy) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT COUNT(*) FROM test_management_view WHERE 1=1"
+        );
+        List<Object> params = new ArrayList<>();
+
+        // Add same filters as above
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            sql.append(" AND (test_name LIKE ? OR test_description LIKE ?)");
+            String keyword = "%" + searchKeyword.trim() + "%";
+            params.add(keyword);
+            params.add(keyword);
+        }
+
+        if (testType != null && !testType.isEmpty() && !"all".equals(testType)) {
+            if ("practice".equals(testType)) {
+                sql.append(" AND is_practice = 1");
+            } else if ("official".equals(testType)) {
+                sql.append(" AND is_practice = 0");
+            }
+        }
+
+        if (courseId != null) {
+            sql.append(" AND course_id = ?");
+            params.add(courseId);
+        }
+
+        if (createdBy != null) {
+            sql.append(" AND created_by = ?");
+            params.add(createdBy);
+        }
+
+        try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
     }
 }
