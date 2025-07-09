@@ -619,4 +619,35 @@ public class TestDAO extends DBContext {
         }
         return 0;
     }
+
+    public List<Test> getAllTestsWithBasicInfo() {
+        List<Test> list = new ArrayList<>();
+        String sql = "SELECT * FROM test ORDER BY created_at DESC";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Test test = new Test();
+                test.setId(rs.getInt("id"));
+                test.setName(rs.getString("name"));
+                test.setDescription(rs.getString("description"));
+                test.setIs_practice(rs.getBoolean("is_practice"));
+                test.setDuration_minutes(rs.getInt("duration_minutes"));
+                test.setNum_questions(rs.getInt("num_questions"));
+                test.setCourse_id(rs.getObject("course_id", Integer.class));
+                test.setChapter_id(rs.getObject("chapter_id", Integer.class));
+                test.setTest_order(rs.getInt("test_order"));
+                test.setCreated_by(rs.getObject("created_by", Integer.class));
+
+                Timestamp createdAt = rs.getTimestamp("created_at");
+                if (createdAt != null) {
+                    test.setCreated_at(createdAt.toLocalDateTime());
+                }
+
+                list.add(test);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 }

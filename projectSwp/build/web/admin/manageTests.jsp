@@ -93,13 +93,13 @@
                 <tbody>
                     <c:forEach var="test" items="${testList}">
                         <tr>
-                            <td>${test.id}</td>
-                            <td>${test.name}</td>
-                            <td>${test.description}</td>
+                            <td>${test.test_id}</td>
+                            <td>${test.test_name}</td>
+                            <td>${test.test_description}</td>
                             <td><c:choose><c:when test="${test.is_practice}">Practice</c:when><c:otherwise>Official</c:otherwise></c:choose></td>
-                                    <td>
-                                            <a class="action-link btn btn-sm btn-warning" href="${pageContext.request.contextPath}/test?action=edit&id=${test.id}">Sửa</a>
-                                <a class="action-link btn btn-sm btn-danger" href="${pageContext.request.contextPath}/test?action=delete&id=${test.id}" onclick="return confirm('Bạn chắc chắn muốn xoá?');">Xoá</a>
+                            <td>
+                                <a class="action-link btn btn-sm btn-warning" href="${pageContext.request.contextPath}/test?action=edit&id=${test.test_id}">Sửa</a>
+                                <a class="action-link btn btn-sm btn-danger" href="${pageContext.request.contextPath}/test?action=delete&id=${test.test_id}" onclick="return confirm('Bạn chắc chắn muốn xoá?');">Xoá</a>
                             </td>
                         </tr>
                     </c:forEach>
@@ -110,4 +110,4 @@
         <!-- JS -->
         <script src="/assets/js/bootstrap.bundle.min.js"></script>
     </body>
-</html> 
+</html>

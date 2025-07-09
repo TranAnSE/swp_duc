@@ -96,6 +96,9 @@ public class CourseController extends HttpServlet {
                 case "reorderLessons":
                     reorderLessonsInChapter(request, response);
                     return;
+                case "getAvailableTests":
+                    getAvailableTests(request, response);
+                    return;
                 default:
                     listCourses(request, response);
                     break;
@@ -162,6 +165,9 @@ public class CourseController extends HttpServlet {
                     break;
                 case "submit":
                     submitForApprovalPost(request, response);
+                    break;
+                case "reorderTests":
+                    reorderTests(request, response);
                     break;
                 default:
                     System.out.println("Unknown action: " + action); // Debug log
@@ -1054,6 +1060,74 @@ public class CourseController extends HttpServlet {
                             .append("}");
                     first = false;
                 }
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("[]");
+        }
+    }
+
+    private void reorderTests(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            String[] testIds = request.getParameterValues("testIds");
+
+            if (testIds == null || testIds.length == 0) {
+                response.getWriter().write("{\"success\": false, \"message\": \"No tests to reorder\"}");
+                return;
+            }
+
+            boolean success = courseManagementDAO.reorderTests(courseId, testIds);
+
+            if (success) {
+                response.getWriter().write("{\"success\": true, \"message\": \"Tests reordered successfully\"}");
+            } else {
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to reorder tests\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+        }
+    }
+
+    private void getAvailableTests(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+
+            // Get course details to find subject
+            Map<String, Object> courseDetails = courseManagementDAO.getCourseDetails(courseId);
+            Integer subjectId = (Integer) courseDetails.get("subject_id");
+
+            List<Map<String, Object>> tests = courseManagementDAO.getAvailableTestsForCourseWithDetails(courseId, subjectId);
+
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < tests.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Map<String, Object> test = tests.get(i);
+
+                json.append("{")
+                        .append("\"id\":").append(test.get("id"))
+                        .append(",\"name\":\"").append(escapeJson((String) test.get("name")))
+                        .append("\",\"description\":\"").append(escapeJson((String) test.get("description")))
+                        .append("\",\"is_practice\":").append(test.get("is_practice"))
+                        .append(",\"duration_minutes\":").append(test.get("duration_minutes"))
+                        .append(",\"total_questions\":").append(test.get("total_questions"))
+                        .append(",\"is_in_course\":").append(test.get("is_in_course"))
+                        .append(",\"created_by_name\":\"").append(escapeJson((String) test.get("created_by_name")))
+                        .append("\"}");
             }
             json.append("]");
 

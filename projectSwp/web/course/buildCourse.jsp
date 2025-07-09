@@ -708,35 +708,6 @@
                                     </c:forEach>
                                 </div>
                             </c:if>
-
-                            <!-- Tests -->
-                            <c:if test="${not empty courseTests}">
-                                <h5><i class="fas fa-clipboard-check"></i> Tests (${courseTests.size()})</h5>
-                                <div id="testsList" class="sortable-list">
-                                    <c:forEach items="${courseTests}" var="test">
-                                        <div class="content-item" data-id="${test.test_id}" data-type="test">
-                                            <div class="content-item-header">
-                                                <div>
-                                                    <span class="content-type-badge badge-test">${test.test_type} Test</span>
-                                                    <strong>${test.test_name}</strong>
-                                                    <c:if test="${not empty test.chapter_name}">
-                                                        <small class="text-muted">(${test.chapter_name})</small>
-                                                    </c:if>
-                                                </div>
-                                                <div>
-                                                    <button class="btn btn-sm btn-outline-danger" 
-                                                            onclick="removeFromCourse('test', ${test.test_id})">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <c:if test="${not empty test.test_description}">
-                                                <p class="text-muted mb-0">${test.test_description}</p>
-                                            </c:if>
-                                        </div>
-                                    </c:forEach>
-                                </div>
-                            </c:if>
                         </c:otherwise>
                     </c:choose>
                 </div>
@@ -870,7 +841,12 @@
                                                 ghostClass: 'sortable-ghost',
                                                 handle: '.content-item',
                                                 onEnd: function (evt) {
-                                                    updateContentOrder(evt.from);
+                                                    // Check if this is the tests list
+                                                    if (evt.from.id === 'testsList') {
+                                                        reorderTests();
+                                                    } else {
+                                                        updateContentOrder(evt.from);
+                                                    }
                                                 }
                                             });
                                         }
@@ -1661,13 +1637,177 @@
                                             });
 
                                             function showTestModal() {
-                                                // Implementation for showing available tests modal
-                                                alert('Test selection modal - to be implemented');
-                                            }
+                                                // Load available tests
+                                                fetch('${pageContext.request.contextPath}/course?action=getAvailableTests&courseId=${courseId}')
+                                                                .then(response => response.json())
+                                                                .then(tests => {
+                                                                    displayAvailableTests(tests);
+                                                                    showModal('browseTestModal');
+                                                                })
+                                                                .catch(error => {
+                                                                    console.error('Error loading tests:', error);
+                                                                    alert('Failed to load available tests');
+                                                                });
+                                                    }
 
-                                            function editTest(testId) {
-                                                window.open('${pageContext.request.contextPath}/test?action=edit&id=' + testId, '_blank');
-                                            }
+                                                    function displayAvailableTests(tests) {
+                                                        const container = document.getElementById('availableTestsList');
+                                                        if (!container)
+                                                            return;
+
+                                                        container.innerHTML = '';
+
+                                                        if (tests.length === 0) {
+                                                            container.innerHTML = '<p class="text-muted">No tests available</p>';
+                                                            return;
+                                                        }
+
+                                                        tests.forEach(test => {
+                                                            const testDiv = document.createElement('div');
+                                                            testDiv.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+                                                            // Create test info section
+                                                            const testInfo = document.createElement('div');
+
+                                                            // Test name
+                                                            const testName = document.createElement('strong');
+                                                            testName.textContent = test.name || 'Unnamed Test';
+                                                            testInfo.appendChild(testName);
+
+                                                            // Line break
+                                                            testInfo.appendChild(document.createElement('br'));
+
+                                                            // Test description
+                                                            const testDesc = document.createElement('small');
+                                                            testDesc.className = 'text-muted';
+                                                            testDesc.textContent = test.description || '';
+                                                            testInfo.appendChild(testDesc);
+
+                                                            // Line break
+                                                            testInfo.appendChild(document.createElement('br'));
+
+                                                            // Test details
+                                                            const testDetails = document.createElement('small');
+                                                            testDetails.className = 'text-info';
+                                                            testDetails.textContent = `${test.is_practice ? 'Practice' : 'Official'} | ${test.duration_minutes} min | ${test.total_questions} questions`;
+                                                            testInfo.appendChild(testDetails);
+
+                                                            // Create action section
+                                                            const actionDiv = document.createElement('div');
+                                                            if (test.is_in_course) {
+                                                                const badge = document.createElement('span');
+                                                                badge.className = 'badge bg-success';
+                                                                badge.innerHTML = '<i class="fas fa-check"></i> Added';
+                                                                actionDiv.appendChild(badge);
+                                                            } else {
+                                                                const addBtn = document.createElement('button');
+                                                                addBtn.className = 'btn btn-sm btn-outline-primary';
+                                                                addBtn.innerHTML = '<i class="fas fa-plus"></i> Add';
+                                                                addBtn.onclick = () => addTestToCourse(test.id, test.name);
+                                                                actionDiv.appendChild(addBtn);
+                                                            }
+
+                                                            testDiv.appendChild(testInfo);
+                                                            testDiv.appendChild(actionDiv);
+                                                            container.appendChild(testDiv);
+                                                        });
+                                                    }
+
+                                                    function addTestToCourse(testId, testName) {
+                                                        const params = new URLSearchParams();
+                                                        params.append('action', 'addToCourse');
+                                                        params.append('courseId', '${courseId}');
+                                                        params.append('testId', testId);
+
+                                                        fetch('${pageContext.request.contextPath}/test', {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Content-Type': 'application/x-www-form-urlencoded',
+                                                                'X-Requested-With': 'XMLHttpRequest'
+                                                            },
+                                                            body: params.toString()
+                                                        })
+                                                                .then(response => response.json())
+                                                                .then(data => {
+                                                                    if (data.success) {
+                                                                        hideModal('browseTestModal');
+                                                                        location.reload();
+                                                                    } else {
+                                                                        alert('Failed to add test: ' + data.message);
+                                                                    }
+                                                                })
+                                                                .catch(error => {
+                                                                    console.error('Error:', error);
+                                                                    alert('An error occurred while adding the test');
+                                                                });
+                                                    }
+
+                                                    function reorderTests() {
+                                                        const testItems = document.querySelectorAll('#testsList .content-item[data-type="test"]');
+                                                        const testIds = Array.from(testItems).map(item => item.dataset.id).filter(id => id);
+
+                                                        if (testIds.length === 0) {
+                                                            return;
+                                                        }
+
+                                                        const params = new URLSearchParams();
+                                                        params.append('action', 'reorderTests');
+                                                        params.append('courseId', '${courseId}');
+                                                        testIds.forEach(id => params.append('testIds', id));
+
+                                                        fetch('${pageContext.request.contextPath}/course', {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Content-Type': 'application/x-www-form-urlencoded',
+                                                                'X-Requested-With': 'XMLHttpRequest'
+                                                            },
+                                                            body: params.toString()
+                                                        })
+                                                                .then(response => response.json())
+                                                                .then(data => {
+                                                                    if (!data.success) {
+                                                                        console.error('Failed to reorder tests:', data.message);
+                                                                    }
+                                                                })
+                                                                .catch(error => {
+                                                                    console.error('Error reordering tests:', error);
+                                                                });
+                                                    }
+
+                                                    function editTest(testId) {
+                                                        window.open('${pageContext.request.contextPath}/test?action=edit&id=' + testId, '_blank');
+                                                    }
         </script>
+        <!-- Browse Tests Modal -->
+        <div class="modal fade" id="browseTestModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Browse Available Tests</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            Select tests to add to your course. Tests already in the course are marked as "Added".
+                        </div>
+                        <div id="availableTestsList" class="list-group">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <a href="${pageContext.request.contextPath}/test?action=createForCourse&courseId=${courseId}" 
+                           class="btn btn-success">
+                            <i class="fas fa-plus"></i> Create New Test
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </body>
 </html>

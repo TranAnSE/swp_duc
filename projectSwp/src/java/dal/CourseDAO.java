@@ -1230,4 +1230,73 @@ public class CourseDAO extends DBContext {
         return navigation;
     }
 
+    public boolean reorderTests(int courseId, String[] testIds) throws SQLException {
+        String sql = "UPDATE course_test SET display_order = ? WHERE course_id = ? AND test_id = ? AND is_active = 1";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            connection.setAutoCommit(false);
+
+            for (int i = 0; i < testIds.length; i++) {
+                ps.setInt(1, i + 1); // display_order starts from 1
+                ps.setInt(2, courseId);
+                ps.setInt(3, Integer.parseInt(testIds[i]));
+                ps.addBatch();
+            }
+
+            int[] results = ps.executeBatch();
+            connection.commit();
+
+            // Check if all updates were successful
+            for (int result : results) {
+                if (result <= 0) {
+                    return false;
+                }
+            }
+
+            return true;
+        } catch (SQLException e) {
+            connection.rollback();
+            throw e;
+        } finally {
+            connection.setAutoCommit(true);
+        }
+    }
+
+    public List<Map<String, Object>> getAvailableTestsForCourseWithDetails(int courseId, int subjectId) throws SQLException {
+        String sql = "SELECT t.*, "
+                + "CASE WHEN ct.test_id IS NOT NULL THEN 1 ELSE 0 END as is_in_course, "
+                + "creator.full_name as created_by_name, "
+                + "COUNT(tq.question_id) as total_questions "
+                + "FROM test t "
+                + "LEFT JOIN course_test ct ON t.id = ct.test_id AND ct.course_id = ? AND ct.is_active = 1 "
+                + "LEFT JOIN account creator ON t.created_by = creator.id "
+                + "LEFT JOIN test_question tq ON t.id = tq.test_id "
+                + "WHERE (t.course_id IS NULL OR t.course_id = ?) "
+                + "GROUP BY t.id, t.name, t.description, t.is_practice, t.duration_minutes, "
+                + "t.num_questions, t.created_at, creator.full_name "
+                + "ORDER BY t.created_at DESC";
+
+        List<Map<String, Object>> tests = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ps.setInt(2, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> test = new HashMap<>();
+                test.put("id", rs.getInt("id"));
+                test.put("name", rs.getString("name"));
+                test.put("description", rs.getString("description"));
+                test.put("is_practice", rs.getBoolean("is_practice"));
+                test.put("duration_minutes", rs.getInt("duration_minutes"));
+                test.put("num_questions", rs.getInt("num_questions"));
+                test.put("is_in_course", rs.getBoolean("is_in_course"));
+                test.put("created_by_name", rs.getString("created_by_name"));
+                test.put("total_questions", rs.getInt("total_questions"));
+                test.put("created_at", rs.getTimestamp("created_at"));
+                tests.add(test);
+            }
+        }
+        return tests;
+    }
 }
