@@ -500,6 +500,36 @@
                 margin-bottom: 8px;
                 display: block;
             }
+            .list-group-item {
+                transition: all 0.2s ease;
+            }
+
+            .list-group-item:hover {
+                background-color: #f8f9fa;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+            .test-info-details {
+                margin-top: 5px;
+            }
+
+            .test-info-details .badge {
+                margin-right: 5px;
+            }
+
+            .test-type-practice {
+                background-color: #28a745;
+            }
+
+            .test-type-official {
+                background-color: #dc3545;
+            }
+
+            .test-creator {
+                font-style: italic;
+                color: #6c757d;
+            }
         </style>
     </head>
     <body>
@@ -1837,30 +1867,42 @@
                                             function showTestModal() {
                                                 // Load available tests
                                                 fetch('${pageContext.request.contextPath}/course?action=getAvailableTests&courseId=${courseId}')
-                                                                .then(response => response.json())
+                                                                .then(response => {
+                                                                    if (!response.ok) {
+                                                                        throw new Error('Network response was not ok');
+                                                                    }
+                                                                    return response.json();
+                                                                })
                                                                 .then(tests => {
+                                                                    console.log('Tests loaded:', tests); // Debug log
                                                                     displayAvailableTests(tests);
                                                                     showModal('browseTestModal');
                                                                 })
                                                                 .catch(error => {
                                                                     console.error('Error loading tests:', error);
-                                                                    alert('Failed to load available tests');
+                                                                    alert('Failed to load available tests: ' + error.message);
                                                                 });
                                                     }
 
                                                     function displayAvailableTests(tests) {
+                                                        console.log('displayAvailableTests called with:', tests);
+
                                                         const container = document.getElementById('availableTestsList');
-                                                        if (!container)
+                                                        if (!container) {
+                                                            console.error('availableTestsList container not found');
                                                             return;
+                                                        }
 
                                                         container.innerHTML = '';
 
-                                                        if (tests.length === 0) {
+                                                        if (!tests || tests.length === 0) {
                                                             container.innerHTML = '<p class="text-muted">No tests available</p>';
                                                             return;
                                                         }
 
                                                         tests.forEach(test => {
+                                                            console.log('Processing test:', test);
+
                                                             const testDiv = document.createElement('div');
                                                             testDiv.className = 'list-group-item d-flex justify-content-between align-items-center';
 
@@ -1876,7 +1918,7 @@
                                                             testInfo.appendChild(document.createElement('br'));
 
                                                             // Test description
-                                                            if (test.description) {
+                                                            if (test.description && test.description.trim() !== '') {
                                                                 const testDesc = document.createElement('small');
                                                                 testDesc.className = 'text-muted';
                                                                 testDesc.textContent = test.description;
@@ -1884,16 +1926,26 @@
                                                                 testInfo.appendChild(document.createElement('br'));
                                                             }
 
-                                                            // Test details
+                                                            // Test details with proper values
                                                             const testDetails = document.createElement('small');
                                                             testDetails.className = 'text-info';
 
-                                                            // Ensure we have valid values with fallbacks
+                                                            // Extract values with proper fallbacks
                                                             const testType = test.is_practice ? 'Practice' : 'Official';
                                                             const duration = test.duration_minutes || 30;
                                                             const totalQuestions = test.total_questions || test.num_questions || 0;
+                                                            const createdBy = test.created_by_name || 'Unknown';
 
-                                                            testDetails.textContent = `${testType} | ${duration} min | ${totalQuestions} questions`;
+                                                            console.log('Test details:', {
+                                                                testType,
+                                                                duration,
+                                                                totalQuestions,
+                                                                createdBy,
+                                                                raw_test: test
+                                                            });
+
+                                                            // Use string concatenation instead of template literal in textContent
+                                                            testDetails.textContent = testType + ' | ' + duration + ' min | ' + totalQuestions + ' questions | by ' + createdBy;
                                                             testInfo.appendChild(testDetails);
 
                                                             // Create action section
