@@ -306,7 +306,7 @@ public class TestController extends HttpServlet {
         TestDAO testDAO = new TestDAO();
         QuestionDAO questionDAO = new QuestionDAO();
         TestQuestionDAO testQuestionDAO = new TestQuestionDAO();
-
+        LessonDAO lessonDAO = new LessonDAO();
         try {
             int id = Integer.parseInt(request.getParameter("id"));
             Test test = testDAO.getTestById(id);
@@ -316,34 +316,28 @@ public class TestController extends HttpServlet {
                 return;
             }
             request.setAttribute("test", test);
-
             // Get test context with enhanced information
             Map<String, Object> testContext = testDAO.getTestContext(id);
             if (testContext != null) {
                 request.setAttribute("testContext", testContext);
-
                 String contextLevel = (String) testContext.get("contextLevel");
                 Object contextId = testContext.get("contextId");
                 String contextName = (String) testContext.get("contextName");
-
                 // Set context info for JSP
                 if (contextId != null) {
                     request.setAttribute("contextInfo",
                             "Test Context: " + contextLevel.toUpperCase() + " - " + contextName);
                     request.setAttribute("contextLevel", contextLevel);
                     request.setAttribute("contextId", contextId);
-
                     // Set lesson context specifically for JavaScript
                     if ("lesson".equals(contextLevel)) {
                         request.setAttribute("contextLessonId", contextId);
                     }
                 }
             }
-
             // Get selected question IDs for this test
             List<Integer> selectedQuestionIds = testQuestionDAO.getQuestionIdsByTest(id);
             request.setAttribute("selectedQuestionIds", selectedQuestionIds);
-
             // Get selected questions with full details
             List<Question> selectedQuestions = new ArrayList<>();
             for (Integer questionId : selectedQuestionIds) {
@@ -353,16 +347,19 @@ public class TestController extends HttpServlet {
                 }
             }
             request.setAttribute("selectedQuestions", selectedQuestions);
-
             // Build lesson name map for displaying lesson names
-            Map<String, String> lessonNameMap = buildLessonNameMap(selectedQuestions);
+            List<Integer> lessonIds = new ArrayList<>();
+            for (Question q : selectedQuestions) {
+                if (q.getLesson_id() > 0) {
+                    lessonIds.add(q.getLesson_id());
+                }
+            }
+            Map<Integer, String> lessonNameMap = lessonDAO.getLessonNameMap(lessonIds);
             request.setAttribute("lessonNameMap", lessonNameMap);
-
             // Load hierarchy data for question selection
             GradeDAO gradeDAO = new GradeDAO();
             List<Grade> gradeList = gradeDAO.findAllFromGrade();
             request.setAttribute("gradeList", gradeList);
-
             RequestDispatcher dispatcher = request.getRequestDispatcher("/Test/updateTest.jsp");
             dispatcher.forward(request, response);
         } catch (NumberFormatException e) {

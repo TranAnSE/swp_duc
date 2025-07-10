@@ -1038,8 +1038,16 @@
                                                 <div class="question-meta">
                                                     <span class="lesson-name">
                                                         <i class="fas fa-book"></i>
-                                                        ${lessonNameMap[q.lesson_id] != null ? lessonNameMap[q.lesson_id] : 'Unknown Lesson'}
+                                                        <c:choose>
+                                                            <c:when test="${lessonNameMap[q.lesson_id] != null}">
+                                                                ${lessonNameMap[q.lesson_id]}
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                Unknown Lesson (ID: ${q.lesson_id})
+                                                            </c:otherwise>
+                                                        </c:choose>
                                                     </span>
+
                                                     <span class="meta-badge difficulty-${q.difficulty != null ? q.difficulty : 'medium'}">
                                                         ${q.difficulty != null ? q.difficulty : 'medium'}
                                                     </span>

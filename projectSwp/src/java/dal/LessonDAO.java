@@ -2,7 +2,9 @@ package dal;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import model.Lesson;
 
 public class LessonDAO extends DBContext {
@@ -178,5 +180,37 @@ public class LessonDAO extends DBContext {
             e.printStackTrace();
         }
         return 0;
+    }
+
+    public Map<Integer, String> getLessonNameMap(List<Integer> lessonIds) {
+        Map<Integer, String> lessonNameMap = new HashMap<>();
+        if (lessonIds == null || lessonIds.isEmpty()) {
+            return lessonNameMap;
+        }
+
+        StringBuilder sql = new StringBuilder("SELECT id, name FROM lesson WHERE id IN (");
+        for (int i = 0; i < lessonIds.size(); i++) {
+            if (i > 0) {
+                sql.append(",");
+            }
+            sql.append("?");
+        }
+        sql.append(")");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < lessonIds.size(); i++) {
+                ps.setInt(i + 1, lessonIds.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lessonNameMap.put(rs.getInt("id"), rs.getString("name"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return lessonNameMap;
     }
 }
