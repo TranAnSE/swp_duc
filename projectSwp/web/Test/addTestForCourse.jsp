@@ -38,7 +38,7 @@
                 padding-top: 80px;
                 background-color: #f9f9f9;
             }
-            
+
             .page-wrapper {
                 display: flex;
                 flex-direction: column;
@@ -315,11 +315,11 @@
                 .test-type-selector {
                     grid-template-columns: 1fr;
                 }
-                
+
                 .form-row {
                     grid-template-columns: 1fr;
                 }
-                
+
                 .chapter-options {
                     grid-template-columns: 1fr;
                 }
@@ -429,23 +429,31 @@
                                 <div class="chapter-selector">
                                     <h6>Choose Test Level:</h6>
                                     <div class="chapter-options">
-                                        <div class="chapter-option selected" onclick="selectChapter(null)">
-                                            <input type="radio" name="chapterScope" value="" checked />
+                                        <div class="chapter-option selected" onclick="selectTestScope('course', null)">
+                                            <input type="radio" name="testScope" value="course" checked />
                                             <strong>Course-Level Test</strong>
                                             <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
                                                 Covers the entire course content
                                             </div>
                                         </div>
-                                        
+
                                         <c:forEach var="chapter" items="${courseChapters}">
-                                            <div class="chapter-option" onclick="selectChapter(${chapter.chapter_id})">
-                                                <input type="radio" name="chapterScope" value="${chapter.chapter_id}" />
-                                                <strong>${chapter.chapter_name}</strong>
+                                            <div class="chapter-option" onclick="selectTestScope('chapter', ${chapter.chapter_id})">
+                                                <input type="radio" name="testScope" value="chapter_${chapter.chapter_id}" />
+                                                <strong>Chapter: ${chapter.chapter_name}</strong>
                                                 <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
                                                     Chapter-specific test
                                                 </div>
                                             </div>
                                         </c:forEach>
+                                    </div>
+
+                                    <!-- Lesson Selection (initially hidden) -->
+                                    <div id="lessonSelection" style="display: none; margin-top: 20px;">
+                                        <h6>Select Lesson:</h6>
+                                        <select id="lessonSelect" class="form-control">
+                                            <option value="">-- Select Lesson --</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -464,7 +472,7 @@
                             <div class="question-generation-section">
                                 <h6><i class="fas fa-magic"></i> Smart Question Generation</h6>
                                 <p>You can automatically generate questions based on course content after the test is created.</p>
-                                
+
                                 <div class="generation-controls">
                                     <div class="control-group">
                                         <label>Difficulty Level</label>
@@ -520,92 +528,125 @@
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
         <script>
-            function selectTestType(type) {
-                // Remove selected class from all options
-                document.querySelectorAll('.test-type-option').forEach(option => {
-                    option.classList.remove('selected');
-                });
-                
-                // Add selected class to clicked option
-                event.currentTarget.classList.add('selected');
-                
-                // Update radio button
-                if (type === 'practice') {
-                    document.querySelector('input[name="practice"][value="true"]').checked = true;
-                } else {
-                    document.querySelector('input[name="practice"][value="false"]').checked = true;
-                }
-            }
+                                                function selectTestType(type) {
+                                                    // Remove selected class from all options
+                                                    document.querySelectorAll('.test-type-option').forEach(option => {
+                                                        option.classList.remove('selected');
+                                                    });
 
-            function selectChapter(chapterId) {
-                // Remove selected class from all options
-                document.querySelectorAll('.chapter-option').forEach(option => {
-                    option.classList.remove('selected');
-                });
-                
-                // Add selected class to clicked option
-                event.currentTarget.classList.add('selected');
-                
-                // Update hidden input and radio button
-                if (chapterId) {
-                    document.querySelector('input[name="chapterScope"][value="' + chapterId + '"]').checked = true;
-                    // Update the hidden chapterId field
-                    let hiddenChapter = document.querySelector('input[name="chapterId"]');
-                    if (hiddenChapter) {
-                        hiddenChapter.value = chapterId;
-                    }
-                } else {
-                    document.querySelector('input[name="chapterScope"][value=""]').checked = true;
-                    // Clear the hidden chapterId field
-                    let hiddenChapter = document.querySelector('input[name="chapterId"]');
-                    if (hiddenChapter) {
-                        hiddenChapter.value = '';
-                    }
-                }
-            }
+                                                    // Add selected class to clicked option
+                                                    event.currentTarget.classList.add('selected');
 
-            // Form validation
-            document.getElementById('testForm').addEventListener('submit', function(e) {
-                const name = document.getElementById('name').value.trim();
-                const duration = parseInt(document.getElementById('duration').value);
-                const numQuestions = parseInt(document.getElementById('numQuestions').value);
+                                                    // Update radio button
+                                                    if (type === 'practice') {
+                                                        document.querySelector('input[name="practice"][value="true"]').checked = true;
+                                                    } else {
+                                                        document.querySelector('input[name="practice"][value="false"]').checked = true;
+                                                    }
+                                                }
 
-                if (!name) {
-                    alert('Please enter a test name');
-                    e.preventDefault();
-                    return;
-                }
+                                                function selectTestScope(type, id) {
+                                                    // Remove selected class from all options
+                                                    document.querySelectorAll('.chapter-option').forEach(option => {
+                                                        option.classList.remove('selected');
+                                                    });
 
-                if (duration < 5 || duration > 180) {
-                    alert('Duration must be between 5 and 180 minutes');
-                    e.preventDefault();
-                    return;
-                }
+                                                    // Add selected class to clicked option
+                                                    event.currentTarget.classList.add('selected');
 
-                if (numQuestions < 1 || numQuestions > 100) {
-                    alert('Number of questions must be between 1 and 100');
-                    e.preventDefault();
-                    return;
-                }
+                                                    // Update hidden input
+                                                    let hiddenChapter = document.querySelector('input[name="chapterId"]');
+                                                    let hiddenLesson = document.querySelector('input[name="lessonId"]');
 
-                // Show loading state
-                const submitBtn = document.querySelector('button[type="submit"]');
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Test...';
-            });
+                                                    if (type === 'course') {
+                                                        if (hiddenChapter)
+                                                            hiddenChapter.value = '';
+                                                        if (hiddenLesson)
+                                                            hiddenLesson.value = '';
+                                                        document.getElementById('lessonSelection').style.display = 'none';
+                                                    } else if (type === 'chapter') {
+                                                        if (hiddenChapter)
+                                                            hiddenChapter.value = id;
+                                                        if (hiddenLesson)
+                                                            hiddenLesson.value = '';
+                                                        loadLessonsForChapter(id);
+                                                        document.getElementById('lessonSelection').style.display = 'block';
+                                                    }
+                                                }
 
-            // Auto-generate test name based on context
-            document.addEventListener('DOMContentLoaded', function() {
-                const nameInput = document.getElementById('name');
-                const courseTitle = '${courseDetails.course_title}';
-                const chapterId = '${selectedChapterId}';
-                
-                if (chapterId && chapterId !== 'null') {
-                    nameInput.placeholder = 'Chapter Test - ' + courseTitle;
-                } else {
-                    nameInput.placeholder = 'Course Test - ' + courseTitle;
-                }
-            });
+                                                function loadLessonsForChapter(chapterId) {
+                                                    const lessonSelect = document.getElementById('lessonSelect');
+                                                    lessonSelect.innerHTML = '<option value="">-- Loading lessons... --</option>';
+
+                                                    fetch('${pageContext.request.contextPath}/test?action=getLessonsByChapter&chapterId=' + chapterId)
+                                                            .then(response => response.json())
+                                                            .then(lessons => {
+                                                                lessonSelect.innerHTML = '<option value="">-- Select Lesson (Optional) --</option>';
+                                                                lessons.forEach(lesson => {
+                                                                    const option = document.createElement('option');
+                                                                    option.value = lesson.id;
+                                                                    option.textContent = lesson.name;
+                                                                    lessonSelect.appendChild(option);
+                                                                });
+                                                            })
+                                                            .catch(error => {
+                                                                console.error('Error loading lessons:', error);
+                                                                lessonSelect.innerHTML = '<option value="">-- Error loading lessons --</option>';
+                                                            });
+                                                }
+
+                                                // Form validation
+                                                document.getElementById('testForm').addEventListener('submit', function (e) {
+                                                    const name = document.getElementById('name').value.trim();
+                                                    const duration = parseInt(document.getElementById('duration').value);
+                                                    const numQuestions = parseInt(document.getElementById('numQuestions').value);
+
+                                                    if (!name) {
+                                                        alert('Please enter a test name');
+                                                        e.preventDefault();
+                                                        return;
+                                                    }
+
+                                                    if (duration < 5 || duration > 180) {
+                                                        alert('Duration must be between 5 and 180 minutes');
+                                                        e.preventDefault();
+                                                        return;
+                                                    }
+
+                                                    if (numQuestions < 1 || numQuestions > 100) {
+                                                        alert('Number of questions must be between 1 and 100');
+                                                        e.preventDefault();
+                                                        return;
+                                                    }
+
+                                                    const lessonSelect = document.getElementById('lessonSelect');
+                                                    if (lessonSelect && lessonSelect.value) {
+                                                        // Create hidden input for lesson
+                                                        const lessonInput = document.createElement('input');
+                                                        lessonInput.type = 'hidden';
+                                                        lessonInput.name = 'lessonId';
+                                                        lessonInput.value = lessonSelect.value;
+                                                        this.appendChild(lessonInput);
+                                                    }
+
+                                                    // Show loading state
+                                                    const submitBtn = document.querySelector('button[type="submit"]');
+                                                    submitBtn.disabled = true;
+                                                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Test...';
+                                                });
+
+                                                // Auto-generate test name based on context
+                                                document.addEventListener('DOMContentLoaded', function () {
+                                                    const nameInput = document.getElementById('name');
+                                                    const courseTitle = '${courseDetails.course_title}';
+                                                    const chapterId = '${selectedChapterId}';
+
+                                                    if (chapterId && chapterId !== 'null') {
+                                                        nameInput.placeholder = 'Chapter Test - ' + courseTitle;
+                                                    } else {
+                                                        nameInput.placeholder = 'Course Test - ' + courseTitle;
+                                                    }
+                                                });
         </script>
     </body>
 </html>

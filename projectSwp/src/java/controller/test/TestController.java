@@ -156,6 +156,9 @@ public class TestController extends HttpServlet {
                     case "courseTests":
                         showCourseTests(request, response);
                         break;
+                    case "getLessonsByCourse":
+                        handleGetLessonsByCourse(request, response);
+                        return;
                     default:
                         listTests(request, response);
                         break;
@@ -1400,6 +1403,37 @@ public class TestController extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+        }
+    }
+
+    private void handleGetLessonsByCourse(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            TestDAO testDAO = new TestDAO();
+            List<Map<String, Object>> lessons = testDAO.getLessonsByCourse(courseId);
+
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < lessons.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Map<String, Object> lesson = lessons.get(i);
+                json.append("{\"id\":").append(lesson.get("id"))
+                        .append(",\"name\":\"").append(escapeJsonString((String) lesson.get("name")))
+                        .append("\",\"chapter_id\":").append(lesson.get("chapter_id"))
+                        .append(",\"chapter_name\":\"").append(escapeJsonString((String) lesson.get("chapter_name")))
+                        .append("\"}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("[]");
         }
     }
 }
