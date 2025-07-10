@@ -172,6 +172,10 @@ public class CourseController extends HttpServlet {
                 case "updateTestPosition":
                     updateTestPosition(request, response);
                     break;
+                case "removeTest":
+                    removeTestFromCourse(request, response);
+                    break;
+
                 default:
                     System.out.println("Unknown action: " + action); // Debug log
                     if (isAjaxRequest(request)) {
@@ -1080,7 +1084,7 @@ public class CourseController extends HttpServlet {
 
         try {
             int courseId = Integer.parseInt(request.getParameter("courseId"));
-            String[] testIds = request.getParameterValues("testIds[]");
+            String[] testIds = request.getParameterValues("testIds");
 
             if (testIds == null || testIds.length == 0) {
                 response.getWriter().write("{\"success\": false, \"message\": \"No tests to reorder\"}");
@@ -1171,6 +1175,32 @@ public class CourseController extends HttpServlet {
                 response.getWriter().write("{\"success\": true, \"message\": \"Test position updated successfully\"}");
             } else {
                 response.getWriter().write("{\"success\": false, \"message\": \"Failed to update test position\"}");
+            }
+
+        } catch (NumberFormatException e) {
+            response.getWriter().write("{\"success\": false, \"message\": \"Invalid number format\"}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+        }
+    }
+
+    private void removeTestFromCourse(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            int testId = Integer.parseInt(request.getParameter("testId"));
+
+            boolean success = courseManagementDAO.removeTestFromCourse(courseId, testId);
+
+            if (success) {
+                response.getWriter().write("{\"success\": true, \"message\": \"Test removed from course successfully\"}");
+            } else {
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to remove test from course\"}");
             }
 
         } catch (NumberFormatException e) {
