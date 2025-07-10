@@ -449,6 +449,57 @@
             .small {
                 font-size: 0.875em;
             }
+            .test-section {
+                margin-bottom: 25px;
+                padding: 15px;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                background: #f9f9f9;
+            }
+
+            .test-section h6 {
+                color: #495057;
+                margin-bottom: 15px;
+                font-weight: 600;
+            }
+
+            .lesson-test-section {
+                margin-left: 20px;
+                background: #ffffff;
+                border-left: 3px solid #28a745;
+            }
+
+            .lesson-test-item {
+                background: #ffffff;
+                border-left: 3px solid #17a2b8;
+            }
+
+            .radio-option {
+                display: block;
+                margin-bottom: 10px;
+                cursor: pointer;
+                padding: 8px 12px;
+                border-radius: 4px;
+                transition: background-color 0.2s;
+            }
+
+            .radio-option:hover {
+                background-color: #f8f9fa;
+            }
+
+            .radio-option input[type="radio"] {
+                margin-right: 8px;
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            .form-group label {
+                font-weight: 600;
+                margin-bottom: 8px;
+                display: block;
+            }
         </style>
     </head>
     <body>
@@ -673,40 +724,150 @@
                             <!-- Tests Section -->
                             <c:if test="${not empty courseTests}">
                                 <h5><i class="fas fa-clipboard-check"></i> Tests (${courseTests.size()})</h5>
-                                <div id="testsList" class="sortable-list">
-                                    <c:forEach items="${courseTests}" var="test">
-                                        <div class="content-item" data-id="${test.test_id}" data-type="test">
-                                            <div class="content-item-header">
-                                                <div>
-                                                    <span class="content-type-badge badge-test">
-                                                        ${test.is_practice ? 'Practice' : 'Official'} Test
-                                                    </span>
-                                                    <strong>${test.test_name}</strong>
-                                                    <c:if test="${not empty test.chapter_name}">
-                                                        <small class="text-muted">(${test.chapter_name})</small>
-                                                    </c:if>
-                                                    <span class="text-info ml-2">
-                                                        <i class="fas fa-clock"></i> ${test.duration_minutes}min
-                                                        <i class="fas fa-question-circle ml-1"></i> ${test.num_questions}q
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <button class="btn btn-sm btn-outline-primary" 
-                                                            onclick="editTest(${test.test_id})">
-                                                        <i class="fas fa-edit"></i> Edit
-                                                    </button>
-                                                    <button class="btn btn-sm btn-outline-danger" 
-                                                            onclick="removeFromCourse('test', ${test.test_id})">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <c:if test="${not empty test.test_description}">
-                                                <p class="text-muted mb-0">${test.test_description}</p>
-                                            </c:if>
-                                        </div>
-                                    </c:forEach>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    Tests can be positioned at course level, chapter level, or lesson level. Drag to reorder within each section.
                                 </div>
+
+                                <!-- Course Level Tests -->
+                                <c:set var="courseLevelTests" value="${courseTests.stream().filter(t -> t.position_context == 'course').toList()}" />
+                                <c:if test="${not empty courseLevelTests}">
+                                    <div class="test-section">
+                                        <h6><i class="fas fa-graduation-cap"></i> Course Level Tests</h6>
+                                        <div id="courseLevelTests" class="sortable-list test-sortable" data-context="course">
+                                            <c:forEach items="${courseLevelTests}" var="test">
+                                                <div class="content-item test-item" data-id="${test.test_id}" data-type="test" 
+                                                     data-chapter-id="" data-lesson-id="">
+                                                    <div class="content-item-header">
+                                                        <div>
+                                                            <span class="content-type-badge badge-test">
+                                                                ${test.is_practice ? 'Practice' : 'Official'} Test
+                                                            </span>
+                                                            <strong>${test.test_name}</strong>
+                                                            <span class="text-info ml-2">
+                                                                <i class="fas fa-clock"></i> ${test.duration_minutes}min
+                                                                <i class="fas fa-question-circle ml-1"></i> ${test.num_questions}q
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <button class="btn btn-sm btn-outline-secondary" 
+                                                                    onclick="showTestPositionModal(${test.test_id}, '${fn:escapeXml(test.test_name)}', 'course', null, null)">
+                                                                <i class="fas fa-arrows-alt"></i> Move
+                                                            </button>
+                                                            <button class="btn btn-sm btn-outline-primary" 
+                                                                    onclick="editTest(${test.test_id})">
+                                                                <i class="fas fa-edit"></i> Edit
+                                                            </button>
+                                                            <button class="btn btn-sm btn-outline-danger" 
+                                                                    onclick="removeFromCourse('test', ${test.test_id})">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <c:if test="${not empty test.test_description}">
+                                                        <p class="text-muted mb-0">${test.test_description}</p>
+                                                    </c:if>
+                                                </div>
+                                            </c:forEach>
+                                        </div>
+                                    </div>
+                                </c:if>
+
+                                <!-- Chapter Level Tests -->
+                                <c:forEach items="${courseChapters}" var="chapter">
+                                    <c:set var="chapterTests" value="${courseTests.stream().filter(t -> t.chapter_id != null && t.chapter_id == chapter.chapter_id && t.position_context == 'chapter').toList()}" />
+                                    <c:if test="${not empty chapterTests}">
+                                        <div class="test-section">
+                                            <h6><i class="fas fa-bookmark"></i> ${chapter.chapter_name} Tests</h6>
+                                            <div id="chapterTests_${chapter.chapter_id}" class="sortable-list test-sortable" 
+                                                 data-context="chapter" data-chapter-id="${chapter.chapter_id}">
+                                                <c:forEach items="${chapterTests}" var="test">
+                                                    <div class="content-item test-item" data-id="${test.test_id}" data-type="test" 
+                                                         data-chapter-id="${chapter.chapter_id}" data-lesson-id="">
+                                                        <div class="content-item-header">
+                                                            <div>
+                                                                <span class="content-type-badge badge-test">
+                                                                    ${test.is_practice ? 'Practice' : 'Official'} Test
+                                                                </span>
+                                                                <strong>${test.test_name}</strong>
+                                                                <span class="text-info ml-2">
+                                                                    <i class="fas fa-clock"></i> ${test.duration_minutes}min
+                                                                    <i class="fas fa-question-circle ml-1"></i> ${test.num_questions}q
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <button class="btn btn-sm btn-outline-secondary" 
+                                                                        onclick="showTestPositionModal(${test.test_id}, '${fn:escapeXml(test.test_name)}', 'chapter', ${chapter.chapter_id}, null)">
+                                                                    <i class="fas fa-arrows-alt"></i> Move
+                                                                </button>
+                                                                <button class="btn btn-sm btn-outline-primary" 
+                                                                        onclick="editTest(${test.test_id})">
+                                                                    <i class="fas fa-edit"></i> Edit
+                                                                </button>
+                                                                <button class="btn btn-sm btn-outline-danger" 
+                                                                        onclick="removeFromCourse('test', ${test.test_id})">
+                                                                    <i class="fas fa-trash"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <c:if test="${not empty test.test_description}">
+                                                            <p class="text-muted mb-0">${test.test_description}</p>
+                                                        </c:if>
+                                                    </div>
+                                                </c:forEach>
+                                            </div>
+                                        </div>
+                                    </c:if>
+
+                                    <!-- Lesson Level Tests for this chapter -->
+                                    <c:forEach items="${courseLessons}" var="lesson">
+                                        <c:if test="${lesson.chapter_id == chapter.chapter_id}">
+                                            <c:set var="lessonTests" value="${courseTests.stream().filter(t -> t.lesson_id != null && t.lesson_id == lesson.lesson_id).toList()}" />
+                                            <c:if test="${not empty lessonTests}">
+                                                <div class="test-section lesson-test-section">
+                                                    <h6><i class="fas fa-play"></i> ${lesson.lesson_name} Tests</h6>
+                                                    <div id="lessonTests_${lesson.lesson_id}" class="sortable-list test-sortable" 
+                                                         data-context="lesson" data-chapter-id="${chapter.chapter_id}" data-lesson-id="${lesson.lesson_id}">
+                                                        <c:forEach items="${lessonTests}" var="test">
+                                                            <div class="content-item test-item lesson-test-item" data-id="${test.test_id}" data-type="test" 
+                                                                 data-chapter-id="${chapter.chapter_id}" data-lesson-id="${lesson.lesson_id}">
+                                                                <div class="content-item-header">
+                                                                    <div>
+                                                                        <span class="content-type-badge badge-test">
+                                                                            ${test.is_practice ? 'Practice' : 'Official'} Test
+                                                                        </span>
+                                                                        <strong>${test.test_name}</strong>
+                                                                        <span class="text-info ml-2">
+                                                                            <i class="fas fa-clock"></i> ${test.duration_minutes}min
+                                                                            <i class="fas fa-question-circle ml-1"></i> ${test.num_questions}q
+                                                                        </span>
+                                                                    </div>
+                                                                    <div>
+                                                                        <button class="btn btn-sm btn-outline-secondary" 
+                                                                                onclick="showTestPositionModal(${test.test_id}, '${fn:escapeXml(test.test_name)}', 'lesson', ${chapter.chapter_id}, ${lesson.lesson_id})">
+                                                                            <i class="fas fa-arrows-alt"></i> Move
+                                                                        </button>
+                                                                        <button class="btn btn-sm btn-outline-primary" 
+                                                                                onclick="editTest(${test.test_id})">
+                                                                            <i class="fas fa-edit"></i> Edit
+                                                                        </button>
+                                                                        <button class="btn btn-sm btn-outline-danger" 
+                                                                                onclick="removeFromCourse('test', ${test.test_id})">
+                                                                            <i class="fas fa-trash"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <c:if test="${not empty test.test_description}">
+                                                                    <p class="text-muted mb-0">${test.test_description}</p>
+                                                                </c:if>
+                                                            </div>
+                                                        </c:forEach>
+                                                    </div>
+                                                </div>
+                                            </c:if>
+                                        </c:if>
+                                    </c:forEach>
+                                </c:forEach>
                             </c:if>
                         </c:otherwise>
                     </c:choose>
@@ -814,8 +975,10 @@
         <script>
                             let currentChapterId = null;
                             let currentChapterName = '';
+                            let currentTestId = null;
+                            let currentTestName = '';
 
-// Initialize when DOM is ready
+                            // Initialize when DOM is ready
                             document.addEventListener('DOMContentLoaded', function () {
                                 console.log('DOM loaded, initializing...');
 
@@ -841,8 +1004,9 @@
                                                 ghostClass: 'sortable-ghost',
                                                 handle: '.content-item',
                                                 onEnd: function (evt) {
-                                                    // Check if this is the tests list
-                                                    if (evt.from.id === 'testsList') {
+                                                    if (evt.from.classList.contains('test-sortable')) {
+                                                        reorderTestsInSection(evt.from);
+                                                    } else if (evt.from.id === 'testsList') {
                                                         reorderTests();
                                                     } else {
                                                         updateContentOrder(evt.from);
@@ -852,16 +1016,38 @@
                                         }
                                     });
 
-                                    const testsList = document.getElementById('testsList');
-                                    if (testsList) {
-                                        new Sortable(testsList, {
-                                            animation: 150,
-                                            ghostClass: 'sortable-ghost',
-                                            handle: '.content-item',
-                                            onEnd: function (evt) {
-                                                reorderTests(); // Call the reorder function
-                                            }
-                                        });
+                                    function reorderTestsInSection(container) {
+                                        const testItems = container.querySelectorAll('.test-item');
+                                        const testIds = Array.from(testItems).map(item => item.dataset.id).filter(id => id);
+
+                                        if (testIds.length === 0) {
+                                            return;
+                                        }
+
+                                        const params = new URLSearchParams();
+                                        params.append('action', 'reorderTests');
+                                        params.append('courseId', '${courseId}');
+                                        testIds.forEach(id => params.append('testIds[]', id));
+
+                                        fetch('${pageContext.request.contextPath}/course', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/x-www-form-urlencoded',
+                                                'X-Requested-With': 'XMLHttpRequest'
+                                            },
+                                            body: params.toString()
+                                        })
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    if (data.success) {
+                                                        console.log('Tests reordered successfully in section.');
+                                                    } else {
+                                                        console.error('Failed to reorder tests:', data.message);
+                                                    }
+                                                })
+                                                .catch(error => {
+                                                    console.error('Error reordering tests:', error);
+                                                });
                                     }
 
                                     // Initialize sortable for lesson lists within chapters
@@ -1690,18 +1876,24 @@
                                                             testInfo.appendChild(document.createElement('br'));
 
                                                             // Test description
-                                                            const testDesc = document.createElement('small');
-                                                            testDesc.className = 'text-muted';
-                                                            testDesc.textContent = test.description || '';
-                                                            testInfo.appendChild(testDesc);
+                                                            if (test.description) {
+                                                                const testDesc = document.createElement('small');
+                                                                testDesc.className = 'text-muted';
+                                                                testDesc.textContent = test.description;
+                                                                testInfo.appendChild(testDesc);
+                                                                testInfo.appendChild(document.createElement('br'));
+                                                            }
 
-                                                            // Line break
-                                                            testInfo.appendChild(document.createElement('br'));
-
-                                                            // Test details
+                                                            // Test details - FIX: Ensure values are properly displayed
                                                             const testDetails = document.createElement('small');
                                                             testDetails.className = 'text-info';
-                                                            testDetails.textContent = `${test.is_practice ? 'Practice' : 'Official'} | ${test.duration_minutes} min | ${test.total_questions} questions`;
+
+                                                            // Ensure we have valid values with fallbacks
+                                                            const testType = test.is_practice ? 'Practice' : 'Official';
+                                                            const duration = test.duration_minutes || 30;
+                                                            const totalQuestions = test.total_questions || test.num_questions || 0;
+
+                                                            testDetails.textContent = `${testType} | ${duration} min | ${totalQuestions} questions`;
                                                             testInfo.appendChild(testDetails);
 
                                                             // Create action section
@@ -1795,6 +1987,146 @@
                                                     function editTest(testId) {
                                                         window.open('${pageContext.request.contextPath}/test?action=edit&id=' + testId, '_blank');
                                                     }
+
+                                                    function showTestPositionModal(testId, testName, currentLevel, currentChapterId, currentLessonId) {
+                                                        currentTestId = testId;
+                                                        currentTestName = testName;
+
+                                                        document.getElementById('testPositionInfo').innerHTML =
+                                                                '<strong>Moving test:</strong> ' + testName + '<br>' +
+                                                                '<strong>Current position:</strong> ' + currentLevel + ' level';
+
+                                                        // Set current position
+                                                        document.querySelector(`input[name="positionLevel"][value="${currentLevel}"]`).checked = true;
+
+                                                        if (currentChapterId) {
+                                                            document.getElementById('chapterSelect').value = currentChapterId;
+                                                        }
+
+                                                        updatePositionOptions();
+
+                                                        if (currentLessonId) {
+                                                            updateLessonOptions().then(() => {
+                                                                document.getElementById('lessonSelect').value = currentLessonId;
+                                                            });
+                                                        }
+
+                                                        showModal('testPositionModal');
+                                                    }
+
+                                                    function updatePositionOptions() {
+                                                        const level = document.querySelector('input[name="positionLevel"]:checked').value;
+                                                        const chapterSelection = document.getElementById('chapterSelection');
+                                                        const lessonSelection = document.getElementById('lessonSelection');
+
+                                                        if (level === 'course') {
+                                                            chapterSelection.style.display = 'none';
+                                                            lessonSelection.style.display = 'none';
+                                                        } else if (level === 'chapter') {
+                                                            chapterSelection.style.display = 'block';
+                                                            lessonSelection.style.display = 'none';
+                                                        } else if (level === 'lesson') {
+                                                            chapterSelection.style.display = 'block';
+                                                            lessonSelection.style.display = 'block';
+                                                        }
+                                                    }
+
+                                                    function updateLessonOptions() {
+                                                        return new Promise((resolve) => {
+                                                            const chapterId = document.getElementById('chapterSelect').value;
+                                                            const lessonSelect = document.getElementById('lessonSelect');
+
+                                                            if (!chapterId) {
+                                                                lessonSelect.innerHTML = '<option value="">-- Select Chapter First --</option>';
+                                                                resolve();
+                                                                return;
+                                                            }
+
+                                                            lessonSelect.innerHTML = '<option value="">-- Loading lessons... --</option>';
+
+                                                            fetch('${pageContext.request.contextPath}/course?action=getLessonsForCourse&chapterId=' + chapterId + '&courseId=${courseId}')
+                                                                    .then(response => response.json())
+                                                                    .then(lessons => {
+                                                                        lessonSelect.innerHTML = '<option value="">-- Select Lesson --</option>';
+                                                                        lessons.forEach(lesson => {
+                                                                            if (!lesson.isAdded)
+                                                                                return; // Only show lessons that are in the course
+                                                                            const option = document.createElement('option');
+                                                                            option.value = lesson.id;
+                                                                            option.textContent = lesson.name;
+                                                                            lessonSelect.appendChild(option);
+                                                                        });
+                                                                        resolve();
+                                                                    })
+                                                                    .catch(error => {
+                                                                        console.error('Error loading lessons:', error);
+                                                                        lessonSelect.innerHTML = '<option value="">-- Error loading lessons --</option>';
+                                                                        resolve();
+                                                                    });
+                                                        });
+                                                    }
+
+                                                    function updateTestPosition() {
+                                                        if (!currentTestId) {
+                                                            alert('No test selected');
+                                                            return;
+                                                        }
+
+                                                        const level = document.querySelector('input[name="positionLevel"]:checked').value;
+                                                        let chapterId = null;
+                                                        let lessonId = null;
+
+                                                        if (level === 'chapter' || level === 'lesson') {
+                                                            chapterId = document.getElementById('chapterSelect').value;
+                                                            if (!chapterId) {
+                                                                alert('Please select a chapter');
+                                                                return;
+                                                            }
+                                                        }
+
+                                                        if (level === 'lesson') {
+                                                            lessonId = document.getElementById('lessonSelect').value;
+                                                            if (!lessonId) {
+                                                                alert('Please select a lesson');
+                                                                return;
+                                                            }
+                                                        }
+
+                                                        const params = new URLSearchParams();
+                                                        params.append('action', 'updateTestPosition');
+                                                        params.append('courseId', '${courseId}');
+                                                        params.append('testId', currentTestId);
+                                                        params.append('displayOrder', 1); // Will be recalculated on server
+
+                                                        if (chapterId) {
+                                                            params.append('chapterId', chapterId);
+                                                        }
+                                                        if (lessonId) {
+                                                            params.append('lessonId', lessonId);
+                                                        }
+
+                                                        fetch('${pageContext.request.contextPath}/course', {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Content-Type': 'application/x-www-form-urlencoded',
+                                                                'X-Requested-With': 'XMLHttpRequest'
+                                                            },
+                                                            body: params.toString()
+                                                        })
+                                                                .then(response => response.json())
+                                                                .then(data => {
+                                                                    if (data.success) {
+                                                                        hideModal('testPositionModal');
+                                                                        location.reload();
+                                                                    } else {
+                                                                        alert('Failed to move test: ' + data.message);
+                                                                    }
+                                                                })
+                                                                .catch(error => {
+                                                                    console.error('Error:', error);
+                                                                    alert('An error occurred while moving the test');
+                                                                });
+                                                    }
         </script>
         <!-- Browse Tests Modal -->
         <div class="modal fade" id="browseTestModal" tabindex="-1">
@@ -1823,6 +2155,60 @@
                            class="btn btn-success">
                             <i class="fas fa-plus"></i> Create New Test
                         </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Position Modal -->
+        <div class="modal fade" id="testPositionModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Move Test Position</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="testPositionInfo" class="alert alert-info"></div>
+
+                        <div class="form-group">
+                            <label>Position Level:</label>
+                            <div>
+                                <label class="radio-option">
+                                    <input type="radio" name="positionLevel" value="course" onchange="updatePositionOptions()">
+                                    <i class="fas fa-graduation-cap"></i> Course Level
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="positionLevel" value="chapter" onchange="updatePositionOptions()">
+                                    <i class="fas fa-bookmark"></i> Chapter Level
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="positionLevel" value="lesson" onchange="updatePositionOptions()">
+                                    <i class="fas fa-play"></i> Lesson Level
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="chapterSelection" class="form-group" style="display: none;">
+                            <label>Select Chapter:</label>
+                            <select id="chapterSelect" class="form-control" onchange="updateLessonOptions()">
+                                <option value="">-- Select Chapter --</option>
+                                <c:forEach items="${courseChapters}" var="chapter">
+                                    <option value="${chapter.chapter_id}">${chapter.chapter_name}</option>
+                                </c:forEach>
+                            </select>
+                        </div>
+
+                        <div id="lessonSelection" class="form-group" style="display: none;">
+                            <label>Select Lesson:</label>
+                            <select id="lessonSelect" class="form-control">
+                                <option value="">-- Select Lesson --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="updateTestPosition()">Move Test</button>
                     </div>
                 </div>
             </div>

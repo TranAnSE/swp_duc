@@ -1086,49 +1086,59 @@
 
                             <!-- Smart Adding Controls -->
                             <div id="smartAddingControls">
-                                <c:if test="${not empty contextLessonId}">
-                                    <div class="generation-controls">
-                                        <div class="control-group">
-                                            <label for="questionCount">Number of Questions</label>
-                                            <input type="number" id="questionCount" min="1" max="20" value="5" class="form-control">
+                                <c:choose>
+                                    <c:when test="${not empty testContext}">
+                                        <div class="context-info">
+                                            <i class="fas fa-info-circle"></i>
+                                            <strong>Smart Generation Available:</strong> 
+                                            ${testContext.contextLevel} level - ${testContext.contextName}
+                                            <input type="hidden" id="contextLevel" value="${testContext.contextLevel}" />
+                                            <input type="hidden" id="contextId" value="${testContext.contextId}" />
                                         </div>
 
-                                        <div class="control-group">
-                                            <label for="difficultyFilter">Difficulty Level</label>
-                                            <select id="difficultyFilter" class="form-control">
-                                                <option value="all">All Levels</option>
-                                                <option value="easy">Easy</option>
-                                                <option value="medium" selected>Medium</option>
-                                                <option value="hard">Hard</option>
-                                            </select>
+                                        <div class="generation-controls">
+                                            <div class="control-group">
+                                                <label for="questionCount">Number of Questions</label>
+                                                <input type="number" id="questionCount" min="1" max="20" value="5" class="form-control">
+                                            </div>
+
+                                            <div class="control-group">
+                                                <label for="difficultyFilter">Difficulty Level</label>
+                                                <select id="difficultyFilter" class="form-control">
+                                                    <option value="all">All Levels</option>
+                                                    <option value="easy">Easy</option>
+                                                    <option value="medium" selected>Medium</option>
+                                                    <option value="hard">Hard</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="control-group">
+                                                <label for="categoryFilter">Question Category</label>
+                                                <select id="categoryFilter" class="form-control">
+                                                    <option value="all">All Categories</option>
+                                                    <option value="conceptual">Conceptual</option>
+                                                    <option value="application">Application</option>
+                                                    <option value="analysis">Analysis</option>
+                                                    <option value="synthesis">Synthesis</option>
+                                                    <option value="evaluation">Evaluation</option>
+                                                </select>
+                                            </div>
                                         </div>
 
-                                        <div class="control-group">
-                                            <label for="categoryFilter">Question Category</label>
-                                            <select id="categoryFilter" class="form-control">
-                                                <option value="all">All Categories</option>
-                                                <option value="conceptual">Conceptual</option>
-                                                <option value="application">Application</option>
-                                                <option value="analysis">Analysis</option>
-                                                <option value="synthesis">Synthesis</option>
-                                                <option value="evaluation">Evaluation</option>
-                                            </select>
+                                        <div style="text-align: center; margin-bottom: 20px;">
+                                            <button type="button" class="btn-generate" id="generateSmartBtn">
+                                                <i class="fas fa-dice"></i> Generate Smart Questions
+                                            </button>
                                         </div>
-                                    </div>
-
-                                    <div style="text-align: center; margin-bottom: 20px;">
-                                        <button type="button" class="btn-generate" id="generateSmartBtn">
-                                            <i class="fas fa-dice"></i> Generate Smart Questions
-                                        </button>
-                                    </div>
-                                </c:if>
-                                <c:if test="${empty contextLessonId}">
-                                    <div class="alert alert-warning">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                        Smart question generation is not available because this test doesn't have a specific lesson context.
-                                        Please use Manual Question Adding instead.
-                                    </div>
-                                </c:if>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Smart question generation is not available because this test doesn't have a specific context.
+                                            Please use Manual Question Adding instead.
+                                        </div>
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
 
                             <!-- Manual Adding Controls -->
@@ -1521,8 +1531,11 @@
 
                                         // Smart question generation
                                         function generateSmartQuestions() {
-                                            if (!contextLessonId) {
-                                                alert('No lesson context found for this test');
+                                            const contextLevel = document.getElementById('contextLevel')?.value;
+                                            const contextId = document.getElementById('contextId')?.value;
+
+                                            if (!contextLevel || !contextId) {
+                                                alert('No context found for this test');
                                                 return;
                                             }
 
@@ -1530,8 +1543,9 @@
                                             const difficulty = $('#difficultyFilter').val();
                                             const category = $('#categoryFilter').val();
 
-                                            console.log('Generating smart questions with params:', {
-                                                lessonId: contextLessonId,
+                                            console.log('Generating smart questions with context:', {
+                                                contextLevel: contextLevel,
+                                                contextId: contextId,
                                                 count: count,
                                                 difficulty: difficulty,
                                                 category: category,
@@ -1543,17 +1557,41 @@
                                             $('#addingQuestionsPreview').addClass('active');
                                             updateAddingStats();
 
+                                            // Determine the appropriate action based on context level
+                                            let action = '';
+                                            let paramName = '';
+
+                                            switch (contextLevel) {
+                                                case 'lesson':
+                                                    action = 'getSmartQuestions';
+                                                    paramName = 'lessonId';
+                                                    break;
+                                                case 'chapter':
+                                                    action = 'getQuestionsByChapter';
+                                                    paramName = 'chapterId';
+                                                    break;
+                                                case 'subject':
+                                                    action = 'getQuestionsBySubject';
+                                                    paramName = 'subjectId';
+                                                    break;
+                                                default:
+                                                    alert('Unsupported context level: ' + contextLevel);
+                                                    return;
+                                            }
+
+                                            const params = {
+                                                action: action,
+                                                [paramName]: contextId,
+                                                count: count,
+                                                difficulty: difficulty,
+                                                category: category,
+                                                excludeIds: Array.from(currentlySelectedIds).join(',')
+                                            };
+
                                             $.ajax({
                                                 url: 'test',
                                                 method: 'GET',
-                                                data: {
-                                                    action: 'getSmartQuestions',
-                                                    lessonId: contextLessonId,
-                                                    count: count,
-                                                    difficulty: difficulty,
-                                                    category: category,
-                                                    excludeIds: Array.from(currentlySelectedIds).join(',')
-                                                },
+                                                data: params,
                                                 success: function (data) {
                                                     console.log('Smart questions received:', data);
                                                     if (data && data.length > 0) {

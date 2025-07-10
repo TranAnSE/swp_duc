@@ -12,6 +12,7 @@ public class Test {
     private int num_questions;
     private Integer course_id;
     private Integer chapter_id;
+    private Integer lesson_id;
     private int test_order;
     private Integer created_by;
     private LocalDateTime created_at;
@@ -35,7 +36,7 @@ public class Test {
     // New constructor for course-integrated tests
     public Test(String name, String description, boolean is_practice,
             int duration_minutes, int num_questions, Integer course_id,
-            Integer chapter_id, Integer created_by) {
+            Integer chapter_id, Integer lesson_id, Integer created_by) {
         this();
         this.name = name;
         this.description = description;
@@ -44,6 +45,7 @@ public class Test {
         this.num_questions = num_questions;
         this.course_id = course_id;
         this.chapter_id = chapter_id;
+        this.lesson_id = lesson_id;
         this.created_by = created_by;
     }
 
@@ -112,6 +114,14 @@ public class Test {
         this.chapter_id = chapter_id;
     }
 
+    public Integer getLesson_id() {
+        return lesson_id;
+    }
+
+    public void setLesson_id(Integer lesson_id) {
+        this.lesson_id = lesson_id;
+    }
+
     public int getTest_order() {
         return test_order;
     }
@@ -153,12 +163,18 @@ public class Test {
         return chapter_id != null && chapter_id > 0;
     }
 
+    public boolean isLessonSpecific() {
+        return lesson_id != null && lesson_id > 0;
+    }
+
     public String getTestType() {
         return is_practice ? "Practice Test" : "Official Test";
     }
 
     public String getTestScope() {
-        if (isChapterSpecific()) {
+        if (isLessonSpecific()) {
+            return "Lesson Test";
+        } else if (isChapterSpecific()) {
             return "Chapter Test";
         } else if (isCourseIntegrated()) {
             return "Course Test";

@@ -169,6 +169,9 @@ public class CourseController extends HttpServlet {
                 case "reorderTests":
                     reorderTests(request, response);
                     break;
+                case "updateTestPosition":
+                    updateTestPosition(request, response);
+                    break;
                 default:
                     System.out.println("Unknown action: " + action); // Debug log
                     if (isAjaxRequest(request)) {
@@ -441,7 +444,7 @@ public class CourseController extends HttpServlet {
             // Get course content
             List<Map<String, Object>> courseChapters = courseManagementDAO.getCourseChapters(courseId);
             List<Map<String, Object>> courseLessons = courseManagementDAO.getCourseLessons(courseId);
-            List<Map<String, Object>> courseTests = courseManagementDAO.getCourseTests(courseId);
+            List<Map<String, Object>> courseTests = courseManagementDAO.getCourseTestsStructured(courseId);
 
             // Get available chapters for the subject
             Integer subjectId = (Integer) courseDetails.get("subject_id");
@@ -1135,6 +1138,46 @@ public class CourseController extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             response.getWriter().write("[]");
+        }
+    }
+
+    private void updateTestPosition(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            int testId = Integer.parseInt(request.getParameter("testId"));
+            int displayOrder = Integer.parseInt(request.getParameter("displayOrder"));
+
+            String chapterIdParam = request.getParameter("chapterId");
+            String lessonIdParam = request.getParameter("lessonId");
+
+            Integer chapterId = null;
+            Integer lessonId = null;
+
+            if (chapterIdParam != null && !chapterIdParam.isEmpty() && !"null".equals(chapterIdParam)) {
+                chapterId = Integer.parseInt(chapterIdParam);
+            }
+
+            if (lessonIdParam != null && !lessonIdParam.isEmpty() && !"null".equals(lessonIdParam)) {
+                lessonId = Integer.parseInt(lessonIdParam);
+            }
+
+            boolean success = courseManagementDAO.updateTestPosition(courseId, testId, chapterId, lessonId, displayOrder);
+
+            if (success) {
+                response.getWriter().write("{\"success\": true, \"message\": \"Test position updated successfully\"}");
+            } else {
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to update test position\"}");
+            }
+
+        } catch (NumberFormatException e) {
+            response.getWriter().write("{\"success\": false, \"message\": \"Invalid number format\"}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
         }
     }
 }

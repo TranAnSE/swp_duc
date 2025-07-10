@@ -316,6 +316,24 @@ public class TestController extends HttpServlet {
             }
             request.setAttribute("test", test);
 
+            // Get test context
+            Map<String, Object> testContext = testDAO.getTestContext(id);
+            if (testContext != null) {
+                request.setAttribute("testContext", testContext);
+
+                String contextLevel = (String) testContext.get("contextLevel");
+                Object contextId = testContext.get("contextId");
+                String contextName = (String) testContext.get("contextName");
+
+                // Set context info for JSP
+                if (contextId != null) {
+                    request.setAttribute("contextInfo",
+                            "Test Context: " + contextLevel.toUpperCase() + " - " + contextName);
+                    request.setAttribute("contextLevel", contextLevel);
+                    request.setAttribute("contextId", contextId);
+                }
+            }
+
             // Get selected question IDs for this test
             List<Integer> selectedQuestionIds = testQuestionDAO.getQuestionIdsByTest(id);
             request.setAttribute("selectedQuestionIds", selectedQuestionIds);
@@ -334,17 +352,6 @@ public class TestController extends HttpServlet {
             GradeDAO gradeDAO = new GradeDAO();
             List<Grade> gradeList = gradeDAO.findAllFromGrade();
             request.setAttribute("gradeList", gradeList);
-
-            // If the test is associated with a course, get the subject ID to pre-load questions
-            if (test.getCourse_id() != null) {
-                Map<String, Object> courseDetails = courseDAO.getCourseDetails(test.getCourse_id());
-                if (courseDetails != null) {
-                    int subjectId = (int) courseDetails.get("subject_id");
-                    List<Map<String, Object>> availableQuestions = testDAO.getQuestionsBySubject(subjectId);
-                    request.setAttribute("availableQuestions", availableQuestions);
-                    request.setAttribute("courseDetails", courseDetails);
-                }
-            }
 
             RequestDispatcher dispatcher = request.getRequestDispatcher("/Test/updateTest.jsp");
             dispatcher.forward(request, response);
@@ -374,6 +381,7 @@ public class TestController extends HttpServlet {
             // Check if this is a course-integrated test
             String courseIdParam = request.getParameter("courseId");
             String chapterIdParam = request.getParameter("chapterId");
+            String lessonIdParam = request.getParameter("lessonId");
             String durationParam = request.getParameter("duration");
             String numQuestionsParam = request.getParameter("numQuestions");
             String testOrderParam = request.getParameter("testOrder");
@@ -395,6 +403,10 @@ public class TestController extends HttpServlet {
                     test.setChapter_id(Integer.parseInt(chapterIdParam));
                 }
 
+                if (lessonIdParam != null && !lessonIdParam.isEmpty()) {
+                    test.setLesson_id(Integer.parseInt(lessonIdParam));
+                }
+
                 if (durationParam != null && !durationParam.isEmpty()) {
                     test.setDuration_minutes(Integer.parseInt(durationParam));
                 }
@@ -407,9 +419,11 @@ public class TestController extends HttpServlet {
                     test.setTest_order(Integer.parseInt(testOrderParam));
                 }
             } else {
-                // Set default values for new fields
-                test.setDuration_minutes(30);
-                test.setNum_questions(10);
+                // Standalone test - set default values
+                test.setDuration_minutes(durationParam != null && !durationParam.isEmpty()
+                        ? Integer.parseInt(durationParam) : 30);
+                test.setNum_questions(numQuestionsParam != null && !numQuestionsParam.isEmpty()
+                        ? Integer.parseInt(numQuestionsParam) : 10);
             }
 
             int testId = testDAO.addTest(test);

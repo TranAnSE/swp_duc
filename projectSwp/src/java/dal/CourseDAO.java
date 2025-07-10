@@ -1262,11 +1262,53 @@ public class CourseDAO extends DBContext {
         }
     }
 
+    public boolean updateTestPosition(int courseId, int testId, Integer chapterId, Integer lessonId, int displayOrder) throws SQLException {
+        try {
+            connection.setAutoCommit(false);
+
+            // Update course_test table
+            String updateCourseTest = "UPDATE course_test SET chapter_id = ?, display_order = ? WHERE course_id = ? AND test_id = ?";
+            try (PreparedStatement ps1 = connection.prepareStatement(updateCourseTest)) {
+                if (chapterId != null) {
+                    ps1.setInt(1, chapterId);
+                } else {
+                    ps1.setNull(1, Types.INTEGER);
+                }
+                ps1.setInt(2, displayOrder);
+                ps1.setInt(3, courseId);
+                ps1.setInt(4, testId);
+                ps1.executeUpdate();
+            }
+
+            // Update test table for lesson assignment
+            String updateTest = "UPDATE test SET lesson_id = ? WHERE id = ?";
+            try (PreparedStatement ps2 = connection.prepareStatement(updateTest)) {
+                if (lessonId != null) {
+                    ps2.setInt(1, lessonId);
+                } else {
+                    ps2.setNull(1, Types.INTEGER);
+                }
+                ps2.setInt(2, testId);
+                ps2.executeUpdate();
+            }
+
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            connection.rollback();
+            throw e;
+        } finally {
+            connection.setAutoCommit(true);
+        }
+    }
+
     public List<Map<String, Object>> getAvailableTestsForCourseWithDetails(int courseId, int subjectId) throws SQLException {
         String sql = "SELECT t.*, "
                 + "CASE WHEN ct.test_id IS NOT NULL THEN 1 ELSE 0 END as is_in_course, "
                 + "creator.full_name as created_by_name, "
-                + "COUNT(tq.question_id) as total_questions "
+                + "COUNT(tq.question_id) as total_questions, "
+                + "COALESCE(t.duration_minutes, 30) as duration_minutes, "
+                + "COALESCE(t.num_questions, 10) as num_questions "
                 + "FROM test t "
                 + "LEFT JOIN course_test ct ON t.id = ct.test_id AND ct.course_id = ? AND ct.is_active = 1 "
                 + "LEFT JOIN account creator ON t.created_by = creator.id "
@@ -1294,6 +1336,64 @@ public class CourseDAO extends DBContext {
                 test.put("created_by_name", rs.getString("created_by_name"));
                 test.put("total_questions", rs.getInt("total_questions"));
                 test.put("created_at", rs.getTimestamp("created_at"));
+                tests.add(test);
+            }
+        }
+        return tests;
+    }
+
+    public List<Map<String, Object>> getCourseTestsStructured(int courseId) throws SQLException {
+        String sql = """
+        SELECT ct.*, t.name as test_name, t.description as test_description, 
+               t.is_practice, t.duration_minutes, t.num_questions, 
+               c.name as chapter_name, l.name as lesson_name,
+               t.lesson_id
+        FROM course_test ct
+        JOIN test t ON ct.test_id = t.id
+        LEFT JOIN chapter c ON ct.chapter_id = c.id
+        LEFT JOIN lesson l ON t.lesson_id = l.id
+        WHERE ct.course_id = ? AND ct.is_active = 1
+        ORDER BY 
+            CASE WHEN ct.chapter_id IS NULL THEN 0 ELSE 1 END,
+            ct.chapter_id,
+            CASE WHEN t.lesson_id IS NULL THEN 0 ELSE 1 END,
+            t.lesson_id,
+            ct.display_order
+        """;
+
+        List<Map<String, Object>> tests = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> test = new HashMap<>();
+                test.put("id", rs.getInt("id"));
+                test.put("test_id", rs.getInt("test_id"));
+                test.put("test_name", rs.getString("test_name"));
+                test.put("test_description", rs.getString("test_description"));
+                test.put("is_practice", rs.getBoolean("is_practice"));
+                test.put("duration_minutes", rs.getInt("duration_minutes"));
+                test.put("num_questions", rs.getInt("num_questions"));
+                test.put("chapter_id", rs.getObject("chapter_id"));
+                test.put("chapter_name", rs.getString("chapter_name"));
+                test.put("lesson_id", rs.getObject("lesson_id"));
+                test.put("lesson_name", rs.getString("lesson_name"));
+                test.put("test_type", rs.getString("test_type"));
+                test.put("display_order", rs.getInt("display_order"));
+
+                // Determine test position context
+                if (rs.getObject("lesson_id") != null) {
+                    test.put("position_context", "lesson");
+                    test.put("position_name", rs.getString("lesson_name"));
+                } else if (rs.getObject("chapter_id") != null) {
+                    test.put("position_context", "chapter");
+                    test.put("position_name", rs.getString("chapter_name"));
+                } else {
+                    test.put("position_context", "course");
+                    test.put("position_name", "Course Level");
+                }
+
                 tests.add(test);
             }
         }

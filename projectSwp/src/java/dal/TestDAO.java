@@ -26,32 +26,68 @@ public class TestDAO extends DBContext {
     }
 
     public int addTest(Test test) {
-        // If this is a course-integrated test, use the new method
+        String sql;
+
         if (test.getCourse_id() != null) {
-            return addCourseTest(test);
+            // Course-integrated test
+            sql = "INSERT INTO test (name, description, is_practice, duration_minutes, "
+                    + "num_questions, course_id, chapter_id, lesson_id, test_order, created_by) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        } else {
+            // Standalone test
+            sql = "INSERT INTO test (name, description, is_practice, duration_minutes, "
+                    + "num_questions, created_by) VALUES (?, ?, ?, ?, ?, ?)";
         }
 
-        // Otherwise, use legacy method for backward compatibility
-        String sql = "INSERT INTO test (name, description, is_practice, "
-                + "duration_minutes, num_questions, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, test.getName());
             ps.setString(2, test.getDescription());
             ps.setBoolean(3, test.isIs_practice());
-            ps.setInt(5, test.getDuration_minutes());
-            ps.setInt(6, test.getNum_questions());
+            ps.setInt(4, test.getDuration_minutes());
+            ps.setInt(5, test.getNum_questions());
 
-            if (test.getCreated_by() != null) {
-                ps.setInt(7, test.getCreated_by());
+            if (test.getCourse_id() != null) {
+                ps.setInt(6, test.getCourse_id());
+
+                if (test.getChapter_id() != null) {
+                    ps.setInt(7, test.getChapter_id());
+                } else {
+                    ps.setNull(7, Types.INTEGER);
+                }
+
+                if (test.getLesson_id() != null) {
+                    ps.setInt(8, test.getLesson_id());
+                } else {
+                    ps.setNull(8, Types.INTEGER);
+                }
+
+                ps.setInt(9, test.getTest_order());
+
+                if (test.getCreated_by() != null) {
+                    ps.setInt(10, test.getCreated_by());
+                } else {
+                    ps.setNull(10, Types.INTEGER);
+                }
             } else {
-                ps.setNull(7, Types.INTEGER);
+                if (test.getCreated_by() != null) {
+                    ps.setInt(6, test.getCreated_by());
+                } else {
+                    ps.setNull(6, Types.INTEGER);
+                }
             }
 
             ps.executeUpdate();
 
             ResultSet rs = ps.getGeneratedKeys();
             if (rs.next()) {
-                return rs.getInt(1);
+                int testId = rs.getInt(1);
+
+                // If this is a course test, also add to course_test table
+                if (test.getCourse_id() != null) {
+                    addTestToCourse(testId, test.getCourse_id(), test.getChapter_id(), test.getTest_order());
+                }
+
+                return testId;
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -703,5 +739,66 @@ public class TestDAO extends DBContext {
             }
         }
         return lessons;
+    }
+
+    public Map<String, Object> getTestContext(int testId) throws SQLException {
+        String sql = """
+        SELECT t.id, t.name, t.lesson_id, t.chapter_id, t.course_id,
+               l.name as lesson_name, l.chapter_id as lesson_chapter_id,
+               c.name as chapter_name, c.subject_id,
+               s.name as subject_name, s.grade_id,
+               g.name as grade_name,
+               sp.course_title
+        FROM test t
+        LEFT JOIN lesson l ON t.lesson_id = l.id
+        LEFT JOIN chapter c ON (t.chapter_id = c.id OR l.chapter_id = c.id)
+        LEFT JOIN subject s ON c.subject_id = s.id
+        LEFT JOIN grade g ON s.grade_id = g.id
+        LEFT JOIN study_package sp ON t.course_id = sp.id
+        WHERE t.id = ?
+        """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, testId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                Map<String, Object> context = new HashMap<>();
+                context.put("testId", rs.getInt("id"));
+                context.put("testName", rs.getString("name"));
+                context.put("lessonId", rs.getObject("lesson_id"));
+                context.put("chapterId", rs.getObject("chapter_id"));
+                context.put("courseId", rs.getObject("course_id"));
+                context.put("lessonName", rs.getString("lesson_name"));
+                context.put("chapterName", rs.getString("chapter_name"));
+                context.put("subjectName", rs.getString("subject_name"));
+                context.put("subjectId", rs.getObject("subject_id"));
+                context.put("gradeName", rs.getString("grade_name"));
+                context.put("gradeId", rs.getObject("grade_id"));
+                context.put("courseTitle", rs.getString("course_title"));
+
+                // Determine context level
+                if (rs.getObject("lesson_id") != null) {
+                    context.put("contextLevel", "lesson");
+                    context.put("contextId", rs.getInt("lesson_id"));
+                    context.put("contextName", rs.getString("lesson_name"));
+                } else if (rs.getObject("chapter_id") != null) {
+                    context.put("contextLevel", "chapter");
+                    context.put("contextId", rs.getInt("chapter_id"));
+                    context.put("contextName", rs.getString("chapter_name"));
+                } else if (rs.getObject("subject_id") != null) {
+                    context.put("contextLevel", "subject");
+                    context.put("contextId", rs.getInt("subject_id"));
+                    context.put("contextName", rs.getString("subject_name"));
+                } else {
+                    context.put("contextLevel", "course");
+                    context.put("contextId", rs.getObject("course_id"));
+                    context.put("contextName", rs.getString("course_title"));
+                }
+
+                return context;
+            }
+        }
+        return null;
     }
 }
