@@ -677,4 +677,31 @@ public class TestDAO extends DBContext {
         }
         return questions;
     }
+
+    public List<Map<String, Object>> getLessonsByCourse(int courseId) throws SQLException {
+        String sql = """
+        SELECT DISTINCT l.id, l.name, l.chapter_id, c.name as chapter_name
+        FROM course_lesson cl
+        JOIN lesson l ON cl.lesson_id = l.id
+        JOIN chapter c ON l.chapter_id = c.id
+        WHERE cl.course_id = ? AND cl.is_active = 1
+        ORDER BY c.name, l.name
+        """;
+
+        List<Map<String, Object>> lessons = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> lesson = new HashMap<>();
+                lesson.put("id", rs.getInt("id"));
+                lesson.put("name", rs.getString("name"));
+                lesson.put("chapter_id", rs.getInt("chapter_id"));
+                lesson.put("chapter_name", rs.getString("chapter_name"));
+                lessons.add(lesson);
+            }
+        }
+        return lessons;
+    }
 }
