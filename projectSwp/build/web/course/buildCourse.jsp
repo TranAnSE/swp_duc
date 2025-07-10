@@ -1884,7 +1884,7 @@
                                                                 testInfo.appendChild(document.createElement('br'));
                                                             }
 
-                                                            // Test details - FIX: Ensure values are properly displayed
+                                                            // Test details
                                                             const testDetails = document.createElement('small');
                                                             testDetails.className = 'text-info';
 

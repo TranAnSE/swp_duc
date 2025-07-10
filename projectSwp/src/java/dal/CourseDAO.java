@@ -1315,7 +1315,7 @@ public class CourseDAO extends DBContext {
                 + "LEFT JOIN test_question tq ON t.id = tq.test_id "
                 + "WHERE (t.course_id IS NULL OR t.course_id = ?) "
                 + "GROUP BY t.id, t.name, t.description, t.is_practice, t.duration_minutes, "
-                + "t.num_questions, t.created_at, creator.full_name "
+                + "t.num_questions, t.created_at, creator.full_name, ct.test_id "
                 + "ORDER BY t.created_at DESC";
 
         List<Map<String, Object>> tests = new ArrayList<>();
@@ -1330,11 +1330,17 @@ public class CourseDAO extends DBContext {
                 test.put("name", rs.getString("name"));
                 test.put("description", rs.getString("description"));
                 test.put("is_practice", rs.getBoolean("is_practice"));
-                test.put("duration_minutes", rs.getInt("duration_minutes"));
-                test.put("num_questions", rs.getInt("num_questions"));
+
+                // Ensure we get proper values for duration and questions
+                int durationMinutes = rs.getInt("duration_minutes");
+                int numQuestions = rs.getInt("num_questions");
+                int totalQuestions = rs.getInt("total_questions");
+
+                test.put("duration_minutes", durationMinutes > 0 ? durationMinutes : 30);
+                test.put("num_questions", numQuestions > 0 ? numQuestions : 10);
+                test.put("total_questions", totalQuestions);
                 test.put("is_in_course", rs.getBoolean("is_in_course"));
                 test.put("created_by_name", rs.getString("created_by_name"));
-                test.put("total_questions", rs.getInt("total_questions"));
                 test.put("created_at", rs.getTimestamp("created_at"));
                 tests.add(test);
             }
