@@ -26,7 +26,6 @@
         <link rel="stylesheet" href="/assets/css/fontawesome-all.min.css">
         <link rel="stylesheet" href="/assets/css/themify-icons.css">
         <link rel="stylesheet" href="/assets/css/slick.css">
-        <link rel="stylesheet" href="/assets/css/nice-select.css">
         <link rel="stylesheet" href="/assets/css/style.css">
 
         <!-- Select2 CSS -->
@@ -324,6 +323,21 @@
                     grid-template-columns: 1fr;
                 }
             }
+            /* Override nice-select */
+            .nice-select {
+                display: none !important;
+            }
+
+            /* Ensure select2 is visible */
+            .select2-container {
+                display: block !important;
+                width: 100% !important;
+            }
+
+            .select2-container .select2-selection--single {
+                height: 38px !important;
+                line-height: 38px !important;
+            }
         </style>
     </head>
     <body>
@@ -528,6 +542,18 @@
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
         <script>
+                                                // Initialize Select2 properly
+                                                function initializeSelect2(selector) {
+                                                    if ($(selector).hasClass('select2-hidden-accessible')) {
+                                                        $(selector).select2('destroy');
+                                                    }
+                                                    $(selector).select2({
+                                                        theme: 'bootstrap-5',
+                                                        width: '100%',
+                                                        allowClear: false
+                                                    });
+                                                }
+
                                                 function selectTestType(type) {
                                                     // Remove selected class from all options
                                                     document.querySelectorAll('.test-type-option').forEach(option => {
@@ -554,48 +580,77 @@
                                                     // Add selected class to clicked option
                                                     event.currentTarget.classList.add('selected');
 
-                                                    // Update hidden input
-                                                    let hiddenChapter = document.querySelector('input[name="chapterId"]');
-                                                    let hiddenLesson = document.querySelector('input[name="lessonId"]');
+                                                    // Update hidden input for chapterId
+                                                    let chapterIdInput = document.querySelector('input[name="chapterId"]');
+                                                    if (!chapterIdInput) {
+                                                        chapterIdInput = document.createElement('input');
+                                                        chapterIdInput.type = 'hidden';
+                                                        chapterIdInput.name = 'chapterId';
+                                                        document.getElementById('testForm').appendChild(chapterIdInput);
+                                                    }
 
                                                     if (type === 'course') {
-                                                        if (hiddenChapter)
-                                                            hiddenChapter.value = '';
-                                                        if (hiddenLesson)
-                                                            hiddenLesson.value = '';
+                                                        chapterIdInput.value = '';
                                                         document.getElementById('lessonSelection').style.display = 'none';
                                                     } else if (type === 'chapter') {
-                                                        if (hiddenChapter)
-                                                            hiddenChapter.value = id;
-                                                        if (hiddenLesson)
-                                                            hiddenLesson.value = '';
-                                                        loadLessonsForChapter(id);
+                                                        chapterIdInput.value = id;
                                                         document.getElementById('lessonSelection').style.display = 'block';
+                                                        loadLessonsForChapter(id);
                                                     }
                                                 }
 
                                                 function loadLessonsForChapter(chapterId) {
                                                     const lessonSelect = document.getElementById('lessonSelect');
+
+                                                    // Show the actual select element and hide nice-select
+                                                    lessonSelect.style.display = 'block';
+                                                    const niceSelect = lessonSelect.nextElementSibling;
+                                                    if (niceSelect && niceSelect.classList.contains('nice-select')) {
+                                                        niceSelect.style.display = 'none';
+                                                    }
+
+                                                    // Reset and show loading
                                                     lessonSelect.innerHTML = '<option value="">-- Loading lessons... --</option>';
 
+                                                    // Destroy existing select2 if any
+                                                    if ($(lessonSelect).hasClass('select2-hidden-accessible')) {
+                                                        $(lessonSelect).select2('destroy');
+                                                    }
+
+                                                    // Initialize select2
+                                                    initializeSelect2('#lessonSelect');
+
                                                     fetch('${pageContext.request.contextPath}/test?action=getLessonsByChapter&chapterId=' + chapterId)
-                                                            .then(response => response.json())
+                                                            .then(response => {
+                                                                if (!response.ok) {
+                                                                    throw new Error('Network response was not ok');
+                                                                }
+                                                                return response.json();
+                                                            })
                                                             .then(lessons => {
+                                                                // Clear and populate options
                                                                 lessonSelect.innerHTML = '<option value="">-- Select Lesson (Optional) --</option>';
+
                                                                 lessons.forEach(lesson => {
                                                                     const option = document.createElement('option');
                                                                     option.value = lesson.id;
                                                                     option.textContent = lesson.name;
                                                                     lessonSelect.appendChild(option);
                                                                 });
+
+                                                                // Reinitialize select2 with new options
+                                                                $(lessonSelect).select2('destroy');
+                                                                initializeSelect2('#lessonSelect');
                                                             })
                                                             .catch(error => {
                                                                 console.error('Error loading lessons:', error);
                                                                 lessonSelect.innerHTML = '<option value="">-- Error loading lessons --</option>';
+                                                                $(lessonSelect).select2('destroy');
+                                                                initializeSelect2('#lessonSelect');
                                                             });
                                                 }
 
-                                                // Form validation
+                                                // Form validation and submission
                                                 document.getElementById('testForm').addEventListener('submit', function (e) {
                                                     const name = document.getElementById('name').value.trim();
                                                     const duration = parseInt(document.getElementById('duration').value);
@@ -619,14 +674,18 @@
                                                         return;
                                                     }
 
+                                                    // Handle lesson selection
                                                     const lessonSelect = document.getElementById('lessonSelect');
                                                     if (lessonSelect && lessonSelect.value) {
                                                         // Create hidden input for lesson
-                                                        const lessonInput = document.createElement('input');
-                                                        lessonInput.type = 'hidden';
-                                                        lessonInput.name = 'lessonId';
+                                                        let lessonInput = document.querySelector('input[name="lessonId"]');
+                                                        if (!lessonInput) {
+                                                            lessonInput = document.createElement('input');
+                                                            lessonInput.type = 'hidden';
+                                                            lessonInput.name = 'lessonId';
+                                                            this.appendChild(lessonInput);
+                                                        }
                                                         lessonInput.value = lessonSelect.value;
-                                                        this.appendChild(lessonInput);
                                                     }
 
                                                     // Show loading state
@@ -635,8 +694,9 @@
                                                     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Test...';
                                                 });
 
-                                                // Auto-generate test name based on context
+                                                // Initialize on document ready
                                                 document.addEventListener('DOMContentLoaded', function () {
+                                                    // Auto-generate test name based on context
                                                     const nameInput = document.getElementById('name');
                                                     const courseTitle = '${courseDetails.course_title}';
                                                     const chapterId = '${selectedChapterId}';
@@ -646,7 +706,15 @@
                                                     } else {
                                                         nameInput.placeholder = 'Course Test - ' + courseTitle;
                                                     }
+
+                                                    // Initialize select2 for existing selects
+                                                    $('.form-control').each(function () {
+                                                        if (this.tagName === 'SELECT' && this.id !== 'lessonSelect') {
+                                                            initializeSelect2('#' + this.id);
+                                                        }
+                                                    });
                                                 });
         </script>
+
     </body>
 </html>
