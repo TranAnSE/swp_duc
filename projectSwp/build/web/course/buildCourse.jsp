@@ -852,6 +852,18 @@
                                         }
                                     });
 
+                                    const testsList = document.getElementById('testsList');
+                                    if (testsList) {
+                                        new Sortable(testsList, {
+                                            animation: 150,
+                                            ghostClass: 'sortable-ghost',
+                                            handle: '.content-item',
+                                            onEnd: function (evt) {
+                                                reorderTests(); // Call the reorder function
+                                            }
+                                        });
+                                    }
+
                                     // Initialize sortable for lesson lists within chapters
                                     const lessonLists = document.querySelectorAll('.chapter-lessons');
                                     lessonLists.forEach(list => {
@@ -1750,10 +1762,11 @@
                                                             return;
                                                         }
 
+                                                        // Use URLSearchParams for easier parameter handling
                                                         const params = new URLSearchParams();
                                                         params.append('action', 'reorderTests');
                                                         params.append('courseId', '${courseId}');
-                                                        testIds.forEach(id => params.append('testIds', id));
+                                                        testIds.forEach(id => params.append('testIds[]', id)); // Use [] to indicate an array
 
                                                         fetch('${pageContext.request.contextPath}/course', {
                                                             method: 'POST',
@@ -1765,12 +1778,17 @@
                                                         })
                                                                 .then(response => response.json())
                                                                 .then(data => {
-                                                                    if (!data.success) {
+                                                                    if (data.success) {
+                                                                        console.log('Tests reordered successfully.');
+                                                                        // Optionally show a success toast/message
+                                                                    } else {
                                                                         console.error('Failed to reorder tests:', data.message);
+                                                                        alert('Error: Could not reorder tests.');
                                                                     }
                                                                 })
                                                                 .catch(error => {
                                                                     console.error('Error reordering tests:', error);
+                                                                    alert('A network error occurred while reordering tests.');
                                                                 });
                                                     }
 

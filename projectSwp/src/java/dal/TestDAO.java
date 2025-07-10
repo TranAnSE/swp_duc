@@ -650,4 +650,31 @@ public class TestDAO extends DBContext {
         }
         return list;
     }
+
+    public List<Map<String, Object>> getQuestionsBySubject(int subjectId) {
+        List<Map<String, Object>> questions = new ArrayList<>();
+        String sql = "SELECT q.id, q.question, q.question_type, q.difficulty, q.category, q.is_ai_generated, l.name as lesson_name "
+                + "FROM question q "
+                + "JOIN lesson l ON q.lesson_id = l.id "
+                + "JOIN chapter c ON l.chapter_id = c.id "
+                + "WHERE c.subject_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, subjectId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> question = new HashMap<>();
+                question.put("id", rs.getInt("id"));
+                question.put("question", rs.getString("question"));
+                question.put("question_type", rs.getString("question_type"));
+                question.put("difficulty", rs.getString("difficulty"));
+                question.put("category", rs.getString("category"));
+                question.put("is_ai_generated", rs.getBoolean("is_ai_generated"));
+                question.put("lesson_name", rs.getString("lesson_name"));
+                questions.add(question);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return questions;
+    }
 }

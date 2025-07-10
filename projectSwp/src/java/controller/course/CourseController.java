@@ -1077,7 +1077,7 @@ public class CourseController extends HttpServlet {
 
         try {
             int courseId = Integer.parseInt(request.getParameter("courseId"));
-            String[] testIds = request.getParameterValues("testIds");
+            String[] testIds = request.getParameterValues("testIds[]");
 
             if (testIds == null || testIds.length == 0) {
                 response.getWriter().write("{\"success\": false, \"message\": \"No tests to reorder\"}");

@@ -301,6 +301,7 @@ public class TestController extends HttpServlet {
         TestDAO testDAO = new TestDAO();
         QuestionDAO questionDAO = new QuestionDAO();
         TestQuestionDAO testQuestionDAO = new TestQuestionDAO();
+        CourseDAO courseDAO = new CourseDAO();
 
         try {
             int id = Integer.parseInt(request.getParameter("id"));
@@ -318,60 +319,29 @@ public class TestController extends HttpServlet {
 
             // Get selected questions with full details
             List<Question> selectedQuestions = new ArrayList<>();
-            LessonDAO lessonDAO = new LessonDAO();
-            ChapterDAO chapterDAO = new ChapterDAO();
-            DAOSubject subjectDAO = new DAOSubject();
-            GradeDAO gradeDAO = new GradeDAO();
-
-            Map<Integer, String> lessonNameMap = new HashMap<>();
-
-            // Load all lessons for lesson name mapping
-            List<Lesson> allLessons = lessonDAO.getAllLessons();
-            for (Lesson lesson : allLessons) {
-                lessonNameMap.put(lesson.getId(), lesson.getName());
-            }
-            request.setAttribute("lessonNameMap", lessonNameMap);
-
-            // Get detailed information for selected questions and determine the lesson context
-            Integer contextLessonId = null;
-            String contextInfo = "";
-
             for (Integer questionId : selectedQuestionIds) {
                 Question question = questionDAO.getQuestionById(questionId);
                 if (question != null) {
                     selectedQuestions.add(question);
-
-                    // Determine context lesson (use the first question's lesson as context)
-                    if (contextLessonId == null && question.getLesson_id() > 0) {
-                        contextLessonId = question.getLesson_id();
-
-                        // Build context information
-                        try {
-                            Lesson lesson = lessonDAO.getLessonById(contextLessonId);
-                            if (lesson != null) {
-                                Chapter chapter = chapterDAO.findChapterById(lesson.getChapter_id());
-                                if (chapter != null) {
-                                    Subject subject = subjectDAO.findById(chapter.getSubject_id());
-                                    if (subject != null) {
-                                        Grade grade = gradeDAO.getGradeById(subject.getGrade_id());
-                                        if (grade != null) {
-                                            contextInfo = String.format("%s → %s → %s → %s",
-                                                    grade.getName(), subject.getName(),
-                                                    chapter.getName(), lesson.getName());
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (Exception e) {
-                            System.out.println("Error building context info: " + e.getMessage());
-                        }
-                    }
                 }
             }
-
             request.setAttribute("selectedQuestions", selectedQuestions);
-            request.setAttribute("contextLessonId", contextLessonId);
-            request.setAttribute("contextInfo", contextInfo);
+
+            // Load hierarchy data for question selection
+            GradeDAO gradeDAO = new GradeDAO();
+            List<Grade> gradeList = gradeDAO.findAllFromGrade();
+            request.setAttribute("gradeList", gradeList);
+
+            // If the test is associated with a course, get the subject ID to pre-load questions
+            if (test.getCourse_id() != null) {
+                Map<String, Object> courseDetails = courseDAO.getCourseDetails(test.getCourse_id());
+                if (courseDetails != null) {
+                    int subjectId = (int) courseDetails.get("subject_id");
+                    List<Map<String, Object>> availableQuestions = testDAO.getQuestionsBySubject(subjectId);
+                    request.setAttribute("availableQuestions", availableQuestions);
+                    request.setAttribute("courseDetails", courseDetails);
+                }
+            }
 
             RequestDispatcher dispatcher = request.getRequestDispatcher("/Test/updateTest.jsp");
             dispatcher.forward(request, response);
@@ -379,6 +349,7 @@ public class TestController extends HttpServlet {
             request.setAttribute("error", "Invalid ID");
             listTests(request, response);
         } catch (Exception e) {
+            e.printStackTrace();
             request.setAttribute("error", "Error loading test: " + e.getMessage());
             listTests(request, response);
         }
@@ -492,7 +463,7 @@ public class TestController extends HttpServlet {
             String name = request.getParameter("name");
             String description = request.getParameter("description");
             boolean practice = "true".equals(request.getParameter("practice"));
-            
+
             // Update test information
             Test test = new Test(id, name, description, practice);
             testDAO.updateTest(test);
