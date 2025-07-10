@@ -35,6 +35,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.sql.SQLException;
 import model.Account;
 import util.AuthUtil;
 import util.RoleConstants;
@@ -304,7 +306,6 @@ public class TestController extends HttpServlet {
         TestDAO testDAO = new TestDAO();
         QuestionDAO questionDAO = new QuestionDAO();
         TestQuestionDAO testQuestionDAO = new TestQuestionDAO();
-        CourseDAO courseDAO = new CourseDAO();
 
         try {
             int id = Integer.parseInt(request.getParameter("id"));
@@ -316,7 +317,7 @@ public class TestController extends HttpServlet {
             }
             request.setAttribute("test", test);
 
-            // Get test context
+            // Get test context with enhanced information
             Map<String, Object> testContext = testDAO.getTestContext(id);
             if (testContext != null) {
                 request.setAttribute("testContext", testContext);
@@ -331,6 +332,11 @@ public class TestController extends HttpServlet {
                             "Test Context: " + contextLevel.toUpperCase() + " - " + contextName);
                     request.setAttribute("contextLevel", contextLevel);
                     request.setAttribute("contextId", contextId);
+
+                    // Set lesson context specifically for JavaScript
+                    if ("lesson".equals(contextLevel)) {
+                        request.setAttribute("contextLessonId", contextId);
+                    }
                 }
             }
 
@@ -347,6 +353,10 @@ public class TestController extends HttpServlet {
                 }
             }
             request.setAttribute("selectedQuestions", selectedQuestions);
+
+            // Build lesson name map for displaying lesson names
+            Map<String, String> lessonNameMap = buildLessonNameMap(selectedQuestions);
+            request.setAttribute("lessonNameMap", lessonNameMap);
 
             // Load hierarchy data for question selection
             GradeDAO gradeDAO = new GradeDAO();
@@ -1449,5 +1459,29 @@ public class TestController extends HttpServlet {
             e.printStackTrace();
             response.getWriter().write("[]");
         }
+    }
+
+    private Map<String, String> buildLessonNameMap(List<Question> questions) throws SQLException {
+        Map<String, String> lessonNameMap = new HashMap<>();
+        LessonDAO lessonDAO = new LessonDAO();
+
+        Set<Integer> lessonIds = questions.stream()
+                .map(Question::getLesson_id)
+                .filter(id -> id > 0)
+                .collect(Collectors.toSet());
+
+        for (Integer lessonId : lessonIds) {
+            try {
+                Lesson lesson = lessonDAO.getLessonById(lessonId);
+                if (lesson != null) {
+                    lessonNameMap.put(lessonId.toString(), lesson.getName());
+                }
+            } catch (Exception e) {
+                System.err.println("Error loading lesson " + lessonId + ": " + e.getMessage());
+                lessonNameMap.put(lessonId.toString(), "Unknown Lesson");
+            }
+        }
+
+        return lessonNameMap;
     }
 }
