@@ -957,6 +957,62 @@
                     transform: translateY(0);
                 }
             }
+            .form-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                margin-bottom: 20px;
+            }
+
+            .form-group {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .form-group label {
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 8px;
+            }
+
+            .form-group input {
+                padding: 10px;
+                border: 2px solid #e2e8f0;
+                border-radius: 8px;
+                font-size: 14px;
+                transition: border-color 0.2s ease;
+            }
+
+            .form-group input:focus {
+                border-color: #0ea5e9;
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+            }
+
+            .form-text {
+                font-size: 0.875em;
+                color: #6c757d;
+                margin-top: 5px;
+            }
+
+            .alert-success {
+                background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+                border-color: #28a745;
+                color: #155724;
+            }
+
+            .alert-danger {
+                background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
+                border-color: #dc3545;
+                color: #721c24;
+            }
+
+            @media (max-width: 768px) {
+                .form-row {
+                    grid-template-columns: 1fr;
+                    gap: 15px;
+                }
+            }
         </style>
     </head>
     <body>
@@ -981,6 +1037,36 @@
                             <label for="description">Description:</label>
                             <input type="text" name="description" value="${test.description}" required/>
 
+                            <!-- Duration and Number of Questions for Course Tests -->
+                            <c:if test="${isCourseTest}">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Course-Integrated Test Configuration</strong><br>
+                                    This test is part of a course. Duration and question count are configurable.
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="duration">Duration (minutes) *</label>
+                                        <input type="number" id="duration" name="duration" min="5" max="180" 
+                                               value="${testConfig.duration_minutes}" required />
+                                        <small class="form-text text-muted">Test duration between 5 and 180 minutes</small>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="numQuestions">Number of Questions *</label>
+                                        <input type="number" id="numQuestions" name="numQuestions" 
+                                               min="1" max="100" value="${testConfig.num_questions}" required />
+                                        <small class="form-text text-muted">You must select exactly this many questions</small>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <strong>Important:</strong> You must select exactly <span id="requiredQuestionCount">${testConfig.num_questions}</span> questions for this test.
+                                </div>
+                            </c:if>
+
                             <label>
                                 <input type="checkbox" name="practice" value="true"
                                        <c:if test="${test.is_practice}">checked</c:if> />
@@ -995,6 +1081,10 @@
                                     <input type="hidden" id="contextLessonId" value="${contextLessonId}" />
                                 </div>
                             </c:if>
+
+                            <!-- Hidden fields for validation -->
+                            <input type="hidden" id="isCourseTest" value="${isCourseTest}" />
+                            <input type="hidden" id="originalRequiredCount" value="${testConfig.num_questions}" />
                         </div>
 
                         <!-- Currently Selected Questions -->
@@ -1280,6 +1370,8 @@
                                         let lessonHierarchy = null; // Store lesson hierarchy info
                                         let currentSubjectId = null;
                                         let currentChapterId = null;
+                                        let isCourseTest = $('#isCourseTest').val() === 'true';
+                                        let originalRequiredCount = parseInt($('#originalRequiredCount').val()) || 0;
 
                                         // Initialize Select2
                                         function initializeSelect2(selector) {
@@ -2193,6 +2285,10 @@
                                             contextLessonId = $('#contextLessonId').val();
                                             currentlySelectedIds = new Set();
 
+                                            if (isCourseTest && originalRequiredCount > 0) {
+                                                updateQuestionCountWarning(originalRequiredCount);
+                                            }
+
                                             // Initialize currently selected question IDs
                                             $('.current-question-checkbox:checked').each(function () {
                                                 currentlySelectedIds.add(parseInt($(this).val()));
@@ -2268,12 +2364,42 @@
                                             });
 
                                             // Form submission validation
-                                            $('#updateTestForm').on('submit', function (e) {
+                                            $('#updateTestForm').off('submit').on('submit', function (e) {
                                                 const totalSelected = $('input[name="questionIds"]:checked').length;
+
                                                 if (totalSelected === 0) {
                                                     e.preventDefault();
                                                     alert('Please select at least one question for the test');
                                                     return false;
+                                                }
+
+                                                // Course test specific validation
+                                                if (isCourseTest) {
+                                                    const requiredCount = parseInt($('#numQuestions').val()) || originalRequiredCount;
+                                                    const duration = parseInt($('#duration').val());
+
+                                                    // Validate duration
+                                                    if (duration < 5 || duration > 180) {
+                                                        e.preventDefault();
+                                                        alert('Duration must be between 5 and 180 minutes');
+                                                        $('#duration').focus();
+                                                        return false;
+                                                    }
+
+                                                    // Validate question count
+                                                    if (requiredCount < 1 || requiredCount > 100) {
+                                                        e.preventDefault();
+                                                        alert('Number of questions must be between 1 and 100');
+                                                        $('#numQuestions').focus();
+                                                        return false;
+                                                    }
+
+                                                    // Validate exact question count match
+                                                    if (totalSelected !== requiredCount) {
+                                                        e.preventDefault();
+                                                        alert(`For course-integrated tests, you must select exactly ${requiredCount} questions. Currently selected: ${totalSelected} questions.`);
+                                                        return false;
+                                                    }
                                                 }
 
                                                 // Collect all selected question IDs
@@ -2385,6 +2511,62 @@
                                         window.clearManualFilters = clearManualFilters;
                                         window.showHierarchySelection = showHierarchySelection;
                                         window.hideHierarchySelection = hideHierarchySelection;
+
+                                        // Update required question count when numQuestions changes
+                                        $(document).on('change', '#numQuestions', function () {
+                                            const newCount = parseInt($(this).val()) || 0;
+                                            $('#requiredQuestionCount').text(newCount);
+
+                                            if (isCourseTest) {
+                                                updateQuestionCountWarning(newCount);
+                                            }
+                                        });
+
+                                        // Function to update question count warning
+                                        function updateQuestionCountWarning(requiredCount) {
+                                            const selectedCount = $('input[name="questionIds"]:checked').length;
+                                            const warningElement = $('.alert-warning');
+
+                                            if (selectedCount !== requiredCount) {
+                                                warningElement.removeClass('alert-warning').addClass('alert-danger');
+                                                warningElement.find('strong').text('Error:');
+                                                warningElement.find('span').after(' Currently selected: ' + selectedCount + ' questions.');
+                                            } else {
+                                                warningElement.removeClass('alert-danger').addClass('alert-success');
+                                                warningElement.find('strong').text('Perfect:');
+                                                warningElement.html('<i class="fas fa-check-circle"></i> <strong>Perfect:</strong> You have selected exactly ' + requiredCount + ' questions as required.');
+                                            }
+                                        }
+                                        // Override the existing updateCurrentSelectionStats function
+                                        const originalUpdateCurrentSelectionStats = window.updateCurrentSelectionStats;
+                                        window.updateCurrentSelectionStats = function () {
+                                            // Call original function
+                                            if (originalUpdateCurrentSelectionStats) {
+                                                originalUpdateCurrentSelectionStats();
+                                            }
+
+                                            // Add course test validation
+                                            if (isCourseTest) {
+                                                const requiredCount = parseInt($('#numQuestions').val()) || originalRequiredCount;
+                                                const selectedCount = $('.current-question-checkbox:checked').length;
+                                                updateQuestionCountWarning(requiredCount);
+                                            }
+                                        };
+                                        // Override the existing updateAddingStats function
+                                        const originalUpdateAddingStats = window.updateAddingStats;
+                                        window.updateAddingStats = function () {
+                                            // Call original function
+                                            if (originalUpdateAddingStats) {
+                                                originalUpdateAddingStats();
+                                            }
+
+                                            // Add course test validation
+                                            if (isCourseTest) {
+                                                const requiredCount = parseInt($('#numQuestions').val()) || originalRequiredCount;
+                                                const totalSelected = $('input[name="questionIds"]:checked').length;
+                                                updateQuestionCountWarning(requiredCount);
+                                            }
+                                        };
         </script>
     </body>
 </html>

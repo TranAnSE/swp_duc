@@ -307,6 +307,7 @@ public class TestController extends HttpServlet {
         QuestionDAO questionDAO = new QuestionDAO();
         TestQuestionDAO testQuestionDAO = new TestQuestionDAO();
         LessonDAO lessonDAO = new LessonDAO();
+
         try {
             int id = Integer.parseInt(request.getParameter("id"));
             Test test = testDAO.getTestById(id);
@@ -315,7 +316,21 @@ public class TestController extends HttpServlet {
                 listTests(request, response);
                 return;
             }
+
+            // Get test configuration
+            Map<String, Integer> testConfig = testDAO.getTestConfiguration(id);
+            request.setAttribute("testConfig", testConfig);
+
+            // Check if this is a course-integrated test
+            boolean isCourseTest = testDAO.isCourseIntegratedTest(id);
+            request.setAttribute("isCourseTest", isCourseTest);
+
+            // Get required question count for validation
+            int requiredQuestionCount = testDAO.getRequiredQuestionCount(id);
+            request.setAttribute("requiredQuestionCount", requiredQuestionCount);
+
             request.setAttribute("test", test);
+
             // Get test context with enhanced information
             Map<String, Object> testContext = testDAO.getTestContext(id);
             if (testContext != null) {
@@ -323,21 +338,25 @@ public class TestController extends HttpServlet {
                 String contextLevel = (String) testContext.get("contextLevel");
                 Object contextId = testContext.get("contextId");
                 String contextName = (String) testContext.get("contextName");
+
                 // Set context info for JSP
                 if (contextId != null) {
                     request.setAttribute("contextInfo",
                             "Test Context: " + contextLevel.toUpperCase() + " - " + contextName);
                     request.setAttribute("contextLevel", contextLevel);
                     request.setAttribute("contextId", contextId);
+
                     // Set lesson context specifically for JavaScript
                     if ("lesson".equals(contextLevel)) {
                         request.setAttribute("contextLessonId", contextId);
                     }
                 }
             }
+
             // Get selected question IDs for this test
             List<Integer> selectedQuestionIds = testQuestionDAO.getQuestionIdsByTest(id);
             request.setAttribute("selectedQuestionIds", selectedQuestionIds);
+
             // Get selected questions with full details
             List<Question> selectedQuestions = new ArrayList<>();
             for (Integer questionId : selectedQuestionIds) {
@@ -347,6 +366,7 @@ public class TestController extends HttpServlet {
                 }
             }
             request.setAttribute("selectedQuestions", selectedQuestions);
+
             // Build lesson name map for displaying lesson names
             List<Integer> lessonIds = new ArrayList<>();
             for (Question q : selectedQuestions) {
@@ -356,12 +376,15 @@ public class TestController extends HttpServlet {
             }
             Map<Integer, String> lessonNameMap = lessonDAO.getLessonNameMap(lessonIds);
             request.setAttribute("lessonNameMap", lessonNameMap);
+
             // Load hierarchy data for question selection
             GradeDAO gradeDAO = new GradeDAO();
             List<Grade> gradeList = gradeDAO.findAllFromGrade();
             request.setAttribute("gradeList", gradeList);
+
             RequestDispatcher dispatcher = request.getRequestDispatcher("/Test/updateTest.jsp");
             dispatcher.forward(request, response);
+
         } catch (NumberFormatException e) {
             request.setAttribute("error", "Invalid ID");
             listTests(request, response);
@@ -488,15 +511,80 @@ public class TestController extends HttpServlet {
             String description = request.getParameter("description");
             boolean practice = "true".equals(request.getParameter("practice"));
 
-            // Update test information
-            Test test = new Test(id, name, description, practice);
-            testDAO.updateTest(test);
+            // Get duration and num_questions parameters
+            String durationParam = request.getParameter("duration");
+            String numQuestionsParam = request.getParameter("numQuestions");
+
+            int duration = 30; // default
+            int numQuestions = 10; // default
+
+            if (durationParam != null && !durationParam.trim().isEmpty()) {
+                try {
+                    duration = Integer.parseInt(durationParam);
+                    if (duration < 5 || duration > 180) {
+                        request.setAttribute("error", "Duration must be between 5 and 180 minutes");
+                        showEditForm(request, response);
+                        return;
+                    }
+                } catch (NumberFormatException e) {
+                    request.setAttribute("error", "Invalid duration format");
+                    showEditForm(request, response);
+                    return;
+                }
+            }
+
+            if (numQuestionsParam != null && !numQuestionsParam.trim().isEmpty()) {
+                try {
+                    numQuestions = Integer.parseInt(numQuestionsParam);
+                    if (numQuestions < 1 || numQuestions > 100) {
+                        request.setAttribute("error", "Number of questions must be between 1 and 100");
+                        showEditForm(request, response);
+                        return;
+                    }
+                } catch (NumberFormatException e) {
+                    request.setAttribute("error", "Invalid number of questions format");
+                    showEditForm(request, response);
+                    return;
+                }
+            }
+
+            // Create test object with all fields
+            Test test = new Test();
+            test.setId(id);
+            test.setName(name);
+            test.setDescription(description);
+            test.setIs_practice(practice);
+            test.setDuration_minutes(duration);
+            test.setNum_questions(numQuestions);
+
+            // Check if this is a course-integrated test
+            boolean isCourseTest = testDAO.isCourseIntegratedTest(id);
+
+            // Validate question count for course-integrated tests
+            String[] questionIds = request.getParameterValues("questionIds");
+            int selectedQuestionCount = questionIds != null ? questionIds.length : 0;
+
+            if (isCourseTest && selectedQuestionCount != numQuestions) {
+                request.setAttribute("error",
+                        String.format("For course-integrated tests, you must select exactly %d questions as specified in the test configuration. Currently selected: %d questions.",
+                                numQuestions, selectedQuestionCount));
+                showEditForm(request, response);
+                return;
+            }
+
+            // Update test information with new method
+            boolean updateSuccess = testDAO.updateTestWithConfiguration(test);
+
+            if (!updateSuccess) {
+                request.setAttribute("error", "Failed to update test configuration");
+                showEditForm(request, response);
+                return;
+            }
 
             // Remove all old questions from test
             testQuestionDAO.removeAllQuestionsFromTest(id);
 
             // Add new selected questions
-            String[] questionIds = request.getParameterValues("questionIds");
             if (questionIds != null && questionIds.length > 0) {
                 for (String questionIdStr : questionIds) {
                     try {
@@ -509,13 +597,16 @@ public class TestController extends HttpServlet {
             }
 
             request.setAttribute("message", "Test updated successfully");
+            response.sendRedirect("test");
+
         } catch (NumberFormatException e) {
             request.setAttribute("error", "Invalid ID");
+            response.sendRedirect("test");
         } catch (Exception e) {
+            e.printStackTrace();
             request.setAttribute("error", "Error updating test: " + e.getMessage());
+            response.sendRedirect("test");
         }
-
-        response.sendRedirect("test");
     }
 
     private void deleteTest(HttpServletRequest request, HttpServletResponse response)

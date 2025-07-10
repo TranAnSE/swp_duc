@@ -801,4 +801,80 @@ public class TestDAO extends DBContext {
         }
         return null;
     }
+
+    /**
+     * Get test configuration (duration and num_questions) by test ID
+     */
+    public Map<String, Integer> getTestConfiguration(int testId) throws SQLException {
+        String sql = "SELECT duration_minutes, num_questions FROM test WHERE id = ?";
+        Map<String, Integer> config = new HashMap<>();
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, testId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                config.put("duration_minutes", rs.getInt("duration_minutes"));
+                config.put("num_questions", rs.getInt("num_questions"));
+            }
+        }
+
+        return config;
+    }
+
+    /**
+     * Update test with duration and num_questions
+     */
+    public boolean updateTestWithConfiguration(Test test) throws SQLException {
+        String sql = "UPDATE test SET name = ?, description = ?, is_practice = ?, "
+                + "duration_minutes = ?, num_questions = ?, updated_at = CURRENT_TIMESTAMP "
+                + "WHERE id = ?";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, test.getName());
+            ps.setString(2, test.getDescription());
+            ps.setBoolean(3, test.isIs_practice());
+            ps.setInt(4, test.getDuration_minutes());
+            ps.setInt(5, test.getNum_questions());
+            ps.setInt(6, test.getId());
+
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Check if test is course-integrated
+     */
+    public boolean isCourseIntegratedTest(int testId) throws SQLException {
+        String sql = "SELECT course_id FROM test WHERE id = ?";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, testId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getObject("course_id") != null;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get test's required question count
+     */
+    public int getRequiredQuestionCount(int testId) throws SQLException {
+        String sql = "SELECT num_questions FROM test WHERE id = ?";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, testId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt("num_questions");
+            }
+        }
+
+        return 0;
+    }
 }
