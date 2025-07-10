@@ -1061,10 +1061,11 @@
                                     </div>
                                 </div>
 
-                                <div class="alert alert-warning">
+                                <div class="alert alert-warning" id="questionCountWarning">
                                     <i class="fas fa-exclamation-triangle"></i>
                                     <strong>Important:</strong> You must select exactly <span id="requiredQuestionCount">${testConfig.num_questions}</span> questions for this test.
                                 </div>
+
                             </c:if>
 
                             <label>
@@ -1383,7 +1384,7 @@
                                             });
                                         }
 
-// Update current selection stats
+                                        // Update current selection stats
                                         function updateCurrentSelectionStats() {
                                             const totalCurrent = $('.current-question-checkbox').length;
                                             const selectedCurrent = $('.current-question-checkbox:checked').length;
@@ -1404,6 +1405,12 @@
                                             $('.current-question-checkbox:checked').each(function () {
                                                 currentlySelectedIds.add(parseInt($(this).val()));
                                             });
+
+                                            // Update course test validation if applicable
+                                            if (isCourseTest) {
+                                                const requiredCount = getCurrentRequiredCount();
+                                                updateQuestionCountWarning(requiredCount);
+                                            }
                                         }
 
                                         // Update adding questions stats
@@ -1426,9 +1433,15 @@
                                             });
 
                                             console.log('Adding stats updated:', {selected: selected, total: total, method: method});
+
+                                            // Update course test validation if applicable
+                                            if (isCourseTest) {
+                                                const requiredCount = getCurrentRequiredCount();
+                                                updateQuestionCountWarning(requiredCount);
+                                            }
                                         }
 
-// Update manual questions stats
+                                        // Update manual questions stats
                                         function updateManualStats() {
                                             // Count only visible questions after filtering
                                             const visibleItems = $('#manualQuestionsList .question-item:visible');
@@ -2285,8 +2298,15 @@
                                             contextLessonId = $('#contextLessonId').val();
                                             currentlySelectedIds = new Set();
 
+                                            // Initialize validation on page load
                                             if (isCourseTest && originalRequiredCount > 0) {
                                                 updateQuestionCountWarning(originalRequiredCount);
+
+                                                // Also trigger validation when any question checkbox changes
+                                                $(document).on('change', 'input[name="questionIds"]', function () {
+                                                    const requiredCount = getCurrentRequiredCount();
+                                                    updateQuestionCountWarning(requiredCount);
+                                                });
                                             }
 
                                             // Initialize currently selected question IDs
@@ -2375,8 +2395,10 @@
 
                                                 // Course test specific validation
                                                 if (isCourseTest) {
-                                                    const requiredCount = parseInt($('#numQuestions').val()) || originalRequiredCount;
+                                                    const requiredCount = getCurrentRequiredCount();
                                                     const duration = parseInt($('#duration').val());
+
+                                                    console.log('Form submission - requiredCount:', requiredCount, 'totalSelected:', totalSelected);
 
                                                     // Validate duration
                                                     if (duration < 5 || duration > 180) {
@@ -2512,11 +2534,29 @@
                                         window.showHierarchySelection = showHierarchySelection;
                                         window.hideHierarchySelection = hideHierarchySelection;
 
+                                        // Function to get current required count
+                                        function getCurrentRequiredCount() {
+                                            if (isCourseTest) {
+                                                const numQuestionsInput = $('#numQuestions');
+                                                if (numQuestionsInput.length > 0) {
+                                                    const value = parseInt(numQuestionsInput.val());
+                                                    return value > 0 ? value : originalRequiredCount;
+                                                }
+                                            }
+                                            return originalRequiredCount;
+                                        }
+
                                         // Update required question count when numQuestions changes
                                         $(document).on('change', '#numQuestions', function () {
                                             const newCount = parseInt($(this).val()) || 0;
-                                            $('#requiredQuestionCount').text(newCount);
+                                            const requiredSpan = $('#requiredQuestionCount');
 
+                                            // Update all instances of required count display
+                                            if (requiredSpan.length) {
+                                                requiredSpan.text(newCount);
+                                            }
+
+                                            // Update warning for course tests
                                             if (isCourseTest) {
                                                 updateQuestionCountWarning(newCount);
                                             }
@@ -2525,18 +2565,39 @@
                                         // Function to update question count warning
                                         function updateQuestionCountWarning(requiredCount) {
                                             const selectedCount = $('input[name="questionIds"]:checked').length;
-                                            const warningElement = $('.alert-warning');
+                                            const warningElement = $('#questionCountWarning');
+
+                                            console.log('updateQuestionCountWarning - requiredCount:', requiredCount, 'selectedCount:', selectedCount);
+
+                                            if (!warningElement.length) {
+                                                console.warn('Warning element not found');
+                                                return;
+                                            }
+
+                                            // Update the required count display in the warning element
+                                            const requiredSpan = warningElement.find('#requiredQuestionCount');
+                                            if (requiredSpan.length) {
+                                                requiredSpan.text(requiredCount);
+                                            }
 
                                             if (selectedCount !== requiredCount) {
-                                                warningElement.removeClass('alert-warning').addClass('alert-danger');
-                                                warningElement.find('strong').text('Error:');
-                                                warningElement.find('span').after(' Currently selected: ' + selectedCount + ' questions.');
+                                                warningElement.removeClass('alert-warning alert-success').addClass('alert-danger');
+                                                warningElement.html(
+                                                        '<i class="fas fa-exclamation-triangle"></i> ' +
+                                                        '<strong>Error:</strong> You must select exactly <span id="requiredQuestionCount">' +
+                                                        requiredCount + '</span> questions for this test. Currently selected: <strong>' +
+                                                        selectedCount + '</strong> questions.'
+                                                        );
                                             } else {
-                                                warningElement.removeClass('alert-danger').addClass('alert-success');
-                                                warningElement.find('strong').text('Perfect:');
-                                                warningElement.html('<i class="fas fa-check-circle"></i> <strong>Perfect:</strong> You have selected exactly ' + requiredCount + ' questions as required.');
+                                                warningElement.removeClass('alert-danger alert-warning').addClass('alert-success');
+                                                warningElement.html(
+                                                        '<i class="fas fa-check-circle"></i> ' +
+                                                        '<strong>Perfect:</strong> You have selected exactly <strong>' +
+                                                        requiredCount + '</strong> questions as required.'
+                                                        );
                                             }
                                         }
+
                                         // Override the existing updateCurrentSelectionStats function
                                         const originalUpdateCurrentSelectionStats = window.updateCurrentSelectionStats;
                                         window.updateCurrentSelectionStats = function () {
@@ -2547,11 +2608,12 @@
 
                                             // Add course test validation
                                             if (isCourseTest) {
-                                                const requiredCount = parseInt($('#numQuestions').val()) || originalRequiredCount;
-                                                const selectedCount = $('.current-question-checkbox:checked').length;
+                                                const requiredCount = getCurrentRequiredCount();
+                                                console.log('updateCurrentSelectionStats - requiredCount:', requiredCount);
                                                 updateQuestionCountWarning(requiredCount);
                                             }
                                         };
+
                                         // Override the existing updateAddingStats function
                                         const originalUpdateAddingStats = window.updateAddingStats;
                                         window.updateAddingStats = function () {
@@ -2562,8 +2624,8 @@
 
                                             // Add course test validation
                                             if (isCourseTest) {
-                                                const requiredCount = parseInt($('#numQuestions').val()) || originalRequiredCount;
-                                                const totalSelected = $('input[name="questionIds"]:checked').length;
+                                                const requiredCount = getCurrentRequiredCount();
+                                                console.log('updateAddingStats - requiredCount:', requiredCount);
                                                 updateQuestionCountWarning(requiredCount);
                                             }
                                         };
