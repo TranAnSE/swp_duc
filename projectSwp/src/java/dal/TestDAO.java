@@ -748,7 +748,7 @@ public class TestDAO extends DBContext {
                c.name as chapter_name, c.subject_id,
                s.name as subject_name, s.grade_id,
                g.name as grade_name,
-               sp.course_title
+               sp.course_title as course_name
         FROM test t
         LEFT JOIN lesson l ON t.lesson_id = l.id
         LEFT JOIN chapter c ON (t.chapter_id = c.id OR l.chapter_id = c.id)
@@ -775,9 +775,9 @@ public class TestDAO extends DBContext {
                 context.put("subjectId", rs.getObject("subject_id"));
                 context.put("gradeName", rs.getString("grade_name"));
                 context.put("gradeId", rs.getObject("grade_id"));
-                context.put("courseTitle", rs.getString("course_title"));
+                context.put("courseName", rs.getString("course_name"));
 
-                // Determine context level
+                // Determine context level with priority: lesson > chapter > course > subject
                 if (rs.getObject("lesson_id") != null) {
                     context.put("contextLevel", "lesson");
                     context.put("contextId", rs.getInt("lesson_id"));
@@ -786,14 +786,18 @@ public class TestDAO extends DBContext {
                     context.put("contextLevel", "chapter");
                     context.put("contextId", rs.getInt("chapter_id"));
                     context.put("contextName", rs.getString("chapter_name"));
+                } else if (rs.getObject("course_id") != null) {
+                    // For course-level tests, use subject as context
+                    context.put("contextLevel", "subject");
+                    context.put("contextId", rs.getObject("subject_id"));
+                    context.put("contextName", rs.getString("subject_name"));
+                    // Also store course info
+                    context.put("courseLevel", true);
+                    context.put("courseContextName", rs.getString("course_name"));
                 } else if (rs.getObject("subject_id") != null) {
                     context.put("contextLevel", "subject");
                     context.put("contextId", rs.getInt("subject_id"));
                     context.put("contextName", rs.getString("subject_name"));
-                } else {
-                    context.put("contextLevel", "course");
-                    context.put("contextId", rs.getObject("course_id"));
-                    context.put("contextName", rs.getString("course_title"));
                 }
 
                 return context;

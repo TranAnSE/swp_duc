@@ -339,14 +339,25 @@ public class TestController extends HttpServlet {
                 Object contextId = testContext.get("contextId");
                 String contextName = (String) testContext.get("contextName");
 
+                // Enhanced context info display
+                String contextInfo = "";
+                if (Boolean.TRUE.equals(testContext.get("courseLevel"))) {
+                    // For course-level tests
+                    String courseName = (String) testContext.get("courseContextName");
+                    contextInfo = "Course: " + (courseName != null ? courseName : "Unknown Course")
+                            + " (Subject: " + (contextName != null ? contextName : "Unknown Subject") + ")";
+                } else {
+                    contextInfo = "Test Context: " + (contextLevel != null ? contextLevel.toUpperCase() : "Unknown")
+                            + " - " + (contextName != null ? contextName : "Unknown");
+                }
+
                 // Set context info for JSP
                 if (contextId != null) {
-                    request.setAttribute("contextInfo",
-                            "Test Context: " + contextLevel.toUpperCase() + " - " + contextName);
+                    request.setAttribute("contextInfo", contextInfo);
                     request.setAttribute("contextLevel", contextLevel);
                     request.setAttribute("contextId", contextId);
 
-                    // Set lesson context specifically for JavaScript
+                    // Set lesson context specifically for JavaScript (for backward compatibility)
                     if ("lesson".equals(contextLevel)) {
                         request.setAttribute("contextLessonId", contextId);
                     }
@@ -763,47 +774,14 @@ public class TestController extends HttpServlet {
             }
 
             QuestionDAO questionDAO = new QuestionDAO();
-            List<Question> allQuestions = questionDAO.getQuestionsByLessonWithDetails(lessonId);
-            List<Question> filteredQuestions = new ArrayList<>();
-
-            // Filter questions by criteria and exclude already selected ones
-            for (Question question : allQuestions) {
-                // Skip if already selected
-                if (excludeIds.contains(question.getId())) {
-                    continue;
-                }
-
-                boolean matchesCriteria = true;
-
-                if (difficulty != null && !difficulty.isEmpty() && !difficulty.equals("all")) {
-                    String qDifficulty = question.getDifficulty() != null ? question.getDifficulty() : "medium";
-                    if (!qDifficulty.equals(difficulty)) {
-                        matchesCriteria = false;
-                    }
-                }
-
-                if (category != null && !category.isEmpty() && !category.equals("all")) {
-                    String qCategory = question.getCategory() != null ? question.getCategory() : "conceptual";
-                    if (!qCategory.equals(category)) {
-                        matchesCriteria = false;
-                    }
-                }
-
-                if (matchesCriteria) {
-                    filteredQuestions.add(question);
-                }
-            }
-
-            // Shuffle and select random questions
-            Collections.shuffle(filteredQuestions);
-            List<Question> selectedQuestions = filteredQuestions.subList(0, Math.min(count, filteredQuestions.size()));
+            List<Question> questions = questionDAO.getSmartQuestionsForLesson(lessonId, count, difficulty, category, excludeIds);
 
             StringBuilder json = new StringBuilder("[");
-            for (int i = 0; i < selectedQuestions.size(); i++) {
+            for (int i = 0; i < questions.size(); i++) {
                 if (i > 0) {
                     json.append(",");
                 }
-                Question question = selectedQuestions.get(i);
+                Question question = questions.get(i);
                 String difficulty_val = question.getDifficulty() != null ? question.getDifficulty() : "medium";
                 String category_val = question.getCategory() != null ? question.getCategory() : "conceptual";
                 String questionType = question.getQuestion_type() != null ? question.getQuestion_type() : "SINGLE";

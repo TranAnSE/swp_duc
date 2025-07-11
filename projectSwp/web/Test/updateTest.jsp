@@ -1080,6 +1080,11 @@
                                     <i class="fas fa-map-marker-alt"></i>
                                     <strong>Test Context:</strong> ${contextInfo}
                                     <input type="hidden" id="contextLessonId" value="${contextLessonId}" />
+                                    <input type="hidden" id="contextLevel" value="${contextLevel}" />
+                                    <input type="hidden" id="contextId" value="${contextId}" />
+                                    <c:if test="${testContext.courseLevel}">
+                                        <input type="hidden" id="isCourseLevel" value="true" />
+                                    </c:if>
                                 </div>
                             </c:if>
 
@@ -1190,9 +1195,19 @@
                                         <div class="context-info">
                                             <i class="fas fa-info-circle"></i>
                                             <strong>Smart Generation Available:</strong> 
-                                            ${testContext.contextLevel} level - ${testContext.contextName}
+                                            <c:choose>
+                                                <c:when test="${testContext.courseLevel}">
+                                                    Course level - ${testContext.courseContextName} (Subject: ${testContext.contextName})
+                                                </c:when>
+                                                <c:otherwise>
+                                                    ${testContext.contextLevel} level - ${testContext.contextName}
+                                                </c:otherwise>
+                                            </c:choose>
                                             <input type="hidden" id="contextLevel" value="${testContext.contextLevel}" />
                                             <input type="hidden" id="contextId" value="${testContext.contextId}" />
+                                            <c:if test="${testContext.courseLevel}">
+                                                <input type="hidden" id="isCourseLevel" value="true" />
+                                            </c:if>
                                         </div>
 
                                         <div class="generation-controls">
@@ -1706,6 +1721,13 @@
                                         function generateSmartQuestions() {
                                             const contextLevel = document.getElementById('contextLevel')?.value;
                                             const contextId = document.getElementById('contextId')?.value;
+                                            const isCourseLevel = document.getElementById('isCourseLevel')?.value === 'true';
+
+                                            console.log('Smart generation context:', {
+                                                contextLevel: contextLevel,
+                                                contextId: contextId,
+                                                isCourseLevel: isCourseLevel
+                                            });
 
                                             if (!contextLevel || !contextId) {
                                                 alert('No context found for this test');
@@ -1715,20 +1737,6 @@
                                             const count = $('#questionCount').val() || 5;
                                             const difficulty = $('#difficultyFilter').val();
                                             const category = $('#categoryFilter').val();
-
-                                            console.log('Generating smart questions with context:', {
-                                                contextLevel: contextLevel,
-                                                contextId: contextId,
-                                                count: count,
-                                                difficulty: difficulty,
-                                                category: category,
-                                                excludeIds: Array.from(currentlySelectedIds)
-                                            });
-
-                                            // Show loading state
-                                            $('#addingQuestionsList').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Generating smart questions...</div>');
-                                            $('#addingQuestionsPreview').addClass('active');
-                                            updateAddingStats();
 
                                             // Determine the appropriate action based on context level
                                             let action = '';
@@ -1744,6 +1752,7 @@
                                                     paramName = 'chapterId';
                                                     break;
                                                 case 'subject':
+                                                    // For course-level tests or subject-level tests
                                                     action = 'getQuestionsBySubject';
                                                     paramName = 'subjectId';
                                                     break;
@@ -1752,21 +1761,51 @@
                                                     return;
                                             }
 
+                                            console.log('Generating smart questions with context:', {
+                                                contextLevel: contextLevel,
+                                                contextId: contextId,
+                                                action: action,
+                                                paramName: paramName,
+                                                count: count,
+                                                difficulty: difficulty,
+                                                category: category,
+                                                excludeIds: Array.from(currentlySelectedIds)
+                                            });
+
+                                            // Show loading state
+                                            $('#addingQuestionsList').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Generating smart questions...</div>');
+                                            $('#addingQuestionsPreview').addClass('active');
+                                            updateAddingStats();
+
+                                            // Build parameters object properly
                                             const params = {
                                                 action: action,
-                                                [paramName]: contextId,
                                                 count: count,
                                                 difficulty: difficulty,
                                                 category: category,
                                                 excludeIds: Array.from(currentlySelectedIds).join(',')
                                             };
 
+                                            // Add the specific ID parameter
+                                            params[paramName] = contextId;
+
+                                            console.log('Final params object:', params);
+
                                             $.ajax({
                                                 url: 'test',
                                                 method: 'GET',
                                                 data: params,
+                                                dataType: 'json',
                                                 success: function (data) {
                                                     console.log('Smart questions received:', data);
+
+                                                    if (!Array.isArray(data)) {
+                                                        console.error('Expected array but got:', typeof data, data);
+                                                        $('#addingQuestionsList').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Invalid response format from server.</div>');
+                                                        updateAddingStats();
+                                                        return;
+                                                    }
+
                                                     if (data && data.length > 0) {
                                                         displayAddingQuestions(data);
                                                     } else {
@@ -1776,7 +1815,15 @@
                                                 },
                                                 error: function (xhr, status, error) {
                                                     console.error('Failed to generate smart questions:', error);
-                                                    $('#addingQuestionsList').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Failed to generate smart questions. Please try again.</div>');
+                                                    console.error('Response status:', xhr.status);
+                                                    console.error('Response text:', xhr.responseText);
+
+                                                    let errorMessage = 'Failed to generate smart questions. Please try again.';
+                                                    if (xhr.responseText && xhr.responseText.includes('<!DOCTYPE html>')) {
+                                                        errorMessage = 'Server returned an error page. Action: ' + action + ' may not be handled properly.';
+                                                    }
+
+                                                    $('#addingQuestionsList').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> ' + errorMessage + '</div>');
                                                     updateAddingStats();
                                                 }
                                             });
@@ -2087,29 +2134,66 @@
                                         function showSelectionScopeOptionsForUpdate() {
                                             // Add scope selection if not exists
                                             if ($('#scopeSelectionUpdate').length === 0) {
-                                                const scopeHtml = `
-            <div id="scopeSelectionUpdate" class="form-section" style="margin-bottom: 20px;">
-                <h5><i class="fas fa-layer-group"></i> Question Selection Scope</h5>
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    Choose the scope for adding more questions: specific lesson, entire chapter, or whole subject.
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <label>
-                        <input type="radio" name="selectionScopeUpdate" value="lesson" checked onchange="toggleSelectionScopeForUpdate()"> 
-                        <i class="fas fa-book"></i> Lesson Level - Select from a specific lesson
-                    </label><br>
-                    <label>
-                        <input type="radio" name="selectionScopeUpdate" value="chapter" onchange="toggleSelectionScopeForUpdate()"> 
-                        <i class="fas fa-bookmark"></i> Chapter Level - Select from all lessons in a chapter
-                    </label><br>
-                    <label>
-                        <input type="radio" name="selectionScopeUpdate" value="subject" onchange="toggleSelectionScopeForUpdate()"> 
-                        <i class="fas fa-graduation-cap"></i> Subject Level - Select from all lessons in a subject
-                    </label>
-                </div>
-            </div>
-        `;
+                                                const contextLevel = document.getElementById('contextLevel')?.value;
+                                                const contextId = document.getElementById('contextId')?.value;
+
+                                                let contextHint = '';
+                                                if (contextLevel && contextId) {
+                                                    contextHint = '<div class="alert alert-success">' +
+                                                            '<i class="fas fa-info-circle"></i>' +
+                                                            '<strong>Test Context Available:</strong> This test has ' + contextLevel + ' level context. ' +
+                                                            'You can use "' + contextLevel + '" scope for direct generation, or choose other scopes for broader question selection.' +
+                                                            '</div>';
+                                                }
+
+                                                // Build scope options HTML
+                                                let lessonChecked = '';
+                                                let chapterChecked = '';
+                                                let subjectChecked = '';
+                                                let lessonIndicator = '';
+                                                let chapterIndicator = '';
+                                                let subjectIndicator = '';
+
+                                                if (contextLevel === 'lesson') {
+                                                    lessonChecked = 'checked';
+                                                    lessonIndicator = '<span class="scope-indicator lesson">Current Context</span>';
+                                                } else if (contextLevel === 'chapter') {
+                                                    chapterChecked = 'checked';
+                                                    chapterIndicator = '<span class="scope-indicator chapter">Current Context</span>';
+                                                } else if (contextLevel === 'subject') {
+                                                    subjectChecked = 'checked';
+                                                    subjectIndicator = '<span class="scope-indicator subject">Current Context</span>';
+                                                } else {
+                                                    // Default to chapter if no context
+                                                    chapterChecked = 'checked';
+                                                }
+
+                                                const scopeHtml = '<div id="scopeSelectionUpdate" class="form-section" style="margin-bottom: 20px;">' +
+                                                        '<h5><i class="fas fa-layer-group"></i> Question Selection Scope</h5>' +
+                                                        '<div class="alert alert-info">' +
+                                                        '<i class="fas fa-info-circle"></i>' +
+                                                        'Choose the scope for adding more questions: specific lesson, entire chapter, or whole subject.' +
+                                                        '</div>' +
+                                                        contextHint +
+                                                        '<div style="margin-bottom: 15px;">' +
+                                                        '<label>' +
+                                                        '<input type="radio" name="selectionScopeUpdate" value="lesson" ' + lessonChecked + ' onchange="toggleSelectionScopeForUpdate()"> ' +
+                                                        '<i class="fas fa-book"></i> Lesson Level - Select from a specific lesson ' +
+                                                        lessonIndicator +
+                                                        '</label><br>' +
+                                                        '<label>' +
+                                                        '<input type="radio" name="selectionScopeUpdate" value="chapter" ' + chapterChecked + ' onchange="toggleSelectionScopeForUpdate()"> ' +
+                                                        '<i class="fas fa-bookmark"></i> Chapter Level - Select from all lessons in a chapter ' +
+                                                        chapterIndicator +
+                                                        '</label><br>' +
+                                                        '<label>' +
+                                                        '<input type="radio" name="selectionScopeUpdate" value="subject" ' + subjectChecked + ' onchange="toggleSelectionScopeForUpdate()"> ' +
+                                                        '<i class="fas fa-graduation-cap"></i> Subject Level - Select from all lessons in a subject ' +
+                                                        subjectIndicator +
+                                                        '</label>' +
+                                                        '</div>' +
+                                                        '</div>';
+
                                                 $('#hierarchySection').before(scopeHtml);
                                             }
 
@@ -2271,48 +2355,110 @@
                                             });
                                         }
                                         function generateSmartQuestionsUpdate() {
+                                            console.log('=== GENERATE SMART QUESTIONS UPDATE DEBUG ===');
+                                            console.log('Available elements:');
+                                            console.log('- contextLevel element:', document.getElementById('contextLevel'));
+                                            console.log('- contextId element:', document.getElementById('contextId'));
+                                            console.log('- isCourseLevel element:', document.getElementById('isCourseLevel'));
+
                                             const scope = $('input[name="selectionScopeUpdate"]:checked').val();
                                             const count = $('#questionCount').val() || 5;
                                             const difficulty = $('#difficultyFilter').val();
                                             const category = $('#categoryFilter').val();
 
+                                            // Get context from hidden inputs
+                                            const contextLevel = document.getElementById('contextLevel')?.value;
+                                            const contextId = document.getElementById('contextId')?.value;
+                                            const isCourseLevel = document.getElementById('isCourseLevel')?.value === 'true';
+
+                                            console.log('=== DEBUG SMART GENERATION UPDATE ===');
+                                            console.log('Selected scope:', scope);
+                                            console.log('Test contextLevel:', contextLevel);
+                                            console.log('Test contextId:', contextId);
+                                            console.log('isCourseLevel:', isCourseLevel);
+
                                             let sourceId = null;
                                             let action = '';
+                                            let paramName = '';
 
+                                            // Determine action and source based on scope
                                             switch (scope) {
                                                 case 'lesson':
-                                                    if (!contextLessonId) {
-                                                        alert('No lesson context found for this test');
+                                                    // For lesson scope, we need to check if we have lesson context or need manual selection
+                                                    if (contextLevel === 'lesson' && contextId) {
+                                                        // Test has lesson context, use it directly
+                                                        sourceId = contextId;
+                                                        action = 'getSmartQuestions';
+                                                        paramName = 'lessonId';
+                                                    } else if (contextLessonId) {
+                                                        // Fallback to global contextLessonId if available
+                                                        sourceId = contextLessonId;
+                                                        action = 'getSmartQuestions';
+                                                        paramName = 'lessonId';
+                                                    } else {
+                                                        // No lesson context available, user needs to select manually
+                                                        alert('This test doesn\'t have a specific lesson context. Please select a lesson manually from the hierarchy, or choose Chapter/Subject scope instead.');
                                                         return;
                                                     }
-                                                    sourceId = contextLessonId;
-                                                    action = 'getSmartQuestions';
                                                     break;
+
                                                 case 'chapter':
-                                                    if (!currentChapterId) {
-                                                        alert('Please select a chapter first');
+                                                    // For chapter scope, check test context first, then manual selection
+                                                    if (contextLevel === 'chapter' && contextId) {
+                                                        // Test has chapter context, use it directly
+                                                        sourceId = contextId;
+                                                        action = 'getQuestionsByChapter';
+                                                        paramName = 'chapterId';
+                                                    } else if (currentChapterId) {
+                                                        // Use manually selected chapter
+                                                        sourceId = currentChapterId;
+                                                        action = 'getQuestionsByChapter';
+                                                        paramName = 'chapterId';
+                                                    } else {
+                                                        alert('Please select a chapter first from the hierarchy');
                                                         return;
                                                     }
-                                                    sourceId = currentChapterId;
-                                                    action = 'getQuestionsByChapter';
                                                     break;
+
                                                 case 'subject':
-                                                    if (!currentSubjectId) {
-                                                        alert('Please select a subject first');
+                                                    // For subject scope, check test context first, then manual selection
+                                                    if (contextLevel === 'subject' && contextId) {
+                                                        // Test has subject context, use it directly
+                                                        sourceId = contextId;
+                                                        action = 'getQuestionsBySubject';
+                                                        paramName = 'subjectId';
+                                                    } else if (currentSubjectId) {
+                                                        // Use manually selected subject
+                                                        sourceId = currentSubjectId;
+                                                        action = 'getQuestionsBySubject';
+                                                        paramName = 'subjectId';
+                                                    } else {
+                                                        alert('Please select a subject first from the hierarchy');
                                                         return;
                                                     }
-                                                    sourceId = currentSubjectId;
-                                                    action = 'getQuestionsBySubject';
                                                     break;
+
+                                                default:
+                                                    alert('Please select a scope first');
+                                                    return;
                                             }
 
-                                            console.log('Generating smart questions for update:', {scope, sourceId, count, difficulty, category});
+                                            console.log('Final generation params:', {
+                                                scope: scope,
+                                                sourceId: sourceId,
+                                                action: action,
+                                                paramName: paramName,
+                                                count: count,
+                                                difficulty: difficulty,
+                                                category: category
+                                            });
 
                                             // Show loading state
                                             $('#addingQuestionsList').html('<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Generating smart questions...</div>');
                                             $('#addingQuestionsPreview').addClass('active');
                                             updateAddingStats();
 
+                                            // Build parameters object properly
                                             const params = {
                                                 action: action,
                                                 count: count,
@@ -2321,21 +2467,26 @@
                                                 excludeIds: Array.from(currentlySelectedIds).join(',')
                                             };
 
-                                            // Set the appropriate ID parameter
-                                            if (scope === 'lesson') {
-                                                params.lessonId = sourceId;
-                                            } else if (scope === 'chapter') {
-                                                params.chapterId = sourceId;
-                                            } else if (scope === 'subject') {
-                                                params.subjectId = sourceId;
-                                            }
+                                            // Add the specific ID parameter
+                                            params[paramName] = sourceId;
+
+                                            console.log('Final AJAX params:', params);
 
                                             $.ajax({
                                                 url: 'test',
                                                 method: 'GET',
                                                 data: params,
+                                                dataType: 'json',
                                                 success: function (data) {
                                                     console.log('Smart questions received for update:', data);
+
+                                                    if (!Array.isArray(data)) {
+                                                        console.error('Expected array but got:', typeof data, data);
+                                                        $('#addingQuestionsList').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Invalid response format from server.</div>');
+                                                        updateAddingStats();
+                                                        return;
+                                                    }
+
                                                     if (data && data.length > 0) {
                                                         displayAddingQuestions(data);
                                                     } else {
@@ -2345,11 +2496,37 @@
                                                 },
                                                 error: function (xhr, status, error) {
                                                     console.error('Failed to generate smart questions:', error);
-                                                    $('#addingQuestionsList').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> Failed to generate smart questions. Please try again.</div>');
+                                                    console.error('Response status:', xhr.status);
+                                                    console.error('Response text:', xhr.responseText);
+
+                                                    let errorMessage = 'Failed to generate smart questions. Please try again.';
+                                                    if (xhr.responseText && xhr.responseText.includes('<!DOCTYPE html>')) {
+                                                        errorMessage = 'Server returned an error page. Action: ' + action + ' may not be handled properly.';
+                                                    }
+
+                                                    $('#addingQuestionsList').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> ' + errorMessage + '</div>');
                                                     updateAddingStats();
                                                 }
                                             });
                                         }
+
+                                        // Function to auto-select appropriate scope based on test context
+                                        function autoSelectAppropriateScope() {
+                                            const contextLevel = document.getElementById('contextLevel')?.value;
+
+                                            console.log('Auto-selecting scope for contextLevel:', contextLevel);
+
+                                            if (contextLevel) {
+                                                // Auto-select the scope that matches test context
+                                                const scopeRadio = $('input[name="selectionScopeUpdate"][value="' + contextLevel + '"]');
+                                                if (scopeRadio.length > 0) {
+                                                    scopeRadio.prop('checked', true);
+                                                    toggleSelectionScopeForUpdate();
+                                                    console.log('Auto-selected scope:', contextLevel);
+                                                }
+                                            }
+                                        }
+
                                         const originalToggleAddingMethod = window.toggleAddingMethod;
 
                                         // Document ready function
@@ -2357,6 +2534,26 @@
                                             // Initialize global variables
                                             contextLessonId = $('#contextLessonId').val();
                                             currentlySelectedIds = new Set();
+
+                                            // Initialize scope selection if not already done
+                                            if ($('input[name="selectionScopeUpdate"]').length === 0) {
+                                                setTimeout(function () {
+                                                    showSelectionScopeOptionsForUpdate();
+                                                }, 100);
+                                            }
+
+                                            setTimeout(function () {
+                                                // Initialize scope selection if not already done
+                                                if ($('#scopeSelectionUpdate').length === 0) {
+                                                    showSelectionScopeOptionsForUpdate();
+                                                }
+
+                                                // Auto-select appropriate scope based on test context
+                                                autoSelectAppropriateScope();
+
+                                                // Setup handlers
+                                                setupEnhancedHierarchyHandlers();
+                                            }, 500);
 
                                             // Initialize validation on page load
                                             if (isCourseTest && originalRequiredCount > 0) {
@@ -2587,9 +2784,12 @@
                                                 if ($('#scopeSelectionUpdate').length === 0) {
                                                     showSelectionScopeOptionsForUpdate();
                                                 }
+                                                // Auto-select appropriate scope
+                                                autoSelectAppropriateScope();
                                                 setupEnhancedHierarchyHandlers();
                                             }
                                         };
+
                                         window.generateSmartQuestions = generateSmartQuestionsUpdate;
                                         window.regenerateQuestions = regenerateQuestions;
                                         window.filterManualQuestions = filterManualQuestions;
