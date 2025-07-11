@@ -1075,15 +1075,33 @@
                                 </label>
 
                                 <!-- Context Information -->
-                            <c:if test="${not empty contextInfo}">
+                            <c:if test="${not empty testContext}">
                                 <div class="context-info">
                                     <i class="fas fa-map-marker-alt"></i>
-                                    <strong>Test Context:</strong> ${contextInfo}
-                                    <input type="hidden" id="contextLessonId" value="${contextLessonId}" />
-                                    <input type="hidden" id="contextLevel" value="${contextLevel}" />
-                                    <input type="hidden" id="contextId" value="${contextId}" />
-                                    <c:if test="${testContext.courseLevel}">
+                                    <strong>Test Context:</strong> 
+                                    <c:choose>
+                                        <c:when test="${testContext.contextLevel == 'lesson'}">
+                                            Lesson level - ${testContext.contextName}
+                                        </c:when>
+                                        <c:when test="${testContext.contextLevel == 'chapter'}">
+                                            Chapter level - ${testContext.contextName}
+                                        </c:when>
+                                        <c:when test="${testContext.contextLevel == 'subject'}">
+                                            Subject level - ${testContext.contextName}
+                                        </c:when>
+                                        <c:otherwise>
+                                            Course level - ${testContext.contextName}
+                                        </c:otherwise>
+                                    </c:choose>
+
+                                    <!-- Hidden fields for JavaScript -->
+                                    <input type="hidden" id="contextLevel" value="${testContext.contextLevel}" />
+                                    <input type="hidden" id="contextId" value="${testContext.contextId}" />
+                                    <c:if test="${testContext.contextLevel == 'subject'}">
                                         <input type="hidden" id="isCourseLevel" value="true" />
+                                    </c:if>
+                                    <c:if test="${testContext.contextLevel == 'lesson'}">
+                                        <input type="hidden" id="contextLessonId" value="${testContext.contextId}" />
                                     </c:if>
                                 </div>
                             </c:if>
@@ -1196,18 +1214,19 @@
                                             <i class="fas fa-info-circle"></i>
                                             <strong>Smart Generation Available:</strong> 
                                             <c:choose>
-                                                <c:when test="${testContext.courseLevel}">
-                                                    Course level - ${testContext.courseContextName} (Subject: ${testContext.contextName})
+                                                <c:when test="${testContext.contextLevel == 'lesson'}">
+                                                    Lesson level - ${testContext.contextName}
+                                                </c:when>
+                                                <c:when test="${testContext.contextLevel == 'chapter'}">
+                                                    Chapter level - ${testContext.contextName}
+                                                </c:when>
+                                                <c:when test="${testContext.contextLevel == 'subject'}">
+                                                    Subject level - ${testContext.contextName}
                                                 </c:when>
                                                 <c:otherwise>
-                                                    ${testContext.contextLevel} level - ${testContext.contextName}
+                                                    Course level - ${testContext.contextName}
                                                 </c:otherwise>
                                             </c:choose>
-                                            <input type="hidden" id="contextLevel" value="${testContext.contextLevel}" />
-                                            <input type="hidden" id="contextId" value="${testContext.contextId}" />
-                                            <c:if test="${testContext.courseLevel}">
-                                                <input type="hidden" id="isCourseLevel" value="true" />
-                                            </c:if>
                                         </div>
 
                                         <div class="generation-controls">
@@ -2356,6 +2375,8 @@
                                         }
                                         function generateSmartQuestionsUpdate() {
                                             console.log('=== GENERATE SMART QUESTIONS UPDATE DEBUG ===');
+
+                                            // Debug available elements
                                             console.log('Available elements:');
                                             console.log('- contextLevel element:', document.getElementById('contextLevel'));
                                             console.log('- contextId element:', document.getElementById('contextId'));
@@ -2366,76 +2387,75 @@
                                             const difficulty = $('#difficultyFilter').val();
                                             const category = $('#categoryFilter').val();
 
-                                            // Get context from hidden inputs
-                                            const contextLevel = document.getElementById('contextLevel')?.value;
-                                            const contextId = document.getElementById('contextId')?.value;
-                                            const isCourseLevel = document.getElementById('isCourseLevel')?.value === 'true';
-
                                             console.log('=== DEBUG SMART GENERATION UPDATE ===');
                                             console.log('Selected scope:', scope);
-                                            console.log('Test contextLevel:', contextLevel);
-                                            console.log('Test contextId:', contextId);
+
+                                            // Get test context information
+                                            const testContextLevel = document.getElementById('contextLevel')?.value;
+                                            const testContextId = document.getElementById('contextId')?.value;
+                                            const isCourseLevel = document.getElementById('isCourseLevel')?.value === 'true';
+
+                                            console.log('Test contextLevel:', testContextLevel);
+                                            console.log('Test contextId:', testContextId);
                                             console.log('isCourseLevel:', isCourseLevel);
 
                                             let sourceId = null;
                                             let action = '';
                                             let paramName = '';
 
-                                            // Determine action and source based on scope
+                                            // Enhanced logic for determining source based on scope and test context
                                             switch (scope) {
                                                 case 'lesson':
-                                                    // For lesson scope, we need to check if we have lesson context or need manual selection
-                                                    if (contextLevel === 'lesson' && contextId) {
-                                                        // Test has lesson context, use it directly
-                                                        sourceId = contextId;
-                                                        action = 'getSmartQuestions';
-                                                        paramName = 'lessonId';
-                                                    } else if (contextLessonId) {
-                                                        // Fallback to global contextLessonId if available
-                                                        sourceId = contextLessonId;
-                                                        action = 'getSmartQuestions';
-                                                        paramName = 'lessonId';
+                                                    if (!contextLessonId) {
+                                                        // Try to get from manual selection
+                                                        const selectedLessonId = $('#lessonSelect').val();
+                                                        if (!selectedLessonId) {
+                                                            alert('Please select a lesson first from the hierarchy');
+                                                            return;
+                                                        }
+                                                        sourceId = selectedLessonId;
                                                     } else {
-                                                        // No lesson context available, user needs to select manually
-                                                        alert('This test doesn\'t have a specific lesson context. Please select a lesson manually from the hierarchy, or choose Chapter/Subject scope instead.');
-                                                        return;
+                                                        sourceId = contextLessonId;
                                                     }
+                                                    action = 'getSmartQuestions';
+                                                    paramName = 'lessonId';
                                                     break;
 
                                                 case 'chapter':
-                                                    // For chapter scope, check test context first, then manual selection
-                                                    if (contextLevel === 'chapter' && contextId) {
-                                                        // Test has chapter context, use it directly
-                                                        sourceId = contextId;
-                                                        action = 'getQuestionsByChapter';
-                                                        paramName = 'chapterId';
-                                                    } else if (currentChapterId) {
-                                                        // Use manually selected chapter
-                                                        sourceId = currentChapterId;
-                                                        action = 'getQuestionsByChapter';
-                                                        paramName = 'chapterId';
+                                                    if (!currentChapterId) {
+                                                        // For course-level tests, we need to select a chapter manually
+                                                        const selectedChapterId = $('#chapterSelect').val();
+                                                        if (!selectedChapterId) {
+                                                            alert('Please select a chapter first from the hierarchy');
+                                                            return;
+                                                        }
+                                                        sourceId = selectedChapterId;
                                                     } else {
-                                                        alert('Please select a chapter first from the hierarchy');
-                                                        return;
+                                                        sourceId = currentChapterId;
                                                     }
+                                                    action = 'getQuestionsByChapter';
+                                                    paramName = 'chapterId';
                                                     break;
 
                                                 case 'subject':
-                                                    // For subject scope, check test context first, then manual selection
-                                                    if (contextLevel === 'subject' && contextId) {
-                                                        // Test has subject context, use it directly
-                                                        sourceId = contextId;
-                                                        action = 'getQuestionsBySubject';
-                                                        paramName = 'subjectId';
+                                                    // Enhanced subject handling
+                                                    if (testContextLevel === 'subject' && testContextId) {
+                                                        // Use context from test
+                                                        sourceId = testContextId;
                                                     } else if (currentSubjectId) {
                                                         // Use manually selected subject
                                                         sourceId = currentSubjectId;
-                                                        action = 'getQuestionsBySubject';
-                                                        paramName = 'subjectId';
                                                     } else {
-                                                        alert('Please select a subject first from the hierarchy');
-                                                        return;
+                                                        // Try to get from hierarchy selection
+                                                        const selectedSubjectId = $('#subjectSelect').val();
+                                                        if (!selectedSubjectId) {
+                                                            alert('Please select a subject first from the hierarchy');
+                                                            return;
+                                                        }
+                                                        sourceId = selectedSubjectId;
                                                     }
+                                                    action = 'getQuestionsBySubject';
+                                                    paramName = 'subjectId';
                                                     break;
 
                                                 default:
@@ -2470,7 +2490,7 @@
                                             // Add the specific ID parameter
                                             params[paramName] = sourceId;
 
-                                            console.log('Final AJAX params:', params);
+                                            console.log('Final params object:', params);
 
                                             $.ajax({
                                                 url: 'test',
@@ -2768,6 +2788,28 @@
                                                 // Setup handlers
                                                 setupEnhancedHierarchyHandlers();
                                             }, 500);
+
+                                            // Auto-select appropriate scope based on test context
+                                            if (testContextLevel && $('#scopeSelectionUpdate').length > 0) {
+                                                console.log('Auto-selecting scope for contextLevel:', testContextLevel);
+                                                let autoScope = 'subject'; // default
+
+                                                if (testContextLevel === 'lesson') {
+                                                    autoScope = 'lesson';
+                                                } else if (testContextLevel === 'chapter') {
+                                                    autoScope = 'chapter';
+                                                } else if (testContextLevel === 'subject') {
+                                                    autoScope = 'subject';
+                                                }
+
+                                                $('input[name="selectionScopeUpdate"][value="' + autoScope + '"]').prop('checked', true);
+                                                console.log('Auto-selected scope:', autoScope);
+
+                                                // Trigger the change event to update UI
+                                                setTimeout(function () {
+                                                    toggleSelectionScopeForUpdate();
+                                                }, 200);
+                                            }
 
 //                                            console.log('Test Update page initialized successfully');
                                         });
