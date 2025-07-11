@@ -1094,6 +1094,11 @@
                                         </c:otherwise>
                                     </c:choose>
 
+                                    <!-- Debug info -->
+<!--                                    <small style="display: block; color: #666; margin-top: 5px;">
+                                        Debug: contextId=${testContext.contextId}, contextLevel=${testContext.contextLevel}
+                                    </small>-->
+
                                     <!-- Hidden fields for JavaScript -->
                                     <input type="hidden" id="contextLevel" value="${testContext.contextLevel}" />
                                     <input type="hidden" id="contextId" value="${testContext.contextId}" />
@@ -1227,6 +1232,11 @@
                                                     Course level - ${testContext.contextName}
                                                 </c:otherwise>
                                             </c:choose>
+
+                                            <!-- Debug info -->
+<!--                                            <small style="display: block; color: #666; margin-top: 5px;">
+                                                Subject: ${testContext.contextName} (ID: ${testContext.contextId})
+                                            </small>-->
                                         </div>
 
                                         <div class="generation-controls">
@@ -2790,6 +2800,7 @@
                                             }, 500);
 
                                             // Auto-select appropriate scope based on test context
+                                            const testContextLevel = document.getElementById('contextLevel')?.value;
                                             if (testContextLevel && $('#scopeSelectionUpdate').length > 0) {
                                                 console.log('Auto-selecting scope for contextLevel:', testContextLevel);
                                                 let autoScope = 'subject'; // default
