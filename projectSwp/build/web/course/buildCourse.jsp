@@ -912,7 +912,12 @@
                                 <c:choose>
                                     <c:when test="${courseDetails.approval_status == 'DRAFT'}">Ready to Publish?</c:when>
                                     <c:when test="${courseDetails.approval_status == 'PENDING_APPROVAL'}">Pending Approval</c:when>
-                                    <c:when test="${courseDetails.approval_status == 'APPROVED'}">Course Approved</c:when>
+                                    <c:when test="${courseDetails.approval_status == 'APPROVED'}">
+                                        <c:choose>
+                                            <c:when test="${courseDetails.allow_edit_after_approval}">Course Approved - Edit Mode</c:when>
+                                            <c:otherwise>Course Approved</c:otherwise>
+                                        </c:choose>
+                                    </c:when>
                                     <c:when test="${courseDetails.approval_status == 'REJECTED'}">Course Rejected</c:when>
                                 </c:choose>
                             </h5>
@@ -925,7 +930,14 @@
                                         Your course is waiting for admin approval. You cannot edit while pending.
                                     </c:when>
                                     <c:when test="${courseDetails.approval_status == 'APPROVED'}">
-                                        Your course has been approved and is available to students!
+                                        <c:choose>
+                                            <c:when test="${courseDetails.allow_edit_after_approval}">
+                                                Your course is approved but you have permission to edit. Remember to resubmit after changes!
+                                            </c:when>
+                                            <c:otherwise>
+                                                Your course has been approved and is available to students!
+                                            </c:otherwise>
+                                        </c:choose>
                                     </c:when>
                                     <c:when test="${courseDetails.approval_status == 'REJECTED'}">
                                         Your course was rejected. Reason: ${courseDetails.rejection_reason}
@@ -944,6 +956,11 @@
                                 </c:when>
                                 <c:when test="${courseDetails.approval_status == 'REJECTED'}">
                                     <button class="btn btn-warning btn-lg" onclick="submitForApproval()">
+                                        <i class="fas fa-paper-plane"></i> Resubmit for Approval
+                                    </button>
+                                </c:when>
+                                <c:when test="${courseDetails.approval_status == 'APPROVED' && courseDetails.allow_edit_after_approval}">
+                                    <button class="btn btn-warning btn-lg" onclick="resubmitForApproval()">
                                         <i class="fas fa-paper-plane"></i> Resubmit for Approval
                                     </button>
                                 </c:when>
@@ -2177,6 +2194,77 @@
                                                                 .catch(error => {
                                                                     console.error('Error:', error);
                                                                     alert('An error occurred while moving the test');
+                                                                });
+                                                    }
+
+                                                    function resubmitForApproval() {
+                                                        if (!confirm('Are you sure you want to resubmit this course for approval? This will reset the approval status and you will not be able to edit until admin reviews again.')) {
+                                                            return;
+                                                        }
+
+                                                        const params = new URLSearchParams();
+                                                        params.append('action', 'resubmit');
+                                                        params.append('courseId', '${courseId}');
+
+                                                        const resubmitButtons = document.querySelectorAll('button[onclick*="resubmitForApproval"]');
+                                                        const originalTexts = [];
+
+                                                        resubmitButtons.forEach((btn, index) => {
+                                                            originalTexts[index] = btn.innerHTML;
+                                                            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Resubmitting...';
+                                                            btn.disabled = true;
+                                                        });
+
+                                                        fetch('${pageContext.request.contextPath}/course', {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Content-Type': 'application/x-www-form-urlencoded',
+                                                                'X-Requested-With': 'XMLHttpRequest'
+                                                            },
+                                                            body: params.toString()
+                                                        })
+                                                                .then(response => {
+                                                                    if (!response.ok) {
+                                                                        throw new Error('Network response was not ok');
+                                                                    }
+
+                                                                    const contentType = response.headers.get('content-type');
+                                                                    if (!contentType || !contentType.includes('application/json')) {
+                                                                        return response.text().then(text => {
+                                                                            console.error('Expected JSON but got:', text.substring(0, 500));
+                                                                            throw new Error('Server returned HTML instead of JSON');
+                                                                        });
+                                                                    }
+
+                                                                    return response.json();
+                                                                })
+                                                                .then(data => {
+                                                                    if (data.success) {
+                                                                        resubmitButtons.forEach((btn, index) => {
+                                                                            btn.innerHTML = '<i class="fas fa-check"></i> Resubmitted!';
+                                                                            btn.classList.remove('btn-warning');
+                                                                            btn.classList.add('btn-success');
+                                                                        });
+
+                                                                        setTimeout(function () {
+                                                                            window.location.href = '${pageContext.request.contextPath}/course';
+                                                                        }, 2000);
+                                                                    } else {
+                                                                        resubmitButtons.forEach((btn, index) => {
+                                                                            btn.innerHTML = originalTexts[index];
+                                                                            btn.disabled = false;
+                                                                        });
+                                                                        alert('Failed to resubmit course: ' + (data.message || 'Unknown error'));
+                                                                    }
+                                                                })
+                                                                .catch(error => {
+                                                                    console.error('Error:', error);
+
+                                                                    resubmitButtons.forEach((btn, index) => {
+                                                                        btn.innerHTML = originalTexts[index];
+                                                                        btn.disabled = false;
+                                                                    });
+                                                                    alert('An error occurred while resubmitting the course: ' + error.message);
                                                                 });
                                                     }
         </script>

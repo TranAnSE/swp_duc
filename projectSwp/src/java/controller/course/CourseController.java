@@ -102,6 +102,15 @@ public class CourseController extends HttpServlet {
                 case "getSubjectsByGrade":
                     getSubjectsByGrade(request, response);
                     return;
+                case "allowEdit":
+                    allowEditAfterApproval(request, response);
+                    break;
+                case "revokeEdit":
+                    revokeEditPermission(request, response);
+                    break;
+                case "resubmit":
+                    resubmitForApproval(request, response);
+                    break;
                 default:
                     listCourses(request, response);
                     break;
@@ -180,6 +189,9 @@ public class CourseController extends HttpServlet {
                     break;
                 case "reject":
                     rejectCoursePost(request, response);
+                    break;
+                case "resubmit":
+                    resubmitForApprovalPost(request, response);
                     break;
                 default:
                     System.out.println("Unknown action: " + action); // Debug log
@@ -421,8 +433,8 @@ public class CourseController extends HttpServlet {
         try {
             int courseId = Integer.parseInt(request.getParameter("id"));
 
-            // Get course details
-            Map<String, Object> courseDetails = courseManagementDAO.getCourseDetails(courseId);
+            // Get course details with edit permission info
+            Map<String, Object> courseDetails = courseManagementDAO.getCourseDetailsWithEditPermission(courseId);
             if (courseDetails == null) {
                 request.setAttribute("errorMessage", "Course not found.");
                 response.sendRedirect("course");
@@ -441,10 +453,18 @@ public class CourseController extends HttpServlet {
                     return;
                 }
 
-                // Check if course is in editable state
+                // Check if course is in editable state for teachers
                 String approvalStatus = (String) courseDetails.get("approval_status");
+                Boolean allowEditAfterApproval = (Boolean) courseDetails.get("allow_edit_after_approval");
+
                 if ("PENDING_APPROVAL".equals(approvalStatus)) {
                     request.setAttribute("errorMessage", "Course is pending approval and cannot be edited.");
+                    response.sendRedirect("course");
+                    return;
+                }
+
+                if ("APPROVED".equals(approvalStatus) && (allowEditAfterApproval == null || !allowEditAfterApproval)) {
+                    request.setAttribute("errorMessage", "This approved course cannot be edited. Please contact admin for permission.");
                     response.sendRedirect("course");
                     return;
                 }
@@ -502,7 +522,7 @@ public class CourseController extends HttpServlet {
 
             int courseId = Integer.parseInt(courseIdParam.trim());
 
-            Map<String, Object> courseDetails = courseManagementDAO.getCourseDetails(courseId);
+            Map<String, Object> courseDetails = courseManagementDAO.getCourseDetailsWithEditPermission(courseId);
             if (courseDetails == null) {
                 request.setAttribute("errorMessage", "Course not found.");
                 response.sendRedirect("course");
@@ -522,8 +542,15 @@ public class CourseController extends HttpServlet {
                 }
 
                 String approvalStatus = (String) courseDetails.get("approval_status");
+                Boolean allowEditAfterApproval = (Boolean) courseDetails.get("allow_edit_after_approval");
+
                 if ("PENDING_APPROVAL".equals(approvalStatus)) {
                     request.setAttribute("errorMessage", "Course is pending approval and cannot be edited.");
+                    response.sendRedirect("course");
+                    return;
+                }
+                if ("APPROVED".equals(approvalStatus) && (allowEditAfterApproval == null || !allowEditAfterApproval)) {
+                    request.setAttribute("errorMessage", "This approved course cannot be edited. Please contact admin for permission.");
                     response.sendRedirect("course");
                     return;
                 }
@@ -1376,6 +1403,144 @@ public class CourseController extends HttpServlet {
             e.printStackTrace();
             request.getSession().setAttribute("errorMessage", "Error rejecting course: " + e.getMessage());
             response.sendRedirect("course");
+        }
+    }
+
+    /**
+     * Allow teacher to edit approved course (Admin only)
+     */
+    private void allowEditAfterApproval(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN)) {
+            response.sendRedirect("/error.jsp");
+            return;
+        }
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("id"));
+            boolean success = courseManagementDAO.allowEditAfterApproval(courseId);
+
+            if (success) {
+                request.getSession().setAttribute("message", "Course edit permission granted successfully!");
+            } else {
+                request.getSession().setAttribute("errorMessage", "Failed to grant edit permission.");
+            }
+
+            response.sendRedirect("course");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.getSession().setAttribute("errorMessage", "Error granting edit permission: " + e.getMessage());
+            response.sendRedirect("course");
+        }
+    }
+
+    /**
+     * Revoke edit permission for approved course (Admin only)
+     */
+    private void revokeEditPermission(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN)) {
+            response.sendRedirect("/error.jsp");
+            return;
+        }
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("id"));
+            boolean success = courseManagementDAO.revokeEditPermission(courseId);
+
+            if (success) {
+                request.getSession().setAttribute("message", "Course edit permission revoked successfully!");
+            } else {
+                request.getSession().setAttribute("errorMessage", "Failed to revoke edit permission.");
+            }
+
+            response.sendRedirect("course");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.getSession().setAttribute("errorMessage", "Error revoking edit permission: " + e.getMessage());
+            response.sendRedirect("course");
+        }
+    }
+
+    /**
+     * Resubmit course for approval after editing (Teacher only)
+     */
+    private void resubmitForApproval(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        if (!AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
+            response.sendRedirect("/error.jsp");
+            return;
+        }
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("id"));
+            boolean success = courseManagementDAO.resubmitForApproval(courseId);
+
+            if (success) {
+                request.getSession().setAttribute("message", "Course resubmitted for approval successfully!");
+            } else {
+                request.getSession().setAttribute("errorMessage", "Failed to resubmit course for approval.");
+            }
+
+            response.sendRedirect("course");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.getSession().setAttribute("errorMessage", "Error resubmitting course: " + e.getMessage());
+            response.sendRedirect("course");
+        }
+    }
+
+    /**
+     * Resubmit course for approval via POST (Teacher only)
+     */
+    private void resubmitForApprovalPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        if (!AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
+            if (isAjaxRequest(request)) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\": false, \"message\": \"Access denied\"}");
+                return;
+            } else {
+                response.sendRedirect("/error.jsp");
+                return;
+            }
+        }
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            boolean success = courseManagementDAO.resubmitForApproval(courseId);
+
+            if (isAjaxRequest(request)) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                if (success) {
+                    response.getWriter().write("{\"success\": true, \"message\": \"Course resubmitted for approval successfully\"}");
+                } else {
+                    response.getWriter().write("{\"success\": false, \"message\": \"Failed to resubmit course for approval\"}");
+                }
+            } else {
+                if (success) {
+                    request.getSession().setAttribute("message", "Course resubmitted for approval successfully!");
+                } else {
+                    request.getSession().setAttribute("errorMessage", "Failed to resubmit course for approval.");
+                }
+                response.sendRedirect("course");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (isAjaxRequest(request)) {
+                response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+            } else {
+                request.getSession().setAttribute("errorMessage", "Error resubmitting course: " + e.getMessage());
+                response.sendRedirect("course");
+            }
         }
     }
 }

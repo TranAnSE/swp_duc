@@ -157,6 +157,38 @@
             .nice-select {
                 display: none !important;
             }
+
+            .status-approved-editable {
+                background-color: #fff3cd;
+                color: #856404;
+                border: 1px solid #ffeaa7;
+            }
+
+            .btn-outline-info {
+                color: #17a2b8;
+                border-color: #17a2b8;
+            }
+
+            .btn-outline-info:hover {
+                background-color: #17a2b8;
+                color: white;
+            }
+
+            .btn-outline-warning {
+                color: #ffc107;
+                border-color: #ffc107;
+            }
+
+            .btn-outline-warning:hover {
+                background-color: #ffc107;
+                color: #212529;
+            }
+
+            .btn-group-vertical .btn {
+                margin: 1px;
+                font-size: 0.75em;
+                padding: 3px 6px;
+            }
         </style>
     </head>
     <body>
@@ -171,6 +203,21 @@
 
             <c:if test="${not empty message}">
                 <div class="alert alert-success">${message}</div>
+            </c:if>
+
+            <c:if test="${isEdit && courseDetails.approval_status == 'APPROVED' && courseDetails.allow_edit_after_approval}">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Edit Permission Granted:</strong> You have been granted permission to edit this approved course. 
+                    Remember to resubmit for approval after making changes.
+                </div>
+            </c:if>
+
+            <c:if test="${isEdit && courseDetails.approval_status == 'APPROVED' && not courseDetails.allow_edit_after_approval}">
+                <div class="alert alert-warning">
+                    <i class="fas fa-lock"></i>
+                    <strong>Course Locked:</strong> This approved course cannot be edited. Contact admin for edit permission.
+                </div>
             </c:if>
 
             <c:choose>

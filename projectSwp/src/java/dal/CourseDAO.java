@@ -1444,4 +1444,100 @@ public class CourseDAO extends DBContext {
         }
         return tests;
     }
+
+    /**
+     * Allow teacher to edit approved course
+     */
+    public boolean allowEditAfterApproval(int courseId) throws SQLException {
+        String sql = "UPDATE study_package SET allow_edit_after_approval = 1 WHERE id = ? AND type = 'COURSE' AND approval_status = 'APPROVED'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Revoke edit permission for approved course
+     */
+    public boolean revokeEditPermission(int courseId) throws SQLException {
+        String sql = "UPDATE study_package SET allow_edit_after_approval = 0 WHERE id = ? AND type = 'COURSE'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Check if teacher can edit approved course
+     */
+    public boolean canEditApprovedCourse(int courseId) throws SQLException {
+        String sql = "SELECT allow_edit_after_approval FROM study_package WHERE id = ? AND type = 'COURSE' AND approval_status = 'APPROVED'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getBoolean("allow_edit_after_approval");
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Resubmit course for approval after edit
+     */
+    public boolean resubmitForApproval(int courseId) throws SQLException {
+        String sql = "UPDATE study_package SET approval_status = 'PENDING_APPROVAL', "
+                + "submitted_at = CURRENT_TIMESTAMP, allow_edit_after_approval = 0, "
+                + "approved_at = NULL, approved_by = NULL "
+                + "WHERE id = ? AND type = 'COURSE'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Get course details with edit permission info
+     */
+    public Map<String, Object> getCourseDetailsWithEditPermission(int courseId) throws SQLException {
+        String sql = "SELECT sp.*, s.name as subject_name, s.id as subject_id, g.name as grade_name, g.id as grade_id, "
+                + "sp.allow_edit_after_approval "
+                + "FROM study_package sp "
+                + "JOIN subject s ON sp.subject_id = s.id "
+                + "JOIN grade g ON s.grade_id = g.id "
+                + "WHERE sp.id = ? AND sp.type = 'COURSE'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                Map<String, Object> course = new HashMap<>();
+                course.put("course_id", rs.getInt("id"));
+                course.put("course_title", rs.getString("course_title"));
+                course.put("price", rs.getString("price"));
+                course.put("duration_days", rs.getInt("duration_days"));
+                course.put("description", rs.getString("description"));
+                course.put("approval_status", rs.getString("approval_status"));
+                course.put("is_active", rs.getBoolean("is_active"));
+                course.put("subject_id", rs.getInt("subject_id"));
+                course.put("subject_name", rs.getString("subject_name"));
+                course.put("grade_id", rs.getInt("grade_id"));
+                course.put("grade_name", rs.getString("grade_name"));
+                course.put("created_by", rs.getInt("created_by"));
+                course.put("created_at", rs.getTimestamp("created_at"));
+                course.put("submitted_at", rs.getTimestamp("submitted_at"));
+                course.put("approved_at", rs.getTimestamp("approved_at"));
+                course.put("rejection_reason", rs.getString("rejection_reason"));
+                course.put("allow_edit_after_approval", rs.getBoolean("allow_edit_after_approval"));
+                return course;
+            }
+        }
+        return null;
+    }
 }
