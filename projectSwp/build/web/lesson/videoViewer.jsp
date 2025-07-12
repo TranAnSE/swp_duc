@@ -727,6 +727,41 @@
             .video-container {
                 animation-delay: 0.1s;
             }
+            .chapter-header i.fa-chevron-down,
+            .chapter-header i.fa-chevron-up {
+                transition: transform 0.3s ease;
+            }
+
+            /* Ensure proper icon display */
+            .chapter-header .fa-chevron-up {
+                transform: rotate(180deg);
+            }
+
+            .chapter-header .fa-chevron-down {
+                transform: rotate(0deg);
+            }
+
+            /* Better visual feedback for collapsible state */
+            .chapter-header[aria-expanded="true"] {
+                background: linear-gradient(135deg,
+                    rgba(217, 119, 6, 0.95) 0%,
+                    rgba(180, 83, 9, 0.95) 100%);
+            }
+
+            .chapter-header[aria-expanded="false"] {
+                background: linear-gradient(135deg,
+                    rgba(245, 158, 11, 0.9) 0%,
+                    rgba(217, 119, 6, 0.9) 100%);
+            }
+
+            /* Smooth collapse animation */
+            .collapse {
+                transition: height 0.35s ease;
+            }
+
+            .collapsing {
+                transition: height 0.35s ease;
+            }
         </style>
     </head>
     <body>
@@ -992,19 +1027,57 @@
                     const targetId = $(this).attr('id');
                     const trigger = $('[data-target="#' + targetId + '"]');
                     trigger.attr('aria-expanded', 'true');
+                    // Ensure chevron is in correct position
+                    trigger.find('.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
                 });
 
-                // Handle collapse events for proper icon rotation
-                $('.collapse').on('show.bs.collapse', function () {
+                // Handle collapse events for proper icon rotation and state management
+                $('.collapse').on('show.bs.collapse', function (e) {
+                    // Prevent event bubbling to parent collapses
+                    e.stopPropagation();
+
                     const targetId = $(this).attr('id');
                     const trigger = $('[data-target="#' + targetId + '"]');
+
+                    // Update aria-expanded attribute
                     trigger.attr('aria-expanded', 'true');
+
+                    // Rotate chevron icon
+                    trigger.find('.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+
+                    console.log('Expanding chapter:', targetId);
                 });
 
-                $('.collapse').on('hide.bs.collapse', function () {
+                $('.collapse').on('hide.bs.collapse', function (e) {
+                    // Prevent event bubbling to parent collapses
+                    e.stopPropagation();
+
                     const targetId = $(this).attr('id');
                     const trigger = $('[data-target="#' + targetId + '"]');
+
+                    // Update aria-expanded attribute
                     trigger.attr('aria-expanded', 'false');
+
+                    // Rotate chevron icon back
+                    trigger.find('.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+
+                    console.log('Collapsing chapter:', targetId);
+                });
+
+                // Handle manual clicks on chapter headers
+                $('.chapter-header').on('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const target = $(this).attr('data-target');
+                    const $collapse = $(target);
+
+                    // Toggle the collapse manually
+                    if ($collapse.hasClass('show')) {
+                        $collapse.collapse('hide');
+                    } else {
+                        $collapse.collapse('show');
+                    }
                 });
 
                 // Video progress tracking
@@ -1186,6 +1259,13 @@
                     if ($(window).width() < 768) {
                         // Collapse sidebar by default on mobile except for current lesson
                         $('.course-sidebar .collapse').not(':has(.lesson-item.active)').removeClass('show');
+                        // Update corresponding buttons
+                        $('.course-sidebar .collapse').not(':has(.lesson-item.active)').each(function () {
+                            const targetId = $(this).attr('id');
+                            const trigger = $('[data-target="#' + targetId + '"]');
+                            trigger.attr('aria-expanded', 'false');
+                            trigger.find('.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                        });
                     }
                 }
 
@@ -1196,14 +1276,14 @@
             function showWarningMessage(message) {
                 // Create and show warning toast
                 const toast = $(`
-                    <div class="alert alert-warning alert-dismissible fade show" role="alert" style="position: fixed; top: 120px; right: 20px; z-index: 9999; min-width: 300px;">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>
+        <div class="alert alert-warning alert-dismissible fade show" role="alert" style="position: fixed; top: 120px; right: 20px; z-index: 9999; min-width: 300px;">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
             ${message}
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                `);
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    `);
 
                 $('body').append(toast);
 
@@ -1215,14 +1295,14 @@
             function showSuccessMessage(message) {
                 // Create and show success toast
                 const toast = $(`
-                    <div class="alert alert-success alert-dismissible fade show" role="alert" style="position: fixed; top: 120px; right: 20px; z-index: 9999; min-width: 300px;">
-                        <i class="fas fa-check-circle mr-2"></i>
+        <div class="alert alert-success alert-dismissible fade show" role="alert" style="position: fixed; top: 120px; right: 20px; z-index: 9999; min-width: 300px;">
+            <i class="fas fa-check-circle mr-2"></i>
             ${message}
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                `);
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    `);
 
                 $('body').append(toast);
 
