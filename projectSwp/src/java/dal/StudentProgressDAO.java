@@ -269,4 +269,60 @@ public class StudentProgressDAO extends DBContext {
 
         return progress;
     }
+
+    /**
+     * Mark text-based lesson as completed
+     */
+    public boolean markTextLessonAsCompleted(int studentId, int lessonId, int courseId) {
+        String sql = """
+        INSERT INTO student_lesson_progress 
+        (student_id, lesson_id, course_id, watch_duration, total_duration, 
+         completion_percentage, is_completed, last_position, completed_at)
+        VALUES (?, ?, ?, 0, 0, 100.00, 1, 0, CURRENT_TIMESTAMP)
+        ON DUPLICATE KEY UPDATE
+        completion_percentage = 100.00,
+        is_completed = 1,
+        completed_at = CASE WHEN completed_at IS NULL THEN CURRENT_TIMESTAMP ELSE completed_at END,
+        last_watched_at = CURRENT_TIMESTAMP
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, lessonId);
+            ps.setInt(3, courseId);
+
+            int result = ps.executeUpdate();
+
+            // Update course progress if lesson was marked as completed
+            if (result > 0) {
+                updateCourseProgress(studentId, courseId);
+            }
+
+            return result > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Check if text lesson is already completed
+     */
+    public boolean isTextLessonCompleted(int studentId, int lessonId, int courseId) {
+        String sql = "SELECT is_completed FROM student_lesson_progress WHERE student_id = ? AND lesson_id = ? AND course_id = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, lessonId);
+            ps.setInt(3, courseId);
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getBoolean("is_completed");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }

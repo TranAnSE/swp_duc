@@ -31,6 +31,7 @@ public class VideoViewerController extends HttpServlet {
 
     private CourseDAO courseDAO = new CourseDAO();
     private StudentProgressDAO progressDAO = new StudentProgressDAO();
+    private TestRecordDAO testRecordDAO = new TestRecordDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -64,6 +65,49 @@ public class VideoViewerController extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             handleError(request, response, "An error occurred while loading the course", "/student/home.jsp");
+        }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        String action = request.getParameter("action");
+
+        if ("markTextLessonCompleted".equals(action)) {
+            markTextLessonCompleted(request, response);
+        }
+    }
+
+    private void markTextLessonCompleted(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            HttpSession session = request.getSession();
+            Student student = (Student) session.getAttribute("student");
+
+            if (student == null) {
+                response.getWriter().write("{\"success\": false, \"message\": \"Student not found in session\"}");
+                return;
+            }
+
+            int lessonId = Integer.parseInt(request.getParameter("lessonId"));
+            int courseId = Integer.parseInt(request.getParameter("courseId"));
+
+            boolean success = progressDAO.markTextLessonAsCompleted(student.getId(), lessonId, courseId);
+
+            if (success) {
+                response.getWriter().write("{\"success\": true, \"message\": \"Lesson marked as completed\"}");
+            } else {
+                response.getWriter().write("{\"success\": false, \"message\": \"Failed to mark lesson as completed\"}");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\": false, \"message\": \"Server error: " + e.getMessage() + "\"}");
         }
     }
 
@@ -114,10 +158,14 @@ public class VideoViewerController extends HttpServlet {
         // Get progress data for students
         Map<Integer, StudentLessonProgress> lessonProgressMap = new HashMap<>();
         StudentCourseProgress courseProgress = null;
+        Map<Integer, Map<String, Object>> testResults = new HashMap<>();
 
         if (student != null) {
             lessonProgressMap = progressDAO.getLessonProgressMap(student.getId(), courseId);
             courseProgress = progressDAO.getCourseProgress(student.getId(), courseId);
+
+            // Get test results for this course
+            testResults = testRecordDAO.getCourseTestResultsForStudent(student.getId(), courseId);
 
             // Initialize course progress if not exists
             if (courseProgress == null) {
@@ -139,6 +187,7 @@ public class VideoViewerController extends HttpServlet {
         request.setAttribute("currentLesson", currentLesson);
         request.setAttribute("lessonProgressMap", lessonProgressMap);
         request.setAttribute("courseProgress", courseProgress);
+        request.setAttribute("testResults", testResults); // Add test results
         request.setAttribute("navigation", navigation);
         request.setAttribute("userRole", userRole);
         request.setAttribute("isTrackingEnabled", isTrackingEnabled);

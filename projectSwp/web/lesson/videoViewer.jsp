@@ -762,6 +762,327 @@
             .collapsing {
                 transition: height 0.35s ease;
             }
+            /* Test item styling */
+            .test-item-container {
+                margin: 8px 0;
+            }
+
+            .test-item.practice-test {
+                background: linear-gradient(135deg,
+                    rgba(34, 197, 94, 0.1) 0%,
+                    rgba(22, 163, 74, 0.1) 100%);
+                border: 1px solid rgba(34, 197, 94, 0.3);
+                color: #15803d;
+            }
+
+            .test-item.practice-test:hover {
+                background: linear-gradient(135deg,
+                    rgba(34, 197, 94, 0.2) 0%,
+                    rgba(22, 163, 74, 0.2) 100%);
+                color: #15803d;
+                text-decoration: none;
+            }
+
+            .test-item.official-test {
+                background: linear-gradient(135deg,
+                    rgba(239, 68, 68, 0.1) 0%,
+                    rgba(220, 38, 38, 0.1) 100%);
+                border: 1px solid rgba(239, 68, 68, 0.3);
+                color: #dc2626;
+            }
+
+            .test-item.official-test:hover {
+                background: linear-gradient(135deg,
+                    rgba(239, 68, 68, 0.2) 0%,
+                    rgba(220, 38, 38, 0.2) 100%);
+                color: #dc2626;
+                text-decoration: none;
+            }
+
+            .test-item.official-test.completed {
+                background: linear-gradient(135deg,
+                    rgba(107, 114, 128, 0.1) 0%,
+                    rgba(75, 85, 99, 0.1) 100%);
+                border: 1px solid rgba(107, 114, 128, 0.3);
+                color: #4b5563;
+                cursor: default;
+            }
+
+            .test-status {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                margin-left: auto;
+            }
+
+            .test-type-badge {
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-size: 0.7rem;
+                font-weight: 600;
+                margin-bottom: 2px;
+            }
+
+            .practice-badge {
+                background-color: rgba(34, 197, 94, 0.2);
+                color: #15803d;
+            }
+
+            .official-badge {
+                background-color: rgba(239, 68, 68, 0.2);
+                color: #dc2626;
+            }
+
+            .test-score {
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: #059669;
+            }
+
+            .test-not-taken {
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: #dc2626;
+            }
+
+            /* Text lesson actions */
+            .text-lesson-actions {
+                margin: 25px 0;
+                padding: 20px;
+                background: linear-gradient(135deg,
+                    rgba(240, 249, 255, 0.8) 0%,
+                    rgba(224, 242, 254, 0.8) 100%);
+                border-radius: 12px;
+                border: 1px solid rgba(59, 130, 246, 0.2);
+                text-align: center;
+            }
+
+            .completed-indicator {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                font-size: 1.1rem;
+            }
+
+            #markCompletedBtn {
+                padding: 12px 30px;
+                font-size: 1.1rem;
+                font-weight: 600;
+                border-radius: 8px;
+                transition: all 0.3s ease;
+            }
+
+            #markCompletedBtn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+            }
+            /* Toast notification styles */
+            .toast-notification {
+                position: fixed;
+                top: 120px;
+                right: 20px;
+                z-index: 9999;
+                min-width: 350px;
+                max-width: 500px;
+                padding: 16px 20px;
+                border-radius: 12px;
+                box-shadow:
+                    0 10px 40px rgba(0, 0, 0, 0.15),
+                    0 1px 0 rgba(255, 255, 255, 0.5) inset;
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                font-weight: 500;
+                font-size: 0.95rem;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                opacity: 0;
+                transform: translateX(100px);
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .toast-notification.show {
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+            .toast-notification.success {
+                background: linear-gradient(135deg,
+                    rgba(16, 185, 129, 0.95) 0%,
+                    rgba(5, 150, 105, 0.95) 100%);
+                color: white;
+                border-color: rgba(255, 255, 255, 0.4);
+            }
+
+            .toast-notification.warning {
+                background: linear-gradient(135deg,
+                    rgba(245, 158, 11, 0.95) 0%,
+                    rgba(217, 119, 6, 0.95) 100%);
+                color: white;
+                border-color: rgba(255, 255, 255, 0.4);
+            }
+
+            .toast-notification.error {
+                background: linear-gradient(135deg,
+                    rgba(239, 68, 68, 0.95) 0%,
+                    rgba(220, 38, 38, 0.95) 100%);
+                color: white;
+                border-color: rgba(255, 255, 255, 0.4);
+            }
+
+            .toast-notification i {
+                font-size: 1.2rem;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            }
+
+            .toast-notification .close-btn {
+                margin-left: auto;
+                background: none;
+                border: none;
+                color: inherit;
+                font-size: 1.1rem;
+                cursor: pointer;
+                padding: 4px;
+                border-radius: 4px;
+                transition: all 0.2s ease;
+                opacity: 0.8;
+            }
+
+            .toast-notification .close-btn:hover {
+                opacity: 1;
+                background: rgba(255, 255, 255, 0.2);
+            }
+
+            .toast-notification .message {
+                flex: 1;
+                line-height: 1.4;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            }
+
+            /* Animation for progress update */
+            .progress-update-animation {
+                animation: progressPulse 0.6s ease-out;
+            }
+
+            @keyframes progressPulse {
+                0% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.05);
+                }
+                100% {
+                    transform: scale(1);
+                }
+            }
+
+            /* Mark completed button loading state */
+            #markCompletedBtn.loading {
+                pointer-events: none;
+                opacity: 0.7;
+            }
+
+            #markCompletedBtn.loading i {
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* Completed lesson animation */
+            .lesson-item.newly-completed {
+                animation: completionGlow 1s ease-out;
+            }
+
+            @keyframes completionGlow {
+                0% {
+                    box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+                }
+                50% {
+                    box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+                }
+                100% {
+                    box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+                }
+            }
+
+            /* Responsive adjustments for mobile */
+            @media (max-width: 768px) {
+                .toast-notification {
+                    top: 90px;
+                    right: 15px;
+                    left: 15px;
+                    min-width: auto;
+                    max-width: none;
+                    font-size: 0.9rem;
+                }
+
+                .text-lesson-actions {
+                    margin: 20px 0;
+                    padding: 16px;
+                }
+
+                #markCompletedBtn {
+                    padding: 10px 24px;
+                    font-size: 1rem;
+                }
+            }
+            .completion-prompt {
+                text-align: center;
+            }
+
+            .completion-prompt h6 {
+                color: var(--text-primary);
+                font-weight: 600;
+                margin-bottom: 15px;
+            }
+
+            .completion-prompt kbd {
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 3px;
+                box-shadow: 0 1px 0 rgba(0,0,0,.2), inset 0 0 0 2px #fff;
+                color: #495057;
+                display: inline-block;
+                font-size: 0.8em;
+                font-weight: 700;
+                line-height: 1;
+                padding: 2px 4px;
+                white-space: nowrap;
+            }
+
+            .completion-prompt .text-muted {
+                font-size: 0.85rem;
+                opacity: 0.8;
+            }
+
+            /* Enhanced completed indicator */
+            .completed-indicator {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                font-size: 1.1rem;
+                padding: 15px;
+                background: linear-gradient(135deg,
+                    rgba(16, 185, 129, 0.1) 0%,
+                    rgba(5, 150, 105, 0.1) 100%);
+                border: 2px solid rgba(16, 185, 129, 0.3);
+                border-radius: 12px;
+            }
+
+            .completed-indicator i {
+                font-size: 1.3rem;
+                color: #10b981;
+            }
         </style>
     </head>
     <body>
@@ -847,14 +1168,50 @@
 
                                                     <!-- Tests -->
                                                     <c:forEach var="test" items="${chapter.tests}">
-                                                        <a href="/student/taketest?action=start&testId=${test.test_id}" 
-                                                           class="test-item">
-                                                            <i class="fas ${test.is_practice ? 'fa-dumbbell' : 'fa-clipboard-check'}"></i>
-                                                            <span>${test.test_name}</span>
-                                                            <c:if test="${test.is_practice}">
-                                                                <small class="ml-2">(Practice)</small>
-                                                            </c:if>
-                                                        </a>
+                                                        <c:set var="testResult" value="${testResults[test.test_id]}" />
+                                                        <c:set var="hasResult" value="${testResult != null && testResult.has_taken}" />
+
+                                                        <div class="test-item-container">
+                                                            <c:choose>
+                                                                <c:when test="${test.is_practice}">
+                                                                    <!-- Practice Test -->
+                                                                    <a href="/student/taketest?action=start&testId=${test.test_id}" 
+                                                                       class="test-item practice-test">
+                                                                        <i class="fas fa-dumbbell"></i>
+                                                                        <span>${test.test_name}</span>
+                                                                        <small class="test-type-badge practice-badge">Practice</small>
+                                                                    </a>
+                                                                </c:when>
+                                                                <c:otherwise>
+                                                                    <!-- Official Test -->
+                                                                    <c:choose>
+                                                                        <c:when test="${hasResult}">
+                                                                            <!-- Already taken -->
+                                                                            <div class="test-item official-test completed">
+                                                                                <i class="fas fa-clipboard-check"></i>
+                                                                                <span>${test.test_name}</span>
+                                                                                <div class="test-status">
+                                                                                    <small class="test-type-badge official-badge">Official</small>
+                                                                                    <small class="test-score">Score: <fmt:formatNumber value="${testResult.score}" maxFractionDigits="1"/>%</small>
+                                                                                </div>
+                                                                            </div>
+                                                                        </c:when>
+                                                                        <c:otherwise>
+                                                                            <!-- Not taken yet -->
+                                                                            <a href="/student/taketest?action=start&testId=${test.test_id}" 
+                                                                               class="test-item official-test">
+                                                                                <i class="fas fa-clipboard-check"></i>
+                                                                                <span>${test.test_name}</span>
+                                                                                <div class="test-status">
+                                                                                    <small class="test-type-badge official-badge">Official</small>
+                                                                                    <small class="test-not-taken">Not Taken</small>
+                                                                                </div>
+                                                                            </a>
+                                                                        </c:otherwise>
+                                                                    </c:choose>
+                                                                </c:otherwise>
+                                                            </c:choose>
+                                                        </div>
                                                     </c:forEach>
                                                 </div>
                                             </div>
@@ -876,14 +1233,50 @@
                                             <div class="collapse" id="course-tests">
                                                 <div class="chapter-content">
                                                     <c:forEach var="test" items="${courseStructure.courseLevelTests}">
-                                                        <a href="/student/taketest?action=start&testId=${test.test_id}" 
-                                                           class="test-item">
-                                                            <i class="fas ${test.is_practice ? 'fa-dumbbell' : 'fa-clipboard-check'}"></i>
-                                                            <span>${test.test_name}</span>
-                                                            <c:if test="${test.is_practice}">
-                                                                <small class="ml-2">(Practice)</small>
-                                                            </c:if>
-                                                        </a>
+                                                        <c:set var="testResult" value="${testResults[test.test_id]}" />
+                                                        <c:set var="hasResult" value="${testResult != null && testResult.has_taken}" />
+
+                                                        <div class="test-item-container">
+                                                            <c:choose>
+                                                                <c:when test="${test.is_practice}">
+                                                                    <!-- Practice Test -->
+                                                                    <a href="/student/taketest?action=start&testId=${test.test_id}" 
+                                                                       class="test-item practice-test">
+                                                                        <i class="fas fa-dumbbell"></i>
+                                                                        <span>${test.test_name}</span>
+                                                                        <small class="test-type-badge practice-badge">Practice</small>
+                                                                    </a>
+                                                                </c:when>
+                                                                <c:otherwise>
+                                                                    <!-- Official Test -->
+                                                                    <c:choose>
+                                                                        <c:when test="${hasResult}">
+                                                                            <!-- Already taken -->
+                                                                            <div class="test-item official-test completed">
+                                                                                <i class="fas fa-clipboard-check"></i>
+                                                                                <span>${test.test_name}</span>
+                                                                                <div class="test-status">
+                                                                                    <small class="test-type-badge official-badge">Official</small>
+                                                                                    <small class="test-score">Score: <fmt:formatNumber value="${testResult.score}" maxFractionDigits="1"/>%</small>
+                                                                                </div>
+                                                                            </div>
+                                                                        </c:when>
+                                                                        <c:otherwise>
+                                                                            <!-- Not taken yet -->
+                                                                            <a href="/student/taketest?action=start&testId=${test.test_id}" 
+                                                                               class="test-item official-test">
+                                                                                <i class="fas fa-clipboard-check"></i>
+                                                                                <span>${test.test_name}</span>
+                                                                                <div class="test-status">
+                                                                                    <small class="test-type-badge official-badge">Official</small>
+                                                                                    <small class="test-not-taken">Not Taken</small>
+                                                                                </div>
+                                                                            </a>
+                                                                        </c:otherwise>
+                                                                    </c:choose>
+                                                                </c:otherwise>
+                                                            </c:choose>
+                                                        </div>
                                                     </c:forEach>
                                                 </div>
                                             </div>
@@ -965,6 +1358,33 @@
                                         </c:if>
                                     </div>
 
+                                    <c:if test="${empty currentLesson.video_link && isTrackingEnabled}">
+                                        <c:set var="currentProgress" value="${lessonProgressMap[currentLesson.lesson_id]}" />
+                                        <c:set var="isCompleted" value="${currentProgress != null && currentProgress.completed}" />
+
+                                        <div class="text-lesson-actions">
+                                            <c:choose>
+                                                <c:when test="${isCompleted}">
+                                                    <div class="completed-indicator">
+                                                        <i class="fas fa-check-circle text-success"></i>
+                                                        <span class="text-success font-weight-bold">✅ Lesson Completed</span>
+                                                    </div>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <div class="completion-prompt">
+                                                        <h6 class="mb-3">
+                                                            <i class="fas fa-book-reader mr-2"></i>
+                                                            Have you finished reading this lesson?
+                                                        </h6>
+                                                        <button id="markCompletedBtn" class="btn btn-success btn-lg" onclick="markTextLessonCompleted()">
+                                                            <i class="fas fa-check"></i> Mark as Completed
+                                                        </button>
+                                                    </div>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </div>
+                                    </c:if>
+
                                     <c:if test="${not empty currentLesson.lesson_content}">
                                         <div class="video-description">
                                             <h6><i class="fas fa-info-circle mr-2"></i>Lesson Content</h6>
@@ -1020,296 +1440,394 @@
         <script src="/assets/js/bootstrap.min.js"></script>
 
         <script>
-            $(document).ready(function () {
-                // Auto-expand current lesson's chapter
-                $('.lesson-item.active').parents('.collapse').addClass('show');
-                $('.lesson-item.active').parents('.collapse').each(function () {
-                    const targetId = $(this).attr('id');
-                    const trigger = $('[data-target="#' + targetId + '"]');
-                    trigger.attr('aria-expanded', 'true');
-                    // Ensure chevron is in correct position
-                    trigger.find('.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
-                });
+                                                            $(document).ready(function () {
+                                                                // Auto-expand current lesson's chapter
+                                                                $('.lesson-item.active').parents('.collapse').addClass('show');
+                                                                $('.lesson-item.active').parents('.collapse').each(function () {
+                                                                    const targetId = $(this).attr('id');
+                                                                    const trigger = $('[data-target="#' + targetId + '"]');
+                                                                    trigger.attr('aria-expanded', 'true');
+                                                                    // Ensure chevron is in correct position
+                                                                    trigger.find('.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                                                                });
 
-                // Handle collapse events for proper icon rotation and state management
-                $('.collapse').on('show.bs.collapse', function (e) {
-                    // Prevent event bubbling to parent collapses
-                    e.stopPropagation();
+                                                                // Handle collapse events for proper icon rotation and state management
+                                                                $('.collapse').on('show.bs.collapse', function (e) {
+                                                                    // Prevent event bubbling to parent collapses
+                                                                    e.stopPropagation();
 
-                    const targetId = $(this).attr('id');
-                    const trigger = $('[data-target="#' + targetId + '"]');
+                                                                    const targetId = $(this).attr('id');
+                                                                    const trigger = $('[data-target="#' + targetId + '"]');
 
-                    // Update aria-expanded attribute
-                    trigger.attr('aria-expanded', 'true');
+                                                                    // Update aria-expanded attribute
+                                                                    trigger.attr('aria-expanded', 'true');
 
-                    // Rotate chevron icon
-                    trigger.find('.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                                                                    // Rotate chevron icon
+                                                                    trigger.find('.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
 
-                    console.log('Expanding chapter:', targetId);
-                });
+                                                                    console.log('Expanding chapter:', targetId);
+                                                                });
 
-                $('.collapse').on('hide.bs.collapse', function (e) {
-                    // Prevent event bubbling to parent collapses
-                    e.stopPropagation();
+                                                                $('.collapse').on('hide.bs.collapse', function (e) {
+                                                                    // Prevent event bubbling to parent collapses
+                                                                    e.stopPropagation();
 
-                    const targetId = $(this).attr('id');
-                    const trigger = $('[data-target="#' + targetId + '"]');
+                                                                    const targetId = $(this).attr('id');
+                                                                    const trigger = $('[data-target="#' + targetId + '"]');
 
-                    // Update aria-expanded attribute
-                    trigger.attr('aria-expanded', 'false');
+                                                                    // Update aria-expanded attribute
+                                                                    trigger.attr('aria-expanded', 'false');
 
-                    // Rotate chevron icon back
-                    trigger.find('.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                                                                    // Rotate chevron icon back
+                                                                    trigger.find('.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
 
-                    console.log('Collapsing chapter:', targetId);
-                });
+                                                                    console.log('Collapsing chapter:', targetId);
+                                                                });
 
-                // Handle manual clicks on chapter headers
-                $('.chapter-header').on('click', function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
+                                                                // Handle manual clicks on chapter headers
+                                                                $('.chapter-header').on('click', function (e) {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
 
-                    const target = $(this).attr('data-target');
-                    const $collapse = $(target);
+                                                                    const target = $(this).attr('data-target');
+                                                                    const $collapse = $(target);
 
-                    // Toggle the collapse manually
-                    if ($collapse.hasClass('show')) {
-                        $collapse.collapse('hide');
-                    } else {
-                        $collapse.collapse('show');
-                    }
-                });
+                                                                    // Toggle the collapse manually
+                                                                    if ($collapse.hasClass('show')) {
+                                                                        $collapse.collapse('hide');
+                                                                    } else {
+                                                                        $collapse.collapse('show');
+                                                                    }
+                                                                });
 
-                // Video progress tracking
-                const video = document.getElementById('mainVideo');
-                if (video && video.dataset.trackingEnabled === 'true') {
-                    const lessonId = parseInt(video.dataset.lessonId);
-                    const courseId = parseInt(video.dataset.courseId);
-                    let progressUpdateInterval;
-                    let lastSavedPosition = 0;
-                    let hasStartedWatching = false;
+                                                                // Video progress tracking
+                                                                const video = document.getElementById('mainVideo');
+                                                                if (video && video.dataset.trackingEnabled === 'true') {
+                                                                    const lessonId = parseInt(video.dataset.lessonId);
+                                                                    const courseId = parseInt(video.dataset.courseId);
+                                                                    let progressUpdateInterval;
+                                                                    let lastSavedPosition = 0;
+                                                                    let hasStartedWatching = false;
 
-                    // Prevent seeking beyond watched position initially
-                    let maxWatchedPosition = 0;
-                    const savedProgress = localStorage.getItem(`lesson_${lessonId}_progress`);
-                    if (savedProgress) {
-                        const progressData = JSON.parse(savedProgress);
-                        maxWatchedPosition = progressData.maxPosition || 0;
+                                                                    // Prevent seeking beyond watched position initially
+                                                                    let maxWatchedPosition = 0;
+                                                                    const savedProgress = localStorage.getItem(`lesson_${lessonId}_progress`);
+                                                                    if (savedProgress) {
+                                                                        const progressData = JSON.parse(savedProgress);
+                                                                        maxWatchedPosition = progressData.maxPosition || 0;
 
-                        // Restore last position if significant progress was made
-                        if (progressData.lastPosition > 10) {
-                            video.currentTime = progressData.lastPosition;
-                        }
-                    }
+                                                                        // Restore last position if significant progress was made
+                                                                        if (progressData.lastPosition > 10) {
+                                                                            video.currentTime = progressData.lastPosition;
+                                                                        }
+                                                                    }
 
-                    video.addEventListener('loadedmetadata', function () {
-                        console.log('Video loaded, duration:', video.duration);
-                    });
+                                                                    video.addEventListener('loadedmetadata', function () {
+                                                                        console.log('Video loaded, duration:', video.duration);
+                                                                    });
 
-                    video.addEventListener('play', function () {
-                        if (!hasStartedWatching) {
-                            hasStartedWatching = true;
-                            console.log('Started watching lesson:', lessonId);
-                        }
+                                                                    video.addEventListener('play', function () {
+                                                                        if (!hasStartedWatching) {
+                                                                            hasStartedWatching = true;
+                                                                            console.log('Started watching lesson:', lessonId);
+                                                                        }
 
-                        // Update progress every 5 seconds while playing
-                        progressUpdateInterval = setInterval(function () {
-                            updateProgress();
-                        }, 5000);
-                    });
+                                                                        // Update progress every 5 seconds while playing
+                                                                        progressUpdateInterval = setInterval(function () {
+                                                                            updateProgress();
+                                                                        }, 5000);
+                                                                    });
 
-                    video.addEventListener('pause', function () {
-                        if (progressUpdateInterval) {
-                            clearInterval(progressUpdateInterval);
-                        }
-                        updateProgress();
-                    });
+                                                                    video.addEventListener('pause', function () {
+                                                                        if (progressUpdateInterval) {
+                                                                            clearInterval(progressUpdateInterval);
+                                                                        }
+                                                                        updateProgress();
+                                                                    });
 
-                    video.addEventListener('ended', function () {
-                        if (progressUpdateInterval) {
-                            clearInterval(progressUpdateInterval);
-                        }
-                        updateProgress();
-                    });
+                                                                    video.addEventListener('ended', function () {
+                                                                        if (progressUpdateInterval) {
+                                                                            clearInterval(progressUpdateInterval);
+                                                                        }
+                                                                        updateProgress();
+                                                                    });
 
-                    // Prevent skipping ahead (anti-cheat mechanism)
-                    video.addEventListener('seeking', function () {
-                        if (video.currentTime > maxWatchedPosition + 10) {
-                            console.log('Preventing skip ahead from', video.currentTime, 'to max allowed:', maxWatchedPosition + 10);
-                            video.currentTime = maxWatchedPosition;
+                                                                    // Prevent skipping ahead (anti-cheat mechanism)
+                                                                    video.addEventListener('seeking', function () {
+                                                                        if (video.currentTime > maxWatchedPosition + 10) {
+                                                                            console.log('Preventing skip ahead from', video.currentTime, 'to max allowed:', maxWatchedPosition + 10);
+                                                                            video.currentTime = maxWatchedPosition;
 
-                            // Show warning message
-                            showWarningMessage('You cannot skip ahead in the video. Please watch the content sequentially.');
-                        }
-                    });
+                                                                            // Show warning message
+                                                                            showWarningMessage('You cannot skip ahead in the video. Please watch the content sequentially.');
+                                                                        }
+                                                                    });
 
-                    video.addEventListener('timeupdate', function () {
-                        // Update max watched position
-                        if (video.currentTime > maxWatchedPosition) {
-                            maxWatchedPosition = video.currentTime;
+                                                                    video.addEventListener('timeupdate', function () {
+                                                                        // Update max watched position
+                                                                        if (video.currentTime > maxWatchedPosition) {
+                                                                            maxWatchedPosition = video.currentTime;
 
-                            // Save to localStorage for persistence
-                            const progressData = {
-                                lastPosition: video.currentTime,
-                                maxPosition: maxWatchedPosition,
-                                timestamp: Date.now()
-                            };
-                            localStorage.setItem(`lesson_${lessonId}_progress`, JSON.stringify(progressData));
-                        }
-                    });
+                                                                            // Save to localStorage for persistence
+                                                                            const progressData = {
+                                                                                lastPosition: video.currentTime,
+                                                                                maxPosition: maxWatchedPosition,
+                                                                                timestamp: Date.now()
+                                                                            };
+                                                                            localStorage.setItem(`lesson_${lessonId}_progress`, JSON.stringify(progressData));
+                                                                        }
+                                                                    });
 
-                    function updateProgress() {
-                        if (!video.duration || video.duration === 0)
-                            return;
+                                                                    function updateProgress() {
+                                                                        if (!video.duration || video.duration === 0)
+                                                                            return;
 
-                        const watchDuration = Math.floor(video.currentTime);
-                        const totalDuration = Math.floor(video.duration);
-                        const lastPosition = Math.floor(video.currentTime);
+                                                                        const watchDuration = Math.floor(video.currentTime);
+                                                                        const totalDuration = Math.floor(video.duration);
+                                                                        const lastPosition = Math.floor(video.currentTime);
 
-                        // Only update if there's meaningful progress
-                        if (Math.abs(lastPosition - lastSavedPosition) < 5 && watchDuration < totalDuration * 0.95) {
-                            return;
-                        }
+                                                                        // Only update if there's meaningful progress
+                                                                        if (Math.abs(lastPosition - lastSavedPosition) < 5 && watchDuration < totalDuration * 0.95) {
+                                                                            return;
+                                                                        }
 
-                        lastSavedPosition = lastPosition;
+                                                                        lastSavedPosition = lastPosition;
 
-                        $.ajax({
-                            url: '/progress',
-                            method: 'POST',
-                            data: {
-                                action: 'updateProgress',
-                                lessonId: lessonId,
-                                courseId: courseId,
-                                watchDuration: watchDuration,
-                                totalDuration: totalDuration,
-                                lastPosition: lastPosition
-                            },
-                            success: function (response) {
-                                if (response.success) {
-                                    console.log('Progress updated successfully');
+                                                                        $.ajax({
+                                                                            url: '/progress',
+                                                                            method: 'POST',
+                                                                            data: {
+                                                                                action: 'updateProgress',
+                                                                                lessonId: lessonId,
+                                                                                courseId: courseId,
+                                                                                watchDuration: watchDuration,
+                                                                                totalDuration: totalDuration,
+                                                                                lastPosition: lastPosition
+                                                                            },
+                                                                            success: function (response) {
+                                                                                if (response.success) {
+                                                                                    console.log('Progress updated successfully');
 
-                                    // Check if lesson was just completed
-                                    const completionPercentage = (watchDuration / totalDuration) * 100;
-                                    if (completionPercentage >= 30) {
-                                        markLessonAsCompleted(lessonId);
-                                    }
-                                } else {
-                                    console.error('Failed to update progress:', response.message);
-                                }
-                            },
-                            error: function (xhr, status, error) {
-                                console.error('Error updating progress:', error);
-                            }
-                        });
-                    }
+                                                                                    // Check if lesson was just completed
+                                                                                    const completionPercentage = (watchDuration / totalDuration) * 100;
+                                                                                    if (completionPercentage >= 30) {
+                                                                                        markLessonAsCompleted(lessonId);
+                                                                                    }
+                                                                                } else {
+                                                                                    console.error('Failed to update progress:', response.message);
+                                                                                }
+                                                                            },
+                                                                            error: function (xhr, status, error) {
+                                                                                console.error('Error updating progress:', error);
+                                                                            }
+                                                                        });
+                                                                    }
 
-                    function markLessonAsCompleted(lessonId) {
-                        const lessonItem = $(`.lesson-item[href*="lessonId=${lessonId}"]`);
-                        if (!lessonItem.hasClass('completed')) {
-                            lessonItem.addClass('completed');
+                                                                    function markLessonAsCompleted(lessonId) {
+                                                                        const lessonItem = $(`.lesson-item[href*="lessonId=${lessonId}"]`);
+                                                                        if (!lessonItem.hasClass('completed')) {
+                                                                            lessonItem.addClass('completed');
 
-                            // Show completion message
-                            showSuccessMessage('Lesson completed! Great job!');
+                                                                            // Show completion message
+                                                                            showSuccessMessage('Lesson completed! Great job!');
 
-                            // Update course progress display if visible
-                            setTimeout(function () {
-                                location.reload();
-                            }, 2000);
-                        }
-                    }
+                                                                            // Update course progress display if visible
+                                                                            setTimeout(function () {
+                                                                                location.reload();
+                                                                            }, 2000);
+                                                                        }
+                                                                    }
 
-                    // Save progress when leaving page
-                    $(window).on('beforeunload', function () {
-                        if (video.currentTime > 0) {
-                            updateProgress();
-                        }
-                    });
-                }
+                                                                    // Save progress when leaving page
+                                                                    $(window).on('beforeunload', function () {
+                                                                        if (video.currentTime > 0) {
+                                                                            updateProgress();
+                                                                        }
+                                                                    });
+                                                                }
 
-                // Keyboard navigation
-                $(document).keydown(function (e) {
-                    if (e.target.tagName.toLowerCase() !== 'input' && e.target.tagName.toLowerCase() !== 'textarea') {
-                        // Space bar to play/pause video
-                        if (e.which === 32 && video) {
-                            e.preventDefault();
-                            if (video.paused) {
-                                video.play();
-                            } else {
-                                video.pause();
-                            }
-                        }
-                        // Arrow keys for navigation
-                        if (e.which === 37) { // Left arrow - previous lesson
-                            const prevBtn = $('.nav-btn.prev[href]');
-                            if (prevBtn.length) {
-                                window.location.href = prevBtn.attr('href');
-                            }
-                        }
-                        if (e.which === 39) { // Right arrow - next lesson
-                            const nextBtn = $('.nav-btn.next[href]');
-                            if (nextBtn.length) {
-                                window.location.href = nextBtn.attr('href');
-                            }
-                        }
-                    }
-                });
+                                                                // Keyboard navigation
+                                                                $(document).keydown(function (e) {
+                                                                    if (e.target.tagName.toLowerCase() !== 'input' && e.target.tagName.toLowerCase() !== 'textarea') {
+                                                                        // Space bar to play/pause video
+                                                                        if (e.which === 32 && video) {
+                                                                            e.preventDefault();
+                                                                            if (video.paused) {
+                                                                                video.play();
+                                                                            } else {
+                                                                                video.pause();
+                                                                            }
+                                                                        }
+                                                                        // Arrow keys for navigation
+                                                                        if (e.which === 37) { // Left arrow - previous lesson
+                                                                            const prevBtn = $('.nav-btn.prev[href]');
+                                                                            if (prevBtn.length) {
+                                                                                window.location.href = prevBtn.attr('href');
+                                                                            }
+                                                                        }
+                                                                        if (e.which === 39) { // Right arrow - next lesson
+                                                                            const nextBtn = $('.nav-btn.next[href]');
+                                                                            if (nextBtn.length) {
+                                                                                window.location.href = nextBtn.attr('href');
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                });
 
-                // Mobile responsive adjustments
-                function adjustForMobile() {
-                    if ($(window).width() < 768) {
-                        // Collapse sidebar by default on mobile except for current lesson
-                        $('.course-sidebar .collapse').not(':has(.lesson-item.active)').removeClass('show');
-                        // Update corresponding buttons
-                        $('.course-sidebar .collapse').not(':has(.lesson-item.active)').each(function () {
-                            const targetId = $(this).attr('id');
-                            const trigger = $('[data-target="#' + targetId + '"]');
-                            trigger.attr('aria-expanded', 'false');
-                            trigger.find('.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
-                        });
-                    }
-                }
+                                                                // Mobile responsive adjustments
+                                                                function adjustForMobile() {
+                                                                    if ($(window).width() < 768) {
+                                                                        // Collapse sidebar by default on mobile except for current lesson
+                                                                        $('.course-sidebar .collapse').not(':has(.lesson-item.active)').removeClass('show');
+                                                                        // Update corresponding buttons
+                                                                        $('.course-sidebar .collapse').not(':has(.lesson-item.active)').each(function () {
+                                                                            const targetId = $(this).attr('id');
+                                                                            const trigger = $('[data-target="#' + targetId + '"]');
+                                                                            trigger.attr('aria-expanded', 'false');
+                                                                            trigger.find('.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+                                                                        });
+                                                                    }
+                                                                }
 
-                adjustForMobile();
-                $(window).resize(adjustForMobile);
-            });
+                                                                adjustForMobile();
+                                                                $(window).resize(adjustForMobile);
+                                                            });
 
-            function showWarningMessage(message) {
-                // Create and show warning toast
-                const toast = $(`
-        <div class="alert alert-warning alert-dismissible fade show" role="alert" style="position: fixed; top: 120px; right: 20px; z-index: 9999; min-width: 300px;">
-            <i class="fas fa-exclamation-triangle mr-2"></i>
-            ${message}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
+                                                            function showWarningMessage(message) {
+                                                                showToastNotification(message, 'warning', 'fa-exclamation-triangle');
+                                                            }
+
+                                                            function showSuccessMessage(message) {
+                                                                showToastNotification(message, 'success', 'fa-check-circle');
+                                                            }
+
+                                                            function showErrorMessage(message) {
+                                                                showToastNotification(message, 'error', 'fa-times-circle');
+                                                            }
+
+                                                            function showToastNotification(message, type, iconClass) {
+                                                                // Remove any existing notifications
+                                                                $('.toast-notification').remove();
+
+                                                                // Create new notification
+                                                                const toast = $(`
+        <div class="toast-notification ${type}">
+            <i class="fas ${iconClass}"></i>
+            <div class="message">${message}</div>
+            <button class="close-btn" onclick="closeToast(this)">
+                <i class="fas fa-times"></i>
             </button>
         </div>
     `);
 
-                $('body').append(toast);
+                                                                // Add to body
+                                                                $('body').append(toast);
 
-                setTimeout(function () {
-                    toast.fadeOut();
-                }, 5000);
-            }
+                                                                // Trigger show animation
+                                                                setTimeout(() => {
+                                                                    toast.addClass('show');
+                                                                }, 100);
 
-            function showSuccessMessage(message) {
-                // Create and show success toast
-                const toast = $(`
-        <div class="alert alert-success alert-dismissible fade show" role="alert" style="position: fixed; top: 120px; right: 20px; z-index: 9999; min-width: 300px;">
-            <i class="fas fa-check-circle mr-2"></i>
-            ${message}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-    `);
+                                                                // Auto-hide after 5 seconds
+                                                                setTimeout(() => {
+                                                                    hideToast(toast);
+                                                                }, 5000);
+                                                            }
 
-                $('body').append(toast);
+                                                            function closeToast(button) {
+                                                                const toast = $(button).closest('.toast-notification');
+                                                                hideToast(toast);
+                                                            }
 
-                setTimeout(function () {
-                    toast.fadeOut();
-                }, 5000);
-            }
+                                                            function hideToast(toast) {
+                                                                toast.removeClass('show');
+                                                                setTimeout(() => {
+                                                                    toast.remove();
+                                                                }, 400);
+                                                            }
+
+                                                            function markTextLessonCompleted() {
+                                                                const lessonId = ${currentLesson.lesson_id};
+                                                                const courseId = ${courseId};
+
+                                                                // Disable button and show loading state
+                                                                const btn = document.getElementById('markCompletedBtn');
+                                                                btn.disabled = true;
+                                                                btn.classList.add('loading');
+                                                                btn.innerHTML = '<i class="fas fa-spinner"></i> Marking as Completed...';
+
+                                                                $.ajax({
+                                                                    url: '/video-viewer',
+                                                                    method: 'POST',
+                                                                    data: {
+                                                                        action: 'markTextLessonCompleted',
+                                                                        lessonId: lessonId,
+                                                                        courseId: courseId
+                                                                    },
+                                                                    success: function (response) {
+                                                                        if (response.success) {
+                                                                            // Show success message
+                                                                            showSuccessMessage('🎉 Lesson marked as completed! Great job!');
+
+                                                                            // Update UI with animation
+                                                                            $('.text-lesson-actions').fadeOut(300, function () {
+                                                                                $(this).html(`
+                        <div class="completed-indicator">
+                            <i class="fas fa-check-circle text-success"></i>
+                            <span class="text-success font-weight-bold">Lesson Completed</span>
+                        </div>
+                    `).fadeIn(300);
+                                                                            });
+
+                                                                            // Update sidebar lesson item with animation
+                                                                            const lessonItem = $(`.lesson-item[href*="lessonId=${lessonId}"]`);
+                                                                            lessonItem.addClass('newly-completed');
+                                                                            setTimeout(() => {
+                                                                                lessonItem.addClass('completed').removeClass('newly-completed');
+                                                                            }, 600);
+
+                                                                            // Update progress bar with animation if visible
+                                                                            const progressBar = $('.progress-bar-fill');
+                                                                            if (progressBar.length) {
+                                                                                progressBar.parent().addClass('progress-update-animation');
+                                                                                setTimeout(() => {
+                                                                                    progressBar.parent().removeClass('progress-update-animation');
+                                                                                }, 600);
+                                                                            }
+
+                                                                            // Reload page after 3 seconds to update progress
+                                                                            setTimeout(function () {
+                                                                                window.location.reload();
+                                                                            }, 3000);
+
+                                                                        } else {
+                                                                            showWarningMessage(response.message || 'Failed to mark lesson as completed. Please try again.');
+                                                                            // Re-enable button
+                                                                            resetMarkCompletedButton(btn);
+                                                                        }
+                                                                    },
+                                                                    error: function (xhr, status, error) {
+                                                                        console.error('Error marking lesson as completed:', error);
+                                                                        showErrorMessage('Error marking lesson as completed. Please check your connection and try again.');
+                                                                        // Re-enable button
+                                                                        resetMarkCompletedButton(btn);
+                                                                    }
+                                                                });
+                                                            }
+                                                            function resetMarkCompletedButton(btn) {
+                                                                btn.disabled = false;
+                                                                btn.classList.remove('loading');
+                                                                btn.innerHTML = '<i class="fas fa-check"></i> Mark as Completed';
+                                                            }
+                                                            function goToNextLesson() {
+                                                                const nextBtn = $('.nav-btn.next[href]');
+                                                                if (nextBtn.length) {
+                                                                    showSuccessMessage('Moving to next lesson...');
+                                                                    setTimeout(() => {
+                                                                        window.location.href = nextBtn.attr('href');
+                                                                    }, 1000);
+                                                                }
+                                                            }
         </script>
     </body>
 </html>

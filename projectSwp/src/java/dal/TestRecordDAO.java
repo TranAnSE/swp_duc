@@ -8,11 +8,13 @@ import model.TestRecord;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
+
 /**
  *
  * @author Na
  */
 public class TestRecordDAO extends DBContext {
+
     private Connection conn;
 
     public TestRecordDAO() {
@@ -30,9 +32,9 @@ public class TestRecordDAO extends DBContext {
             ps.setInt(1, studentId);
             ps.setInt(2, testId);
             ps.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
-            
+
             ps.executeUpdate();
-            
+
             ResultSet rs = ps.getGeneratedKeys();
             if (rs.next()) {
                 return rs.getInt(1);
@@ -50,7 +52,7 @@ public class TestRecordDAO extends DBContext {
             ps.setTimestamp(1, startTime);
             ps.setInt(2, testRecordId);
             int rowsAffected = ps.executeUpdate();
-            
+
             System.out.println("Updated start time for test record ID " + testRecordId + ": " + startTime);
             return rowsAffected > 0;
         } catch (SQLException e) {
@@ -63,7 +65,7 @@ public class TestRecordDAO extends DBContext {
     // Hoàn thành test và tính điểm
     public void finishTestRecord(int testRecordId, double score) {
         System.out.println("\n** SAVING TEST RECORD: ID=" + testRecordId + ", SCORE=" + score + " **\n");
-        
+
         // Method 1: Standard JDBC update
         String sql = "UPDATE test_record SET finish_at = ?, score = ? WHERE id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -71,9 +73,9 @@ public class TestRecordDAO extends DBContext {
             ps.setDouble(2, score);
             ps.setInt(3, testRecordId);
             int updated = ps.executeUpdate();
-            
+
             System.out.println("Method 1: Updated " + updated + " rows");
-            
+
             // Verify save was successful
             String verifySql = "SELECT score FROM test_record WHERE id = ?";
             try (PreparedStatement psVerify = conn.prepareStatement(verifySql)) {
@@ -88,12 +90,12 @@ public class TestRecordDAO extends DBContext {
             }
         } catch (SQLException e) {
             System.out.println("ERROR in finishTestRecord: " + e.getMessage());
-            
+
             // Method 2: Fallback to direct statement
             try {
                 String directSql = "UPDATE test_record SET finish_at = NOW(), score = " + score + " WHERE id = " + testRecordId;
                 System.out.println("Trying direct SQL: " + directSql);
-                
+
                 try (Statement stmt = conn.createStatement()) {
                     int updated = stmt.executeUpdate(directSql);
                     System.out.println("Method 2: Updated " + updated + " rows with direct SQL");
@@ -116,24 +118,24 @@ public class TestRecordDAO extends DBContext {
                 record.setId(rs.getInt("id"));
                 record.setStudent_id(rs.getInt("student_id"));
                 record.setTest_id(rs.getInt("test_id"));
-                
+
                 Timestamp startedAt = rs.getTimestamp("started_at");
                 if (startedAt != null) {
                     record.setStarted_at(startedAt.toLocalDateTime());
                 }
-                
+
                 Timestamp finishAt = rs.getTimestamp("finish_at");
                 if (finishAt != null) {
                     record.setFinish_at(finishAt.toLocalDateTime());
                 }
-                
+
                 double score = rs.getDouble("score");
                 record.setScore(score);
-                
+
                 // DEBUG: Print retrieved score
                 String debugMsg = "GET_TEST_RECORD_DEBUG: id=" + id + ", retrieved score=" + score;
                 System.err.println(debugMsg);
-                
+
                 // Write to file for debug
                 try {
                     java.io.FileWriter fw = new java.io.FileWriter("get_test_record_debug.txt", true);
@@ -142,7 +144,7 @@ public class TestRecordDAO extends DBContext {
                 } catch (Exception fe) {
                     System.err.println("File write error: " + fe.getMessage());
                 }
-                
+
                 return record;
             }
         } catch (SQLException e) {
@@ -164,17 +166,17 @@ public class TestRecordDAO extends DBContext {
                 record.setId(rs.getInt("id"));
                 record.setStudent_id(rs.getInt("student_id"));
                 record.setTest_id(rs.getInt("test_id"));
-                
+
                 Timestamp startedAt = rs.getTimestamp("started_at");
                 if (startedAt != null) {
                     record.setStarted_at(startedAt.toLocalDateTime());
                 }
-                
+
                 Timestamp finishAt = rs.getTimestamp("finish_at");
                 if (finishAt != null) {
                     record.setFinish_at(finishAt.toLocalDateTime());
                 }
-                
+
                 record.setScore(rs.getDouble("score"));
                 records.add(record);
             }
@@ -212,12 +214,12 @@ public class TestRecordDAO extends DBContext {
                 record.setId(rs.getInt("id"));
                 record.setStudent_id(rs.getInt("student_id"));
                 record.setTest_id(rs.getInt("test_id"));
-                
+
                 Timestamp startedAt = rs.getTimestamp("started_at");
                 if (startedAt != null) {
                     record.setStarted_at(startedAt.toLocalDateTime());
                 }
-                
+
                 record.setScore(rs.getDouble("score"));
                 return record;
             }
@@ -226,4 +228,110 @@ public class TestRecordDAO extends DBContext {
         }
         return null;
     }
-} 
+
+    /**
+     * Get test result for student and test
+     */
+    public Map<String, Object> getTestResultForStudent(int studentId, int testId) {
+        String sql = """
+        SELECT tr.*, t.name as test_name, t.is_practice 
+        FROM test_record tr
+        JOIN test t ON tr.test_id = t.id
+        WHERE tr.student_id = ? AND tr.test_id = ? AND tr.finish_at IS NOT NULL
+        ORDER BY tr.started_at DESC
+        LIMIT 1
+    """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, testId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("id", rs.getInt("id"));
+                result.put("score", rs.getDouble("score"));
+                result.put("started_at", rs.getTimestamp("started_at"));
+                result.put("finish_at", rs.getTimestamp("finish_at"));
+                result.put("test_name", rs.getString("test_name"));
+                result.put("is_practice", rs.getBoolean("is_practice"));
+                result.put("has_taken", true);
+                return result;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // Return empty result if no test record found
+        Map<String, Object> result = new HashMap<>();
+        result.put("has_taken", false);
+        result.put("score", 0.0);
+        return result;
+    }
+
+    /**
+     * Get all test results for student in a course
+     */
+    public Map<Integer, Map<String, Object>> getCourseTestResultsForStudent(int studentId, int courseId) {
+        String sql = """
+        SELECT tr.test_id, tr.score, tr.started_at, tr.finish_at, t.name as test_name, t.is_practice
+        FROM test_record tr
+        JOIN test t ON tr.test_id = t.id
+        WHERE tr.student_id = ? AND t.course_id = ? AND tr.finish_at IS NOT NULL
+        ORDER BY tr.test_id, tr.started_at DESC
+    """;
+
+        Map<Integer, Map<String, Object>> results = new HashMap<>();
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                int testId = rs.getInt("test_id");
+
+                // Only keep the latest result for each test
+                if (!results.containsKey(testId)) {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("test_id", testId);
+                    result.put("score", rs.getDouble("score"));
+                    result.put("started_at", rs.getTimestamp("started_at"));
+                    result.put("finish_at", rs.getTimestamp("finish_at"));
+                    result.put("test_name", rs.getString("test_name"));
+                    result.put("is_practice", rs.getBoolean("is_practice"));
+                    result.put("has_taken", true);
+                    results.put(testId, result);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return results;
+    }
+
+    /**
+     * Check if student can take official test (hasn't taken it yet)
+     */
+    public boolean canTakeOfficialTest(int studentId, int testId) {
+        String sql = """
+        SELECT COUNT(*) FROM test_record tr
+        JOIN test t ON tr.test_id = t.id
+        WHERE tr.student_id = ? AND tr.test_id = ? AND t.is_practice = 0 AND tr.finish_at IS NOT NULL
+    """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, testId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1) == 0; // Can take if count is 0
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+}
