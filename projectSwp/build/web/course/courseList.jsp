@@ -563,9 +563,9 @@
                                                             </a>
                                                         </c:when>
                                                         <c:when test="${course.approval_status == 'REJECTED'}">
-                                                            <a href="${pageContext.request.contextPath}/course?action=submit&id=${course.course_id}" 
+                                                            <a href="${pageContext.request.contextPath}/course?action=resubmitAfterReject&id=${course.course_id}" 
                                                                class="btn btn-sm btn-warning" title="Resubmit for Approval"
-                                                               onclick="return confirm('Resubmit this course for approval?')">
+                                                               onclick="return confirm('Resubmit this course for approval? The rejection reason will be cleared.')">
                                                                 <i class="fas fa-paper-plane"></i> Resubmit
                                                             </a>
                                                         </c:when>

@@ -976,7 +976,7 @@
                                     </c:if>
                                 </c:when>
                                 <c:when test="${courseDetails.approval_status == 'REJECTED'}">
-                                    <button class="btn btn-warning btn-lg" onclick="submitForApproval()">
+                                    <button class="btn btn-warning btn-lg" onclick="resubmitAfterReject()">
                                         <i class="fas fa-paper-plane"></i> Resubmit for Approval
                                     </button>
                                 </c:when>
@@ -999,7 +999,7 @@
                         </div>
                     </div>
                 </div>
-                    
+
                 <!-- Action Buttons -->
                 <div class="d-flex justify-content-between mt-4">
                     <a href="${pageContext.request.contextPath}/course" class="btn btn-secondary">
@@ -1761,544 +1761,558 @@
                             }
 
                             function submitForApproval() {
-                                if (!confirm('Are you sure you want to submit this course for approval? You will not be able to edit it while it is pending approval.')) {
-                                    return;
-                                }
+                                var approvalStatus = '${courseDetails.approval_status}';
 
-                                window.location.href = '${pageContext.request.contextPath}/course?action=submit&id=${courseId}';
+                                if (approvalStatus === 'DRAFT') {
+                                    if (!confirm('Are you sure you want to submit this course for approval? You will not be able to edit it while it is pending approval.')) {
+                                        return;
                                     }
-
-                                    function previewCourse() {
-                                        window.open('${pageContext.request.contextPath}/course?action=detail&id=${courseId}', '_blank');
+                                    window.location.href = '${pageContext.request.contextPath}/course?action=submit&id=${courseId}';
+                                            } else {
+                                                console.error('submitForApproval called with invalid status:', approvalStatus);
+                                                alert('Invalid operation. Please refresh the page and try again.');
                                             }
+                                        }
 
-                                            function saveDraft() {
-                                                const params = new URLSearchParams();
-                                                params.append('action', 'saveDraft');
-                                                params.append('courseId', '${courseId}');
+                                        function previewCourse() {
+                                            window.open('${pageContext.request.contextPath}/course?action=detail&id=${courseId}', '_blank');
+                                                }
 
-                                                const saveButtons = document.querySelectorAll('button[onclick*="saveDraft"]');
-                                                const originalTexts = [];
+                                                function saveDraft() {
+                                                    const params = new URLSearchParams();
+                                                    params.append('action', 'saveDraft');
+                                                    params.append('courseId', '${courseId}');
 
-                                                saveButtons.forEach((btn, index) => {
-                                                    originalTexts[index] = btn.innerHTML;
-                                                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-                                                    btn.disabled = true;
-                                                });
+                                                    const saveButtons = document.querySelectorAll('button[onclick*="saveDraft"]');
+                                                    const originalTexts = [];
 
-                                                fetch('${pageContext.request.contextPath}/course', {
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/x-www-form-urlencoded',
-                                                        'X-Requested-With': 'XMLHttpRequest'
-                                                    },
-                                                    body: params.toString()
-                                                })
-                                                        .then(response => {
-                                                            if (!response.ok) {
-                                                                throw new Error('Network response was not ok');
-                                                            }
+                                                    saveButtons.forEach((btn, index) => {
+                                                        originalTexts[index] = btn.innerHTML;
+                                                        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                                                        btn.disabled = true;
+                                                    });
 
-                                                            const contentType = response.headers.get('content-type');
-                                                            if (!contentType || !contentType.includes('application/json')) {
-                                                                return response.text().then(text => {
-                                                                    console.error('Expected JSON but got:', text.substring(0, 500));
-                                                                    throw new Error('Server returned HTML instead of JSON');
-                                                                });
-                                                            }
+                                                    fetch('${pageContext.request.contextPath}/course', {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'Content-Type': 'application/x-www-form-urlencoded',
+                                                            'X-Requested-With': 'XMLHttpRequest'
+                                                        },
+                                                        body: params.toString()
+                                                    })
+                                                            .then(response => {
+                                                                if (!response.ok) {
+                                                                    throw new Error('Network response was not ok');
+                                                                }
 
-                                                            return response.json();
-                                                        })
-                                                        .then(data => {
-                                                            if (data.success) {
-                                                                saveButtons.forEach((btn, index) => {
-                                                                    btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
-                                                                    btn.classList.remove('btn-success');
-                                                                    btn.classList.add('btn-outline-success');
-                                                                    btn.disabled = false;
+                                                                const contentType = response.headers.get('content-type');
+                                                                if (!contentType || !contentType.includes('application/json')) {
+                                                                    return response.text().then(text => {
+                                                                        console.error('Expected JSON but got:', text.substring(0, 500));
+                                                                        throw new Error('Server returned HTML instead of JSON');
+                                                                    });
+                                                                }
 
-                                                                    setTimeout(() => {
+                                                                return response.json();
+                                                            })
+                                                            .then(data => {
+                                                                if (data.success) {
+                                                                    saveButtons.forEach((btn, index) => {
+                                                                        btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+                                                                        btn.classList.remove('btn-success');
+                                                                        btn.classList.add('btn-outline-success');
+                                                                        btn.disabled = false;
+
+                                                                        setTimeout(() => {
+                                                                            btn.innerHTML = originalTexts[index];
+                                                                            btn.classList.remove('btn-outline-success');
+                                                                            btn.classList.add('btn-success');
+                                                                        }, 2000);
+                                                                    });
+                                                                } else {
+                                                                    saveButtons.forEach((btn, index) => {
                                                                         btn.innerHTML = originalTexts[index];
-                                                                        btn.classList.remove('btn-outline-success');
-                                                                        btn.classList.add('btn-success');
-                                                                    }, 2000);
-                                                                });
-                                                            } else {
+                                                                        btn.disabled = false;
+                                                                    });
+                                                                    alert('Failed to save draft: ' + (data.message || 'Unknown error'));
+                                                                }
+                                                            })
+                                                            .catch(error => {
+                                                                console.error('Error:', error);
+
                                                                 saveButtons.forEach((btn, index) => {
                                                                     btn.innerHTML = originalTexts[index];
                                                                     btn.disabled = false;
                                                                 });
-                                                                alert('Failed to save draft: ' + (data.message || 'Unknown error'));
-                                                            }
-                                                        })
-                                                        .catch(error => {
-                                                            console.error('Error:', error);
-
-                                                            saveButtons.forEach((btn, index) => {
-                                                                btn.innerHTML = originalTexts[index];
-                                                                btn.disabled = false;
+                                                                alert('An error occurred while saving the draft: ' + error.message);
                                                             });
-                                                            alert('An error occurred while saving the draft: ' + error.message);
+                                                }
+
+                                                // Utility function to escape HTML
+                                                function escapeHtml(text) {
+                                                    if (!text)
+                                                        return '';
+                                                    const div = document.createElement('div');
+                                                    div.textContent = text;
+                                                    return div.innerHTML;
+                                                }
+
+                                                // Auto-save every 5 minutes
+                                                setInterval(function () {
+                                                    const courseContent = document.getElementById('courseContent');
+                                                    if (courseContent && courseContent.children.length > 0) {
+                                                        console.log('Auto-saving draft...');
+                                                        saveDraft();
+                                                    }
+                                                }, 300000); // 5 minutes
+
+                                                // Close modal when clicking outside or on close button
+                                                document.addEventListener('click', function (event) {
+                                                    if (event.target.classList.contains('modal') ||
+                                                            event.target.classList.contains('modal-backdrop') ||
+                                                            event.target.classList.contains('btn-close') ||
+                                                            event.target.getAttribute('data-bs-dismiss') === 'modal') {
+
+                                                        const openModals = document.querySelectorAll('.modal.show');
+                                                        openModals.forEach(modal => {
+                                                            hideModal(modal.id);
                                                         });
-                                            }
-
-                                            // Utility function to escape HTML
-                                            function escapeHtml(text) {
-                                                if (!text)
-                                                    return '';
-                                                const div = document.createElement('div');
-                                                div.textContent = text;
-                                                return div.innerHTML;
-                                            }
-
-                                            // Auto-save every 5 minutes
-                                            setInterval(function () {
-                                                const courseContent = document.getElementById('courseContent');
-                                                if (courseContent && courseContent.children.length > 0) {
-                                                    console.log('Auto-saving draft...');
-                                                    saveDraft();
-                                                }
-                                            }, 300000); // 5 minutes
-
-                                            // Close modal when clicking outside or on close button
-                                            document.addEventListener('click', function (event) {
-                                                if (event.target.classList.contains('modal') ||
-                                                        event.target.classList.contains('modal-backdrop') ||
-                                                        event.target.classList.contains('btn-close') ||
-                                                        event.target.getAttribute('data-bs-dismiss') === 'modal') {
-
-                                                    const openModals = document.querySelectorAll('.modal.show');
-                                                    openModals.forEach(modal => {
-                                                        hideModal(modal.id);
-                                                    });
-                                                }
-                                            });
-
-                                            // Handle escape key to close modals
-                                            document.addEventListener('keydown', function (event) {
-                                                if (event.key === 'Escape') {
-                                                    const openModals = document.querySelectorAll('.modal.show');
-                                                    openModals.forEach(modal => {
-                                                        hideModal(modal.id);
-                                                    });
-                                                }
-                                            });
-
-                                            // Debug function to check what buttons are available
-                                            function debugButtons() {
-                                                console.log('=== DEBUG INFO ===');
-                                                console.log('Chapter buttons with onclick:', document.querySelectorAll('button[onclick*="addChapterToCourse"]'));
-                                                console.log('Lesson buttons with onclick:', document.querySelectorAll('button[onclick*="addLessonToCourse"]'));
-                                                console.log('All buttons with onclick:', document.querySelectorAll('button[onclick]'));
-
-                                                // Log all chapter buttons with their data
-                                                document.querySelectorAll('button[onclick*="addChapterToCourse"]').forEach((btn, index) => {
-                                                    console.log(`Chapter button ${index}:`, {
-                                                        element: btn,
-                                                        onclick: btn.getAttribute('onclick'),
-                                                        text: btn.textContent
-                                                    });
+                                                    }
                                                 });
 
-                                                // Log lesson buttons in modal
-                                                const modal = document.getElementById('addLessonModal');
-                                                if (modal) {
-                                                    console.log('Lesson buttons in modal:', modal.querySelectorAll('button[onclick*="addLessonToCourse"]'));
-                                                }
-                                            }
-
-
-                                            // Call debug function after DOM is ready
-                                            document.addEventListener('DOMContentLoaded', function () {
-                                                setTimeout(debugButtons, 1000); // Wait 1 second then debug
-                                            });
-
-                                            function showTestModal() {
-                                                // Load available tests
-                                                fetch('${pageContext.request.contextPath}/course?action=getAvailableTests&courseId=${courseId}')
-                                                                .then(response => {
-                                                                    if (!response.ok) {
-                                                                        throw new Error('Network response was not ok');
-                                                                    }
-                                                                    return response.json();
-                                                                })
-                                                                .then(tests => {
-                                                                    console.log('Tests loaded:', tests); // Debug log
-                                                                    displayAvailableTests(tests);
-                                                                    showModal('browseTestModal');
-                                                                })
-                                                                .catch(error => {
-                                                                    console.error('Error loading tests:', error);
-                                                                    alert('Failed to load available tests: ' + error.message);
-                                                                });
-                                                    }
-
-                                                    function displayAvailableTests(tests) {
-                                                        console.log('displayAvailableTests called with:', tests);
-
-                                                        const container = document.getElementById('availableTestsList');
-                                                        if (!container) {
-                                                            console.error('availableTestsList container not found');
-                                                            return;
-                                                        }
-
-                                                        container.innerHTML = '';
-
-                                                        if (!tests || tests.length === 0) {
-                                                            container.innerHTML = '<p class="text-muted">No tests available</p>';
-                                                            return;
-                                                        }
-
-                                                        tests.forEach(test => {
-                                                            console.log('Processing test:', test);
-
-                                                            const testDiv = document.createElement('div');
-                                                            testDiv.className = 'list-group-item d-flex justify-content-between align-items-center';
-
-                                                            // Create test info section
-                                                            const testInfo = document.createElement('div');
-
-                                                            // Test name
-                                                            const testName = document.createElement('strong');
-                                                            testName.textContent = test.name || 'Unnamed Test';
-                                                            testInfo.appendChild(testName);
-
-                                                            // Line break
-                                                            testInfo.appendChild(document.createElement('br'));
-
-                                                            // Test description
-                                                            if (test.description && test.description.trim() !== '') {
-                                                                const testDesc = document.createElement('small');
-                                                                testDesc.className = 'text-muted';
-                                                                testDesc.textContent = test.description;
-                                                                testInfo.appendChild(testDesc);
-                                                                testInfo.appendChild(document.createElement('br'));
-                                                            }
-
-                                                            // Test details with proper values
-                                                            const testDetails = document.createElement('small');
-                                                            testDetails.className = 'text-info';
-
-                                                            // Extract values with proper fallbacks
-                                                            const testType = test.is_practice ? 'Practice' : 'Official';
-                                                            const duration = test.duration_minutes || 30;
-                                                            const totalQuestions = test.total_questions || test.num_questions || 0;
-                                                            const createdBy = test.created_by_name || 'Unknown';
-
-                                                            console.log('Test details:', {
-                                                                testType,
-                                                                duration,
-                                                                totalQuestions,
-                                                                createdBy,
-                                                                raw_test: test
-                                                            });
-
-                                                            // Use string concatenation instead of template literal in textContent
-                                                            testDetails.textContent = testType + ' | ' + duration + ' min | ' + totalQuestions + ' questions | by ' + createdBy;
-                                                            testInfo.appendChild(testDetails);
-
-                                                            // Create action section
-                                                            const actionDiv = document.createElement('div');
-                                                            if (test.is_in_course) {
-                                                                const badge = document.createElement('span');
-                                                                badge.className = 'badge bg-success';
-                                                                badge.innerHTML = '<i class="fas fa-check"></i> Added';
-                                                                actionDiv.appendChild(badge);
-                                                            } else {
-                                                                const addBtn = document.createElement('button');
-                                                                addBtn.className = 'btn btn-sm btn-outline-primary';
-                                                                addBtn.innerHTML = '<i class="fas fa-plus"></i> Add';
-                                                                addBtn.onclick = () => addTestToCourse(test.id, test.name);
-                                                                actionDiv.appendChild(addBtn);
-                                                            }
-
-                                                            testDiv.appendChild(testInfo);
-                                                            testDiv.appendChild(actionDiv);
-                                                            container.appendChild(testDiv);
+                                                // Handle escape key to close modals
+                                                document.addEventListener('keydown', function (event) {
+                                                    if (event.key === 'Escape') {
+                                                        const openModals = document.querySelectorAll('.modal.show');
+                                                        openModals.forEach(modal => {
+                                                            hideModal(modal.id);
                                                         });
                                                     }
+                                                });
 
-                                                    function addTestToCourse(testId, testName) {
-                                                        const params = new URLSearchParams();
-                                                        params.append('action', 'addToCourse');
-                                                        params.append('courseId', '${courseId}');
-                                                        params.append('testId', testId);
+                                                // Debug function to check what buttons are available
+                                                function debugButtons() {
+                                                    console.log('=== DEBUG INFO ===');
+                                                    console.log('Chapter buttons with onclick:', document.querySelectorAll('button[onclick*="addChapterToCourse"]'));
+                                                    console.log('Lesson buttons with onclick:', document.querySelectorAll('button[onclick*="addLessonToCourse"]'));
+                                                    console.log('All buttons with onclick:', document.querySelectorAll('button[onclick]'));
 
-                                                        fetch('${pageContext.request.contextPath}/test', {
-                                                            method: 'POST',
-                                                            headers: {
-                                                                'Content-Type': 'application/x-www-form-urlencoded',
-                                                                'X-Requested-With': 'XMLHttpRequest'
-                                                            },
-                                                            body: params.toString()
-                                                        })
-                                                                .then(response => response.json())
-                                                                .then(data => {
-                                                                    if (data.success) {
-                                                                        hideModal('browseTestModal');
-                                                                        location.reload();
-                                                                    } else {
-                                                                        alert('Failed to add test: ' + data.message);
-                                                                    }
-                                                                })
-                                                                .catch(error => {
-                                                                    console.error('Error:', error);
-                                                                    alert('An error occurred while adding the test');
-                                                                });
+                                                    // Log all chapter buttons with their data
+                                                    document.querySelectorAll('button[onclick*="addChapterToCourse"]').forEach((btn, index) => {
+                                                        console.log(`Chapter button ${index}:`, {
+                                                            element: btn,
+                                                            onclick: btn.getAttribute('onclick'),
+                                                            text: btn.textContent
+                                                        });
+                                                    });
+
+                                                    // Log lesson buttons in modal
+                                                    const modal = document.getElementById('addLessonModal');
+                                                    if (modal) {
+                                                        console.log('Lesson buttons in modal:', modal.querySelectorAll('button[onclick*="addLessonToCourse"]'));
                                                     }
+                                                }
 
-                                                    function reorderTests() {
-                                                        const testItems = document.querySelectorAll('#testsList .content-item[data-type="test"]');
-                                                        const testIds = Array.from(testItems).map(item => item.dataset.id).filter(id => id);
 
-                                                        if (testIds.length === 0) {
-                                                            return;
-                                                        }
+                                                // Call debug function after DOM is ready
+                                                document.addEventListener('DOMContentLoaded', function () {
+                                                    setTimeout(debugButtons, 1000); // Wait 1 second then debug
+                                                });
 
-                                                        // Use URLSearchParams for easier parameter handling
-                                                        const params = new URLSearchParams();
-                                                        params.append('action', 'reorderTests');
-                                                        params.append('courseId', '${courseId}');
-                                                        testIds.forEach(id => params.append('testIds[]', id)); // Use [] to indicate an array
-
-                                                        fetch('${pageContext.request.contextPath}/course', {
-                                                            method: 'POST',
-                                                            headers: {
-                                                                'Content-Type': 'application/x-www-form-urlencoded',
-                                                                'X-Requested-With': 'XMLHttpRequest'
-                                                            },
-                                                            body: params.toString()
-                                                        })
-                                                                .then(response => response.json())
-                                                                .then(data => {
-                                                                    if (data.success) {
-                                                                        console.log('Tests reordered successfully.');
-                                                                        // Optionally show a success toast/message
-                                                                    } else {
-                                                                        console.error('Failed to reorder tests:', data.message);
-                                                                        alert('Error: Could not reorder tests.');
-                                                                    }
-                                                                })
-                                                                .catch(error => {
-                                                                    console.error('Error reordering tests:', error);
-                                                                    alert('A network error occurred while reordering tests.');
-                                                                });
-                                                    }
-
-                                                    function editTest(testId) {
-                                                        window.open('${pageContext.request.contextPath}/test?action=edit&id=' + testId, '_blank');
-                                                    }
-
-                                                    function showTestPositionModal(testId, testName, currentLevel, currentChapterId, currentLessonId) {
-                                                        currentTestId = testId;
-                                                        currentTestName = testName;
-
-                                                        document.getElementById('testPositionInfo').innerHTML =
-                                                                '<strong>Moving test:</strong> ' + testName + '<br>' +
-                                                                '<strong>Current position:</strong> ' + currentLevel + ' level';
-
-                                                        // Set current position
-                                                        document.querySelector(`input[name="positionLevel"][value="${currentLevel}"]`).checked = true;
-
-                                                        if (currentChapterId) {
-                                                            document.getElementById('chapterSelect').value = currentChapterId;
-                                                        }
-
-                                                        updatePositionOptions();
-
-                                                        if (currentLessonId) {
-                                                            updateLessonOptions().then(() => {
-                                                                document.getElementById('lessonSelect').value = currentLessonId;
-                                                            });
-                                                        }
-
-                                                        showModal('testPositionModal');
-                                                    }
-
-                                                    function updatePositionOptions() {
-                                                        const level = document.querySelector('input[name="positionLevel"]:checked').value;
-                                                        const chapterSelection = document.getElementById('chapterSelection');
-                                                        const lessonSelection = document.getElementById('lessonSelection');
-
-                                                        if (level === 'course') {
-                                                            chapterSelection.style.display = 'none';
-                                                            lessonSelection.style.display = 'none';
-                                                        } else if (level === 'chapter') {
-                                                            chapterSelection.style.display = 'block';
-                                                            lessonSelection.style.display = 'none';
-                                                        } else if (level === 'lesson') {
-                                                            chapterSelection.style.display = 'block';
-                                                            lessonSelection.style.display = 'block';
-                                                        }
-                                                    }
-
-                                                    function updateLessonOptions() {
-                                                        return new Promise((resolve) => {
-                                                            const chapterId = document.getElementById('chapterSelect').value;
-                                                            const lessonSelect = document.getElementById('lessonSelect');
-
-                                                            if (!chapterId) {
-                                                                lessonSelect.innerHTML = '<option value="">-- Select Chapter First --</option>';
-                                                                resolve();
-                                                                return;
-                                                            }
-
-                                                            lessonSelect.innerHTML = '<option value="">-- Loading lessons... --</option>';
-
-                                                            fetch('${pageContext.request.contextPath}/course?action=getLessonsForCourse&chapterId=' + chapterId + '&courseId=${courseId}')
-                                                                    .then(response => response.json())
-                                                                    .then(lessons => {
-                                                                        lessonSelect.innerHTML = '<option value="">-- Select Lesson --</option>';
-                                                                        lessons.forEach(lesson => {
-                                                                            if (!lesson.isAdded)
-                                                                                return; // Only show lessons that are in the course
-                                                                            const option = document.createElement('option');
-                                                                            option.value = lesson.id;
-                                                                            option.textContent = lesson.name;
-                                                                            lessonSelect.appendChild(option);
-                                                                        });
-                                                                        resolve();
+                                                function showTestModal() {
+                                                    // Load available tests
+                                                    fetch('${pageContext.request.contextPath}/course?action=getAvailableTests&courseId=${courseId}')
+                                                                    .then(response => {
+                                                                        if (!response.ok) {
+                                                                            throw new Error('Network response was not ok');
+                                                                        }
+                                                                        return response.json();
+                                                                    })
+                                                                    .then(tests => {
+                                                                        console.log('Tests loaded:', tests); // Debug log
+                                                                        displayAvailableTests(tests);
+                                                                        showModal('browseTestModal');
                                                                     })
                                                                     .catch(error => {
-                                                                        console.error('Error loading lessons:', error);
-                                                                        lessonSelect.innerHTML = '<option value="">-- Error loading lessons --</option>';
-                                                                        resolve();
+                                                                        console.error('Error loading tests:', error);
+                                                                        alert('Failed to load available tests: ' + error.message);
                                                                     });
-                                                        });
-                                                    }
-
-                                                    function updateTestPosition() {
-                                                        if (!currentTestId) {
-                                                            alert('No test selected');
-                                                            return;
                                                         }
 
-                                                        const level = document.querySelector('input[name="positionLevel"]:checked').value;
-                                                        let chapterId = null;
-                                                        let lessonId = null;
+                                                        function displayAvailableTests(tests) {
+                                                            console.log('displayAvailableTests called with:', tests);
 
-                                                        if (level === 'chapter' || level === 'lesson') {
-                                                            chapterId = document.getElementById('chapterSelect').value;
-                                                            if (!chapterId) {
-                                                                alert('Please select a chapter');
+                                                            const container = document.getElementById('availableTestsList');
+                                                            if (!container) {
+                                                                console.error('availableTestsList container not found');
                                                                 return;
                                                             }
-                                                        }
 
-                                                        if (level === 'lesson') {
-                                                            lessonId = document.getElementById('lessonSelect').value;
-                                                            if (!lessonId) {
-                                                                alert('Please select a lesson');
+                                                            container.innerHTML = '';
+
+                                                            if (!tests || tests.length === 0) {
+                                                                container.innerHTML = '<p class="text-muted">No tests available</p>';
                                                                 return;
                                                             }
-                                                        }
 
-                                                        const params = new URLSearchParams();
-                                                        params.append('action', 'updateTestPosition');
-                                                        params.append('courseId', '${courseId}');
-                                                        params.append('testId', currentTestId);
-                                                        params.append('displayOrder', 1); // Will be recalculated on server
+                                                            tests.forEach(test => {
+                                                                console.log('Processing test:', test);
 
-                                                        if (chapterId) {
-                                                            params.append('chapterId', chapterId);
-                                                        }
-                                                        if (lessonId) {
-                                                            params.append('lessonId', lessonId);
-                                                        }
+                                                                const testDiv = document.createElement('div');
+                                                                testDiv.className = 'list-group-item d-flex justify-content-between align-items-center';
 
-                                                        fetch('${pageContext.request.contextPath}/course', {
-                                                            method: 'POST',
-                                                            headers: {
-                                                                'Content-Type': 'application/x-www-form-urlencoded',
-                                                                'X-Requested-With': 'XMLHttpRequest'
-                                                            },
-                                                            body: params.toString()
-                                                        })
-                                                                .then(response => response.json())
-                                                                .then(data => {
-                                                                    if (data.success) {
-                                                                        hideModal('testPositionModal');
-                                                                        location.reload();
-                                                                    } else {
-                                                                        alert('Failed to move test: ' + data.message);
-                                                                    }
-                                                                })
-                                                                .catch(error => {
-                                                                    console.error('Error:', error);
-                                                                    alert('An error occurred while moving the test');
+                                                                // Create test info section
+                                                                const testInfo = document.createElement('div');
+
+                                                                // Test name
+                                                                const testName = document.createElement('strong');
+                                                                testName.textContent = test.name || 'Unnamed Test';
+                                                                testInfo.appendChild(testName);
+
+                                                                // Line break
+                                                                testInfo.appendChild(document.createElement('br'));
+
+                                                                // Test description
+                                                                if (test.description && test.description.trim() !== '') {
+                                                                    const testDesc = document.createElement('small');
+                                                                    testDesc.className = 'text-muted';
+                                                                    testDesc.textContent = test.description;
+                                                                    testInfo.appendChild(testDesc);
+                                                                    testInfo.appendChild(document.createElement('br'));
+                                                                }
+
+                                                                // Test details with proper values
+                                                                const testDetails = document.createElement('small');
+                                                                testDetails.className = 'text-info';
+
+                                                                // Extract values with proper fallbacks
+                                                                const testType = test.is_practice ? 'Practice' : 'Official';
+                                                                const duration = test.duration_minutes || 30;
+                                                                const totalQuestions = test.total_questions || test.num_questions || 0;
+                                                                const createdBy = test.created_by_name || 'Unknown';
+
+                                                                console.log('Test details:', {
+                                                                    testType,
+                                                                    duration,
+                                                                    totalQuestions,
+                                                                    createdBy,
+                                                                    raw_test: test
                                                                 });
-                                                    }
 
-                                                    function resubmitForApproval() {
-                                                        if (!confirm('Are you sure you want to resubmit this course for approval? This will reset the approval status and you will not be able to edit until admin reviews again.')) {
-                                                            return;
+                                                                // Use string concatenation instead of template literal in textContent
+                                                                testDetails.textContent = testType + ' | ' + duration + ' min | ' + totalQuestions + ' questions | by ' + createdBy;
+                                                                testInfo.appendChild(testDetails);
+
+                                                                // Create action section
+                                                                const actionDiv = document.createElement('div');
+                                                                if (test.is_in_course) {
+                                                                    const badge = document.createElement('span');
+                                                                    badge.className = 'badge bg-success';
+                                                                    badge.innerHTML = '<i class="fas fa-check"></i> Added';
+                                                                    actionDiv.appendChild(badge);
+                                                                } else {
+                                                                    const addBtn = document.createElement('button');
+                                                                    addBtn.className = 'btn btn-sm btn-outline-primary';
+                                                                    addBtn.innerHTML = '<i class="fas fa-plus"></i> Add';
+                                                                    addBtn.onclick = () => addTestToCourse(test.id, test.name);
+                                                                    actionDiv.appendChild(addBtn);
+                                                                }
+
+                                                                testDiv.appendChild(testInfo);
+                                                                testDiv.appendChild(actionDiv);
+                                                                container.appendChild(testDiv);
+                                                            });
                                                         }
 
-                                                        const params = new URLSearchParams();
-                                                        params.append('action', 'resubmit');
-                                                        params.append('courseId', '${courseId}');
+                                                        function addTestToCourse(testId, testName) {
+                                                            const params = new URLSearchParams();
+                                                            params.append('action', 'addToCourse');
+                                                            params.append('courseId', '${courseId}');
+                                                            params.append('testId', testId);
 
-                                                        const resubmitButtons = document.querySelectorAll('button[onclick*="resubmitForApproval"]');
-                                                        const originalTexts = [];
+                                                            fetch('${pageContext.request.contextPath}/test', {
+                                                                method: 'POST',
+                                                                headers: {
+                                                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                                                    'X-Requested-With': 'XMLHttpRequest'
+                                                                },
+                                                                body: params.toString()
+                                                            })
+                                                                    .then(response => response.json())
+                                                                    .then(data => {
+                                                                        if (data.success) {
+                                                                            hideModal('browseTestModal');
+                                                                            location.reload();
+                                                                        } else {
+                                                                            alert('Failed to add test: ' + data.message);
+                                                                        }
+                                                                    })
+                                                                    .catch(error => {
+                                                                        console.error('Error:', error);
+                                                                        alert('An error occurred while adding the test');
+                                                                    });
+                                                        }
 
-                                                        resubmitButtons.forEach((btn, index) => {
-                                                            originalTexts[index] = btn.innerHTML;
-                                                            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Resubmitting...';
-                                                            btn.disabled = true;
-                                                        });
+                                                        function reorderTests() {
+                                                            const testItems = document.querySelectorAll('#testsList .content-item[data-type="test"]');
+                                                            const testIds = Array.from(testItems).map(item => item.dataset.id).filter(id => id);
 
-                                                        fetch('${pageContext.request.contextPath}/course', {
-                                                            method: 'POST',
-                                                            headers: {
-                                                                'Content-Type': 'application/x-www-form-urlencoded',
-                                                                'X-Requested-With': 'XMLHttpRequest'
-                                                            },
-                                                            body: params.toString()
-                                                        })
-                                                                .then(response => {
-                                                                    if (!response.ok) {
-                                                                        throw new Error('Network response was not ok');
-                                                                    }
+                                                            if (testIds.length === 0) {
+                                                                return;
+                                                            }
 
-                                                                    const contentType = response.headers.get('content-type');
-                                                                    if (!contentType || !contentType.includes('application/json')) {
-                                                                        return response.text().then(text => {
-                                                                            console.error('Expected JSON but got:', text.substring(0, 500));
-                                                                            throw new Error('Server returned HTML instead of JSON');
+                                                            // Use URLSearchParams for easier parameter handling
+                                                            const params = new URLSearchParams();
+                                                            params.append('action', 'reorderTests');
+                                                            params.append('courseId', '${courseId}');
+                                                            testIds.forEach(id => params.append('testIds[]', id)); // Use [] to indicate an array
+
+                                                            fetch('${pageContext.request.contextPath}/course', {
+                                                                method: 'POST',
+                                                                headers: {
+                                                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                                                    'X-Requested-With': 'XMLHttpRequest'
+                                                                },
+                                                                body: params.toString()
+                                                            })
+                                                                    .then(response => response.json())
+                                                                    .then(data => {
+                                                                        if (data.success) {
+                                                                            console.log('Tests reordered successfully.');
+                                                                            // Optionally show a success toast/message
+                                                                        } else {
+                                                                            console.error('Failed to reorder tests:', data.message);
+                                                                            alert('Error: Could not reorder tests.');
+                                                                        }
+                                                                    })
+                                                                    .catch(error => {
+                                                                        console.error('Error reordering tests:', error);
+                                                                        alert('A network error occurred while reordering tests.');
+                                                                    });
+                                                        }
+
+                                                        function editTest(testId) {
+                                                            window.open('${pageContext.request.contextPath}/test?action=edit&id=' + testId, '_blank');
+                                                        }
+
+                                                        function showTestPositionModal(testId, testName, currentLevel, currentChapterId, currentLessonId) {
+                                                            currentTestId = testId;
+                                                            currentTestName = testName;
+
+                                                            document.getElementById('testPositionInfo').innerHTML =
+                                                                    '<strong>Moving test:</strong> ' + testName + '<br>' +
+                                                                    '<strong>Current position:</strong> ' + currentLevel + ' level';
+
+                                                            // Set current position
+                                                            document.querySelector(`input[name="positionLevel"][value="${currentLevel}"]`).checked = true;
+
+                                                            if (currentChapterId) {
+                                                                document.getElementById('chapterSelect').value = currentChapterId;
+                                                            }
+
+                                                            updatePositionOptions();
+
+                                                            if (currentLessonId) {
+                                                                updateLessonOptions().then(() => {
+                                                                    document.getElementById('lessonSelect').value = currentLessonId;
+                                                                });
+                                                            }
+
+                                                            showModal('testPositionModal');
+                                                        }
+
+                                                        function updatePositionOptions() {
+                                                            const level = document.querySelector('input[name="positionLevel"]:checked').value;
+                                                            const chapterSelection = document.getElementById('chapterSelection');
+                                                            const lessonSelection = document.getElementById('lessonSelection');
+
+                                                            if (level === 'course') {
+                                                                chapterSelection.style.display = 'none';
+                                                                lessonSelection.style.display = 'none';
+                                                            } else if (level === 'chapter') {
+                                                                chapterSelection.style.display = 'block';
+                                                                lessonSelection.style.display = 'none';
+                                                            } else if (level === 'lesson') {
+                                                                chapterSelection.style.display = 'block';
+                                                                lessonSelection.style.display = 'block';
+                                                            }
+                                                        }
+
+                                                        function updateLessonOptions() {
+                                                            return new Promise((resolve) => {
+                                                                const chapterId = document.getElementById('chapterSelect').value;
+                                                                const lessonSelect = document.getElementById('lessonSelect');
+
+                                                                if (!chapterId) {
+                                                                    lessonSelect.innerHTML = '<option value="">-- Select Chapter First --</option>';
+                                                                    resolve();
+                                                                    return;
+                                                                }
+
+                                                                lessonSelect.innerHTML = '<option value="">-- Loading lessons... --</option>';
+
+                                                                fetch('${pageContext.request.contextPath}/course?action=getLessonsForCourse&chapterId=' + chapterId + '&courseId=${courseId}')
+                                                                        .then(response => response.json())
+                                                                        .then(lessons => {
+                                                                            lessonSelect.innerHTML = '<option value="">-- Select Lesson --</option>';
+                                                                            lessons.forEach(lesson => {
+                                                                                if (!lesson.isAdded)
+                                                                                    return; // Only show lessons that are in the course
+                                                                                const option = document.createElement('option');
+                                                                                option.value = lesson.id;
+                                                                                option.textContent = lesson.name;
+                                                                                lessonSelect.appendChild(option);
+                                                                            });
+                                                                            resolve();
+                                                                        })
+                                                                        .catch(error => {
+                                                                            console.error('Error loading lessons:', error);
+                                                                            lessonSelect.innerHTML = '<option value="">-- Error loading lessons --</option>';
+                                                                            resolve();
                                                                         });
-                                                                    }
+                                                            });
+                                                        }
 
-                                                                    return response.json();
-                                                                })
-                                                                .then(data => {
-                                                                    if (data.success) {
-                                                                        resubmitButtons.forEach((btn, index) => {
-                                                                            btn.innerHTML = '<i class="fas fa-check"></i> Resubmitted!';
-                                                                            btn.classList.remove('btn-warning');
-                                                                            btn.classList.add('btn-success');
-                                                                        });
+                                                        function updateTestPosition() {
+                                                            if (!currentTestId) {
+                                                                alert('No test selected');
+                                                                return;
+                                                            }
 
-                                                                        setTimeout(function () {
-                                                                            window.location.href = '${pageContext.request.contextPath}/course';
-                                                                        }, 2000);
-                                                                    } else {
+                                                            const level = document.querySelector('input[name="positionLevel"]:checked').value;
+                                                            let chapterId = null;
+                                                            let lessonId = null;
+
+                                                            if (level === 'chapter' || level === 'lesson') {
+                                                                chapterId = document.getElementById('chapterSelect').value;
+                                                                if (!chapterId) {
+                                                                    alert('Please select a chapter');
+                                                                    return;
+                                                                }
+                                                            }
+
+                                                            if (level === 'lesson') {
+                                                                lessonId = document.getElementById('lessonSelect').value;
+                                                                if (!lessonId) {
+                                                                    alert('Please select a lesson');
+                                                                    return;
+                                                                }
+                                                            }
+
+                                                            const params = new URLSearchParams();
+                                                            params.append('action', 'updateTestPosition');
+                                                            params.append('courseId', '${courseId}');
+                                                            params.append('testId', currentTestId);
+                                                            params.append('displayOrder', 1); // Will be recalculated on server
+
+                                                            if (chapterId) {
+                                                                params.append('chapterId', chapterId);
+                                                            }
+                                                            if (lessonId) {
+                                                                params.append('lessonId', lessonId);
+                                                            }
+
+                                                            fetch('${pageContext.request.contextPath}/course', {
+                                                                method: 'POST',
+                                                                headers: {
+                                                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                                                    'X-Requested-With': 'XMLHttpRequest'
+                                                                },
+                                                                body: params.toString()
+                                                            })
+                                                                    .then(response => response.json())
+                                                                    .then(data => {
+                                                                        if (data.success) {
+                                                                            hideModal('testPositionModal');
+                                                                            location.reload();
+                                                                        } else {
+                                                                            alert('Failed to move test: ' + data.message);
+                                                                        }
+                                                                    })
+                                                                    .catch(error => {
+                                                                        console.error('Error:', error);
+                                                                        alert('An error occurred while moving the test');
+                                                                    });
+                                                        }
+
+                                                        function resubmitForApproval() {
+                                                            if (!confirm('Are you sure you want to resubmit this course for approval? This will reset the approval status and you will not be able to edit until admin reviews again.')) {
+                                                                return;
+                                                            }
+
+                                                            const params = new URLSearchParams();
+                                                            params.append('action', 'resubmit');
+                                                            params.append('courseId', '${courseId}');
+
+                                                            const resubmitButtons = document.querySelectorAll('button[onclick*="resubmitForApproval"]');
+                                                            const originalTexts = [];
+
+                                                            resubmitButtons.forEach((btn, index) => {
+                                                                originalTexts[index] = btn.innerHTML;
+                                                                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Resubmitting...';
+                                                                btn.disabled = true;
+                                                            });
+
+                                                            fetch('${pageContext.request.contextPath}/course', {
+                                                                method: 'POST',
+                                                                headers: {
+                                                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                                                    'X-Requested-With': 'XMLHttpRequest'
+                                                                },
+                                                                body: params.toString()
+                                                            })
+                                                                    .then(response => {
+                                                                        if (!response.ok) {
+                                                                            throw new Error('Network response was not ok');
+                                                                        }
+
+                                                                        const contentType = response.headers.get('content-type');
+                                                                        if (!contentType || !contentType.includes('application/json')) {
+                                                                            return response.text().then(text => {
+                                                                                console.error('Expected JSON but got:', text.substring(0, 500));
+                                                                                throw new Error('Server returned HTML instead of JSON');
+                                                                            });
+                                                                        }
+
+                                                                        return response.json();
+                                                                    })
+                                                                    .then(data => {
+                                                                        if (data.success) {
+                                                                            resubmitButtons.forEach((btn, index) => {
+                                                                                btn.innerHTML = '<i class="fas fa-check"></i> Resubmitted!';
+                                                                                btn.classList.remove('btn-warning');
+                                                                                btn.classList.add('btn-success');
+                                                                            });
+
+                                                                            setTimeout(function () {
+                                                                                window.location.href = '${pageContext.request.contextPath}/course';
+                                                                            }, 2000);
+                                                                        } else {
+                                                                            resubmitButtons.forEach((btn, index) => {
+                                                                                btn.innerHTML = originalTexts[index];
+                                                                                btn.disabled = false;
+                                                                            });
+                                                                            alert('Failed to resubmit course: ' + (data.message || 'Unknown error'));
+                                                                        }
+                                                                    })
+                                                                    .catch(error => {
+                                                                        console.error('Error:', error);
+
                                                                         resubmitButtons.forEach((btn, index) => {
                                                                             btn.innerHTML = originalTexts[index];
                                                                             btn.disabled = false;
                                                                         });
-                                                                        alert('Failed to resubmit course: ' + (data.message || 'Unknown error'));
-                                                                    }
-                                                                })
-                                                                .catch(error => {
-                                                                    console.error('Error:', error);
-
-                                                                    resubmitButtons.forEach((btn, index) => {
-                                                                        btn.innerHTML = originalTexts[index];
-                                                                        btn.disabled = false;
+                                                                        alert('An error occurred while resubmitting the course: ' + error.message);
                                                                     });
-                                                                    alert('An error occurred while resubmitting the course: ' + error.message);
-                                                                });
-                                                    }
+                                                        }
+                                                        function resubmitAfterReject() {
+                                                            if (!confirm('Are you sure you want to resubmit this course for approval? The rejection reason will be cleared and the course will be pending approval again.')) {
+                                                                return;
+                                                            }
+
+                                                            // Redirect to controller with specific action for resubmit after reject
+                                                            window.location.href = '${pageContext.request.contextPath}/course?action=resubmitAfterReject&id=${courseId}';
+                                                                }
         </script>
         <!-- Browse Tests Modal -->
         <div class="modal fade" id="browseTestModal" tabindex="-1">

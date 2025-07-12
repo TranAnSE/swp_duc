@@ -111,6 +111,9 @@ public class CourseController extends HttpServlet {
                 case "resubmit":
                     resubmitForApproval(request, response);
                     break;
+                case "resubmitAfterReject":
+                    resubmitAfterReject(request, response);
+                    break;
                 default:
                     listCourses(request, response);
                     break;
@@ -1594,6 +1597,47 @@ public class CourseController extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             return false;
+        }
+    }
+
+    /**
+     * Resubmit course for approval after rejection (Teacher only)
+     */
+    private void resubmitAfterReject(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        if (!AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
+            response.sendRedirect("/error.jsp");
+            return;
+        }
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("id"));
+
+            // Check if course can be resubmitted
+            if (!courseManagementDAO.canResubmitCourse(courseId)) {
+                request.getSession().setAttribute("errorMessage", "Course cannot be resubmitted. Only DRAFT or REJECTED courses can be resubmitted.");
+                response.sendRedirect("course");
+                return;
+            }
+
+            boolean success = courseManagementDAO.resubmitCourseForApproval(courseId);
+
+            if (success) {
+                request.getSession().setAttribute("message", "Course resubmitted for approval successfully!");
+            } else {
+                request.getSession().setAttribute("errorMessage", "Failed to resubmit course for approval.");
+            }
+
+            response.sendRedirect("course");
+
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+            request.getSession().setAttribute("errorMessage", "Invalid course ID format.");
+            response.sendRedirect("course");
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.getSession().setAttribute("errorMessage", "Error resubmitting course: " + e.getMessage());
+            response.sendRedirect("course");
         }
     }
 }

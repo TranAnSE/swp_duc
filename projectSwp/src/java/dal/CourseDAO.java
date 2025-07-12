@@ -1676,4 +1676,46 @@ public class CourseDAO extends DBContext {
 
         return result;
     }
+
+    /**
+     * Resubmit course for approval after rejection or from draft
+     */
+    public boolean resubmitCourseForApproval(int courseId) throws SQLException {
+        String sql = "UPDATE study_package SET "
+                + "approval_status = 'PENDING_APPROVAL', "
+                + "submitted_at = CURRENT_TIMESTAMP, "
+                + "rejection_reason = NULL, "
+                + "updated_at = CURRENT_TIMESTAMP "
+                + "WHERE id = ? AND type = 'COURSE' AND approval_status IN ('DRAFT', 'REJECTED')";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            int result = ps.executeUpdate();
+
+            System.out.println("Resubmit course for approval result: " + result + " rows affected for courseId: " + courseId);
+            return result > 0;
+        } catch (SQLException e) {
+            System.err.println("Error resubmitting course for approval: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    /**
+     * Check if course can be resubmitted (is in DRAFT or REJECTED status)
+     */
+    public boolean canResubmitCourse(int courseId) throws SQLException {
+        String sql = "SELECT approval_status FROM study_package WHERE id = ? AND type = 'COURSE'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                String status = rs.getString("approval_status");
+                return "DRAFT".equals(status) || "REJECTED".equals(status);
+            }
+        }
+        return false;
+    }
 }
