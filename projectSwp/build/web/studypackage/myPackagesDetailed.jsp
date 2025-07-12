@@ -513,10 +513,9 @@
                                         <i class="fas fa-box"></i> ${packageInfo.packageName}
                                     </div>
                                     <div class="package-subtitle">
-                                        Package ID: #${packageInfo.packageId}<br>
                                         Duration: ${packageInfo.durationDays} days per assignment<br>
                                         <span class="package-price">
-                                            <i class="fas fa-money-bill-wave"></i> ${packageInfo.price} VND
+                                            <i class="fas fa-money-bill-wave"></i>${packageInfo.price} VND
                                         </span>
                                     </div>
                                 </div>

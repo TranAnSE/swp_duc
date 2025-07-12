@@ -295,11 +295,11 @@
                             <div class="package-header">
                                 <div>
                                     <div class="package-title">${packageData.packageName}</div>
-                                    <small class="text-muted">
+<!--                                    <small class="text-muted">
                                         Package ID: #${packageData.packageId} | 
                                         Type: ${packageData.packageType} | 
                                         Max Students: ${packageData.maxStudents}
-                                    </small>
+                                    </small>-->
                                     <div class="assignment-stats">
                                         <span class="stats-badge stats-active">
                                             <i class="fas fa-check-circle"></i> Active: ${packageData.activeCount}

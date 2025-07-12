@@ -15,8 +15,9 @@ public class StudyPackage {
     private int id;
     private String name;
     private String price;
-    private String type; // SUBJECT_COMBO or GRADE_ALL
+    private String type;
     private Integer grade_id;
+    private String course_title;
     private int max_students;
     private int duration_days;
     private String description;
@@ -137,5 +138,24 @@ public class StudyPackage {
 
     public void setUpdated_at(LocalDateTime updated_at) {
         this.updated_at = updated_at;
+    }
+
+    public String getCourse_title() {
+        return course_title;
+    }
+
+    public void setCourse_title(String course_title) {
+        this.course_title = course_title;
+    }
+
+    public String getDisplayName() {
+        if (course_title != null && !course_title.trim().isEmpty()) {
+            return course_title;
+        }
+        return name != null ? name : "";
+    }
+
+    public boolean isCourse() {
+        return "COURSE".equals(type);
     }
 }

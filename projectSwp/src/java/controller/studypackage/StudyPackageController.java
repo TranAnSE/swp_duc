@@ -11,7 +11,6 @@ import dal.StudyPackageDAO;
 import dal.StudentPackageDAO;
 import dal.GradeDAO;
 import dal.PackagePurchaseDAO;
-import dal.PackageSubjectDAO;
 import dal.StudentDAO;
 import model.StudyPackage;
 import model.StudentPackage;
@@ -75,26 +74,6 @@ public class StudyPackageController extends HttpServlet {
 
         try {
             switch (service) {
-                case "add":
-                    if (request.getMethod().equalsIgnoreCase("GET")) {
-                        showAddForm(request, response);
-                    } else {
-                        addStudyPackage(request, response);
-                    }
-                    break;
-                case "edit":
-                    if (request.getMethod().equalsIgnoreCase("GET")) {
-                        showEditForm(request, response);
-                    } else {
-                        updateStudyPackage(request, response);
-                    }
-                    break;
-                case "update":
-                    updateStudyPackage(request, response);
-                    break;
-                case "delete":
-                    deleteStudyPackage(request, response);
-                    break;
                 case "search":
                     searchStudyPackage(request, response);
                     break;
@@ -110,9 +89,6 @@ public class StudyPackageController extends HttpServlet {
                 case "assignStudent":
                     assignStudentToPackage(request, response);
                     break;
-                case "getSubjectsByPackage":
-                    handleGetSubjectsByPackage(request, response);
-                    return;
                 case "getAvailableSubjects":
                     handleGetAvailableSubjects(request, response);
                     return;
@@ -204,158 +180,6 @@ public class StudyPackageController extends HttpServlet {
 
         request.setAttribute("listStudyPackage", list != null ? list : List.of());
         request.getRequestDispatcher("/studypackage/listStudyPackage.jsp").forward(request, response);
-    }
-
-    private void showAddForm(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        try {
-            List<Grade> grades = gradeDAO.findAllFromGrade();
-            request.setAttribute("grades", grades);
-
-            // Load all subjects for selection
-            DAOSubject subjectDAO = new DAOSubject();
-            List<Subject> allSubjects = subjectDAO.findAll();
-            request.setAttribute("allSubjects", allSubjects);
-        } catch (Exception e) {
-            e.printStackTrace();
-            request.setAttribute("allSubjects", new ArrayList<>());
-        }
-        request.getRequestDispatcher("/studypackage/form.jsp").forward(request, response);
-    }
-
-    private void addStudyPackage(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        try {
-            StudyPackage stuPackage = getStudyPackageFromRequest(request);
-            int result = dao.addStudyPackage(stuPackage);
-
-            if (result > 0) {
-                // Handle subject assignments for SUBJECT_COMBO type
-                if ("SUBJECT_COMBO".equals(stuPackage.getType())) {
-                    String[] subjectIds = request.getParameterValues("subject_ids");
-                    if (subjectIds != null && subjectIds.length > 0) {
-                        PackageSubjectDAO packageSubjectDAO = new PackageSubjectDAO();
-                        for (String subjectIdStr : subjectIds) {
-                            try {
-                                int subjectId = Integer.parseInt(subjectIdStr);
-                                packageSubjectDAO.addSubjectToPackage(stuPackage.getId(), subjectId);
-                            } catch (NumberFormatException e) {
-                                // Skip invalid subject IDs
-                            }
-                        }
-                    }
-                }
-
-                request.setAttribute("message", "Study package added successfully!");
-                response.sendRedirect("study_package");
-            } else {
-                request.setAttribute("errorMessage", "Cannot add study package. Please check the information.");
-                showAddForm(request, response);
-            }
-        } catch (NumberFormatException e) {
-            request.setAttribute("errorMessage", "Invalid ID format!");
-            showAddForm(request, response);
-        }
-    }
-
-    private void showEditForm(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        try {
-            int editId = Integer.parseInt(request.getParameter("editId"));
-            StudyPackage studyPackage = dao.findStudyPackageById(editId);
-            List<Grade> grades = gradeDAO.findAllFromGrade();
-
-            if (studyPackage != null) {
-                request.setAttribute("studyPackageToEdit", studyPackage);
-                request.setAttribute("grades", grades);
-
-                // Load subjects for SUBJECT_COMBO packages
-                if ("SUBJECT_COMBO".equals(studyPackage.getType())) {
-                    PackageSubjectDAO packageSubjectDAO = new PackageSubjectDAO();
-                    List<Integer> selectedSubjectIds = packageSubjectDAO.getPackageSubjects(editId);
-                    request.setAttribute("selectedSubjectIds", selectedSubjectIds);
-                }
-
-                // Load all subjects for selection
-                try {
-                    DAOSubject subjectDAO = new DAOSubject();
-                    List<Subject> allSubjects = subjectDAO.findAll();
-                    request.setAttribute("allSubjects", allSubjects);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            } else {
-                request.setAttribute("errorMessage", "Study package not found with ID: " + editId);
-            }
-            request.getRequestDispatcher("/studypackage/form.jsp").forward(request, response);
-        } catch (NumberFormatException e) {
-            request.setAttribute("errorMessage", "Invalid ID format!");
-            listStudyPackage(request, response);
-        } catch (Exception e) {
-            e.printStackTrace();
-            request.setAttribute("errorMessage", "Error loading study package: " + e.getMessage());
-            listStudyPackage(request, response);
-        }
-    }
-
-    private void updateStudyPackage(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        try {
-            StudyPackage stuPackage = getStudyPackageFromRequest(request);
-            int result = dao.updateStudyPackage(stuPackage);
-
-            if (result > 0) {
-                // Handle subject assignments for SUBJECT_COMBO type
-                if ("SUBJECT_COMBO".equals(stuPackage.getType())) {
-                    PackageSubjectDAO packageSubjectDAO = new PackageSubjectDAO();
-
-                    // Remove all existing subjects for this package
-                    List<Integer> existingSubjects = packageSubjectDAO.getPackageSubjects(stuPackage.getId());
-                    for (Integer subjectId : existingSubjects) {
-                        packageSubjectDAO.removeSubjectFromPackage(stuPackage.getId(), subjectId);
-                    }
-
-                    // Add new subjects
-                    String[] subjectIds = request.getParameterValues("subject_ids");
-                    if (subjectIds != null && subjectIds.length > 0) {
-                        for (String subjectIdStr : subjectIds) {
-                            try {
-                                int subjectId = Integer.parseInt(subjectIdStr);
-                                packageSubjectDAO.addSubjectToPackage(stuPackage.getId(), subjectId);
-                            } catch (NumberFormatException e) {
-                                // Skip invalid subject IDs
-                            }
-                        }
-                    }
-                }
-
-                request.setAttribute("message", "Study package updated successfully!");
-                response.sendRedirect("study_package");
-            } else {
-                request.setAttribute("errorMessage", "Cannot update study package. Please check the information.");
-                request.setAttribute("studyPackageToEdit", stuPackage);
-                showEditForm(request, response);
-            }
-        } catch (NumberFormatException e) {
-            request.setAttribute("errorMessage", "Invalid ID format!");
-            listStudyPackage(request, response);
-        }
-    }
-
-    private void deleteStudyPackage(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        try {
-            int id = Integer.parseInt(request.getParameter("id"));
-            int result = dao.deleteStudyPackage(id);
-            if (result > 0) {
-                request.setAttribute("message", "Study package deactivated successfully!");
-            } else {
-                request.setAttribute("errorMessage", "Cannot deactivate study package!");
-            }
-        } catch (NumberFormatException e) {
-            request.setAttribute("errorMessage", "Invalid ID format!");
-        }
-        response.sendRedirect("study_package");
     }
 
     private void searchStudyPackage(HttpServletRequest request, HttpServletResponse response)
@@ -603,43 +427,7 @@ public class StudyPackageController extends HttpServlet {
         return new StudyPackage(id, name, price, type, gradeId, maxStudents, durationDays, description);
     }
 
-    // New method to get subjects for a specific package
-    private void handleGetSubjectsByPackage(HttpServletRequest request, HttpServletResponse response)
-            throws IOException {
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-
-        try {
-            int packageId = Integer.parseInt(request.getParameter("packageId"));
-            PackageSubjectDAO packageSubjectDAO = new PackageSubjectDAO();
-            List<Integer> subjectIds = packageSubjectDAO.getPackageSubjects(packageId);
-
-            DAOSubject subjectDAO = new DAOSubject();
-            List<Subject> allSubjects = subjectDAO.findAll();
-
-            StringBuilder json = new StringBuilder("[");
-            boolean first = true;
-            for (Subject subject : allSubjects) {
-                if (subjectIds.contains(subject.getId())) {
-                    if (!first) {
-                        json.append(",");
-                    }
-                    json.append("{\"id\":").append(subject.getId())
-                            .append(",\"name\":\"").append(escapeJson(subject.getName()))
-                            .append("\",\"grade_id\":").append(subject.getGrade_id())
-                            .append("}");
-                    first = false;
-                }
-            }
-            json.append("]");
-
-            response.getWriter().write(json.toString());
-        } catch (Exception e) {
-            response.getWriter().write("[]");
-        }
-    }
-
-// New method to get all available subjects for selection
+// get all available subjects for selection
     private void handleGetAvailableSubjects(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         response.setContentType("application/json");

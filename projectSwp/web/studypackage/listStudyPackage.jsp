@@ -282,8 +282,8 @@
             <!-- Action buttons -->
             <div class="action-buttons">
                 <c:if test="${sessionScope.account.role == 'admin' || sessionScope.account.role == 'teacher'}">
-                    <a href="study_package?service=add" class="add-btn">
-                        <i class="fas fa-plus"></i> Add New Package
+                    <a href="course?action=create" class="add-btn">
+                        <i class="fas fa-plus"></i> Add New Course
                     </a>
                     <a href="study_package?service=manageAssignments" class="add-btn" style="background-color: #17a2b8;">
                         <i class="fas fa-users"></i> Manage Assignments
@@ -307,7 +307,6 @@
                         <tr>
                             <th>ID</th>
                             <th>Name</th>
-                            <th>Type</th>
                             <th>Grade</th>
                             <th>Price (VND)</th>
                             <th>Max Students<br><small class="text-muted">(Per Parent)</small></th>
@@ -324,21 +323,14 @@
                                     <tr>
                                         <td><c:out value="${sp.id}"/></td>
                                         <td>
-                                            <c:out value="${sp.name}"/>
-                                            <c:if test="${sp.type == 'SUBJECT_COMBO'}">
-                                                <br><small class="text-muted">
-                                                    <i class="fas fa-info-circle"></i> 
-                                                    <a href="#" onclick="showSubjects(${sp.id})" class="text-info">View Subjects</a>
-                                                </small>
-                                            </c:if>
-                                        </td>
-                                        <td>
-                                            <span class="package-type-badge ${sp.type == 'GRADE_ALL' ? 'type-grade' : 'type-combo'}">
-                                                <c:choose>
-                                                    <c:when test="${sp.type == 'GRADE_ALL'}">All Subjects</c:when>
-                                                    <c:otherwise>Subject Combo</c:otherwise>
-                                                </c:choose>
-                                            </span>
+                                            <c:choose>
+                                                <c:when test="${not empty sp.course_title}">
+                                                    <c:out value="${sp.course_title}"/>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <c:out value="${sp.name}"/>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </td>
                                         <td>
                                             <c:if test="${sp.grade_id != null}">
@@ -364,35 +356,6 @@
                                             </span>
                                         </td>
                                         <td>
-                                            <c:if test="${sessionScope.account.role == 'admin' || sessionScope.account.role == 'teacher'}">
-                                                <a href="study_package?service=edit&editId=${sp.id}" class="btn btn-primary btn-sm">
-                                                    <i class="fas fa-edit"></i> Edit
-                                                </a>
-
-                                                <c:choose>
-                                                    <c:when test="${sp.is_active}">
-                                                        <form method="post" action="study_package" style="display:inline-block;" 
-                                                              onsubmit="return confirm('Are you sure you want to deactivate package ID ${sp.id}?');">
-                                                            <input type="hidden" name="service" value="delete" />
-                                                            <input type="hidden" name="id" value="${sp.id}" />
-                                                            <button type="submit" class="btn btn-danger btn-sm">
-                                                                <i class="fas fa-ban"></i> Deactivate
-                                                            </button>
-                                                        </form>
-                                                    </c:when>
-                                                    <c:otherwise>
-                                                        <form method="post" action="study_package" style="display:inline-block;" 
-                                                              onsubmit="return confirm('Are you sure you want to activate package ID ${sp.id}?');">
-                                                            <input type="hidden" name="service" value="activate" />
-                                                            <input type="hidden" name="id" value="${sp.id}" />
-                                                            <button type="submit" class="btn btn-success btn-sm">
-                                                                <i class="fas fa-check"></i> Activate
-                                                            </button>
-                                                        </form>
-                                                    </c:otherwise>
-                                                </c:choose>
-                                            </c:if>
-
                                             <a href="study_package?service=detail&id=${sp.id}" class="btn btn-info btn-sm">
                                                 <i class="fas fa-eye"></i> Details
                                             </a>

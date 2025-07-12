@@ -40,8 +40,10 @@ public class StudyPackageDAO extends DBContext {
     public List<StudyPackage> getActivePackages() {
         List<StudyPackage> list = new ArrayList<>();
         String sql = "SELECT sp.*, g.name as grade_name FROM study_package sp "
-                + "LEFT JOIN grade g ON sp.grade_id = g.id "
-                + "WHERE sp.is_active = 1 ORDER BY sp.type, sp.name";
+                + "LEFT JOIN subject s ON sp.subject_id = s.id "
+                + "LEFT JOIN grade g ON s.grade_id = g.id "
+                + "WHERE sp.is_active = 1 AND sp.type = 'COURSE' AND sp.approval_status = 'APPROVED' "
+                + "ORDER BY sp.course_title, sp.name";
         try {
             PreparedStatement pre = connection.prepareStatement(sql);
             ResultSet rs = pre.executeQuery();
@@ -53,6 +55,25 @@ public class StudyPackageDAO extends DBContext {
             Logger.getLogger(StudyPackageDAO.class.getName()).log(Level.SEVERE, null, ex);
         }
         return list;
+    }
+
+    public StudyPackage getCourseById(int id) {
+        String sql = "SELECT sp.*, s.name as subject_name, g.name as grade_name "
+                + "FROM study_package sp "
+                + "LEFT JOIN subject s ON sp.subject_id = s.id "
+                + "LEFT JOIN grade g ON s.grade_id = g.id "
+                + "WHERE sp.id = ? AND sp.type = 'COURSE'";
+        try {
+            PreparedStatement pre = connection.prepareStatement(sql);
+            pre.setInt(1, id);
+            ResultSet rs = pre.executeQuery();
+            if (rs.next()) {
+                return mapResultSetToStudyPackage(rs);
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(StudyPackageDAO.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
     }
 
     // Get packages by grade for students
@@ -189,7 +210,10 @@ public class StudyPackageDAO extends DBContext {
     private StudyPackage mapResultSetToStudyPackage(ResultSet rs) throws SQLException {
         StudyPackage stuPackage = new StudyPackage();
         stuPackage.setId(rs.getInt("id"));
-        stuPackage.setName(rs.getString("name"));
+
+        String courseTitle = rs.getString("course_title");
+        String name = rs.getString("name");
+        stuPackage.setName(courseTitle != null && !courseTitle.trim().isEmpty() ? courseTitle : name);
         stuPackage.setPrice(rs.getString("price"));
 
         // Handle new fields with null checks
@@ -224,7 +248,6 @@ public class StudyPackageDAO extends DBContext {
         return stuPackage;
     }
 
-    // Other existing methods remain the same...
     public int deleteStudyPackage(int id) {
         int n = 0;
         String sql = "UPDATE study_package SET is_active = 0 WHERE id = ?";

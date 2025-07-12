@@ -130,9 +130,15 @@
                     <c:forEach items="${studentPackages}" var="studentPackage">
                         <div class="package-card ${studentPackage.statusClass}">
                             <div class="package-header">
-                                <div class="package-title">${studentPackage.package_name}</div>
-                                <div class="status-badge ${studentPackage.statusBadgeClass}">
-                                    ${studentPackage.statusText}
+                                <div class="package-title">
+                                    <c:choose>
+                                        <c:when test="${not empty packageInfo.course_title}">
+                                            ${packageInfo.course_title}
+                                        </c:when>
+                                        <c:otherwise>
+                                            ${packageInfo.packageName}
+                                        </c:otherwise>
+                                    </c:choose>
                                 </div>
                             </div>
 
