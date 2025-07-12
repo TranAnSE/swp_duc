@@ -882,7 +882,7 @@
                 position: fixed;
                 top: 120px;
                 right: 20px;
-                z-index: 9999;
+                z-index: 10000; /* Increase z-index */
                 min-width: 350px;
                 max-width: 500px;
                 padding: 16px 20px;
@@ -901,6 +901,8 @@
                 opacity: 0;
                 transform: translateX(100px);
                 transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                font-family: inherit; /* Ensure font inheritance */
+                line-height: 1.4;
             }
 
             .toast-notification.show {
@@ -912,7 +914,7 @@
                 background: linear-gradient(135deg,
                     rgba(16, 185, 129, 0.95) 0%,
                     rgba(5, 150, 105, 0.95) 100%);
-                color: white;
+                color: white !important; /* Force white color */
                 border-color: rgba(255, 255, 255, 0.4);
             }
 
@@ -920,7 +922,7 @@
                 background: linear-gradient(135deg,
                     rgba(245, 158, 11, 0.95) 0%,
                     rgba(217, 119, 6, 0.95) 100%);
-                color: white;
+                color: white !important; /* Force white color */
                 border-color: rgba(255, 255, 255, 0.4);
             }
 
@@ -928,26 +930,29 @@
                 background: linear-gradient(135deg,
                     rgba(239, 68, 68, 0.95) 0%,
                     rgba(220, 38, 38, 0.95) 100%);
-                color: white;
+                color: white !important; /* Force white color */
                 border-color: rgba(255, 255, 255, 0.4);
             }
 
             .toast-notification i {
                 font-size: 1.2rem;
                 text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+                color: inherit !important; /* Inherit color from parent */
+                flex-shrink: 0; /* Prevent icon from shrinking */
             }
 
             .toast-notification .close-btn {
                 margin-left: auto;
                 background: none;
                 border: none;
-                color: inherit;
+                color: inherit !important; /* Inherit color from parent */
                 font-size: 1.1rem;
                 cursor: pointer;
                 padding: 4px;
                 border-radius: 4px;
                 transition: all 0.2s ease;
                 opacity: 0.8;
+                flex-shrink: 0; /* Prevent button from shrinking */
             }
 
             .toast-notification .close-btn:hover {
@@ -959,6 +964,27 @@
                 flex: 1;
                 line-height: 1.4;
                 text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                color: inherit !important; /* Inherit color from parent */
+                font-weight: 500;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+            }
+
+            /* Ensure text is visible in all cases */
+            .toast-notification * {
+                color: inherit !important;
+            }
+
+            /* Responsive adjustments for mobile */
+            @media (max-width: 768px) {
+                .toast-notification {
+                    top: 90px;
+                    right: 15px;
+                    left: 15px;
+                    min-width: auto;
+                    max-width: none;
+                    font-size: 0.9rem;
+                }
             }
 
             /* Animation for progress update */
@@ -1082,6 +1108,22 @@
             .completed-indicator i {
                 font-size: 1.3rem;
                 color: #10b981;
+            }
+            /* Force text visibility in toast notifications */
+            .toast-notification,
+            .toast-notification *,
+            .toast-notification .message,
+            .toast-notification i,
+            .toast-notification button {
+                color: white !important;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+            }
+
+            /* Ensure proper font inheritance */
+            .toast-notification {
+                font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+                font-size: 0.95rem !important;
+                font-weight: 500 !important;
             }
         </style>
     </head>
@@ -1706,44 +1748,73 @@
                                                             }
 
                                                             function showToastNotification(message, type, iconClass) {
-                                                                // Remove any existing notifications
-                                                                $('.toast-notification').remove();
+                                                                 // Remove any existing notifications
+                                                                const existingToasts = document.querySelectorAll('.toast-notification');
+                                                                existingToasts.forEach(toast => toast.remove());
 
-                                                                // Create new notification
-                                                                const toast = $(`
-        <div class="toast-notification ${type}">
-            <i class="fas ${iconClass}"></i>
-            <div class="message">${message}</div>
-            <button class="close-btn" onclick="closeToast(this)">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    `);
+                                                                // Create new notification using DOM methods
+                                                                const toastId = 'toast-' + Date.now();
+
+                                                                // Create main container
+                                                                const toast = document.createElement('div');
+                                                                toast.id = toastId;
+                                                                toast.className = `toast-notification ${type}`;
+
+                                                                // Create icon
+                                                                const icon = document.createElement('i');
+                                                                icon.className = `fas ${iconClass}`;
+
+                                                                // Create message container
+                                                                const messageDiv = document.createElement('div');
+                                                                messageDiv.className = 'message';
+                                                                messageDiv.textContent = message;
+
+                                                                // Create close button
+                                                                const closeBtn = document.createElement('button');
+                                                                closeBtn.className = 'close-btn';
+                                                                closeBtn.onclick = () => closeToast(toastId);
+
+                                                                const closeIcon = document.createElement('i');
+                                                                closeIcon.className = 'fas fa-times';
+                                                                closeBtn.appendChild(closeIcon);
+
+                                                                // Assemble toast
+                                                                toast.appendChild(icon);
+                                                                toast.appendChild(messageDiv);
+                                                                toast.appendChild(closeBtn);
 
                                                                 // Add to body
-                                                                $('body').append(toast);
+                                                                document.body.appendChild(toast);
+
+                                                                // Force styles to ensure visibility
+                                                                toast.style.position = 'fixed';
+                                                                toast.style.zIndex = '10000';
+                                                                toast.style.color = 'white';
+                                                                toast.style.display = 'flex';
 
                                                                 // Trigger show animation
                                                                 setTimeout(() => {
-                                                                    toast.addClass('show');
+                                                                    toast.classList.add('show');
                                                                 }, 100);
 
                                                                 // Auto-hide after 5 seconds
                                                                 setTimeout(() => {
-                                                                    hideToast(toast);
+                                                                    hideToast(toastId);
                                                                 }, 5000);
                                                             }
 
-                                                            function closeToast(button) {
-                                                                const toast = $(button).closest('.toast-notification');
-                                                                hideToast(toast);
+                                                            function closeToast(toastId) {
+                                                                hideToast(toastId);
                                                             }
 
-                                                            function hideToast(toast) {
-                                                                toast.removeClass('show');
-                                                                setTimeout(() => {
-                                                                    toast.remove();
-                                                                }, 400);
+                                                            function hideToast(toastId) {
+                                                                const toast = document.getElementById(toastId);
+                                                                if (toast) {
+                                                                    toast.classList.remove('show');
+                                                                    setTimeout(() => {
+                                                                        toast.remove();
+                                                                    }, 400);
+                                                                }
                                                             }
 
                                                             function markTextLessonCompleted() {
@@ -1766,15 +1837,16 @@
                                                                     },
                                                                     success: function (response) {
                                                                         if (response.success) {
-                                                                            // Show success message
-                                                                            showSuccessMessage('🎉 Lesson marked as completed! Great job!');
+                                                                            // Show success message with explicit message
+                                                                            const successMessage = response.message || 'Lesson marked as completed! Great job!';
+                                                                            showSuccessMessage('🎉 ' + successMessage);
 
                                                                             // Update UI with animation
                                                                             $('.text-lesson-actions').fadeOut(300, function () {
                                                                                 $(this).html(`
                         <div class="completed-indicator">
                             <i class="fas fa-check-circle text-success"></i>
-                            <span class="text-success font-weight-bold">Lesson Completed</span>
+                            <span class="text-success font-weight-bold">✅ Lesson Completed</span>
                         </div>
                     `).fadeIn(300);
                                                                             });
@@ -1801,19 +1873,21 @@
                                                                             }, 3000);
 
                                                                         } else {
-                                                                            showWarningMessage(response.message || 'Failed to mark lesson as completed. Please try again.');
+                                                                            const errorMessage = response.message || 'Failed to mark lesson as completed. Please try again.';
+                                                                            showWarningMessage(errorMessage);
                                                                             // Re-enable button
                                                                             resetMarkCompletedButton(btn);
                                                                         }
                                                                     },
                                                                     error: function (xhr, status, error) {
-                                                                        console.error('Error marking lesson as completed:', error);
-                                                                        showErrorMessage('Error marking lesson as completed. Please check your connection and try again.');
+                                                                        const errorMessage = 'Error marking lesson as completed. Please check your connection and try again.';
+                                                                        showErrorMessage(errorMessage);
                                                                         // Re-enable button
                                                                         resetMarkCompletedButton(btn);
                                                                     }
                                                                 });
                                                             }
+
                                                             function resetMarkCompletedButton(btn) {
                                                                 btn.disabled = false;
                                                                 btn.classList.remove('loading');
