@@ -433,6 +433,13 @@ public class CourseController extends HttpServlet {
         try {
             int courseId = Integer.parseInt(request.getParameter("id"));
 
+            // Check build permission
+            if (!hasBuildPermission(request, courseId)) {
+                request.setAttribute("errorMessage", "You don't have permission to build this course. Course may be pending approval or locked for editing.");
+                response.sendRedirect("course");
+                return;
+            }
+
             // Get course details with edit permission info
             Map<String, Object> courseDetails = courseManagementDAO.getCourseDetailsWithEditPermission(courseId);
             if (courseDetails == null) {
@@ -522,6 +529,13 @@ public class CourseController extends HttpServlet {
 
             int courseId = Integer.parseInt(courseIdParam.trim());
 
+            // Check edit permission
+            if (!hasEditPermission(request, courseId)) {
+                request.setAttribute("errorMessage", "You don't have permission to edit this course. Course may be pending approval or locked for editing.");
+                response.sendRedirect("course");
+                return;
+            }
+
             Map<String, Object> courseDetails = courseManagementDAO.getCourseDetailsWithEditPermission(courseId);
             if (courseDetails == null) {
                 request.setAttribute("errorMessage", "Course not found.");
@@ -597,6 +611,13 @@ public class CourseController extends HttpServlet {
                 throw new IllegalArgumentException("Course ID is required");
             }
             int courseId = Integer.parseInt(courseIdParam.trim());
+
+            // Check edit permission
+            if (!hasEditPermission(request, courseId)) {
+                request.setAttribute("errorMessage", "You don't have permission to edit this course.");
+                response.sendRedirect("course");
+                return;
+            }
 
             // Validate courseTitle
             String courseTitle = request.getParameter("courseTitle");
@@ -1541,6 +1562,38 @@ public class CourseController extends HttpServlet {
                 request.getSession().setAttribute("errorMessage", "Error resubmitting course: " + e.getMessage());
                 response.sendRedirect("course");
             }
+        }
+    }
+
+    private boolean hasEditPermission(HttpServletRequest request, int courseId) {
+        try {
+            HttpSession session = request.getSession();
+            Account account = (Account) session.getAttribute("account");
+
+            if (account == null) {
+                return false;
+            }
+
+            return courseManagementDAO.canEditCourse(courseId, account.getRole());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private boolean hasBuildPermission(HttpServletRequest request, int courseId) {
+        try {
+            HttpSession session = request.getSession();
+            Account account = (Account) session.getAttribute("account");
+
+            if (account == null) {
+                return false;
+            }
+
+            return courseManagementDAO.canBuildCourse(courseId, account.getRole(), account.getId());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
     }
 }

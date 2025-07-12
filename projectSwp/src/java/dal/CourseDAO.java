@@ -885,6 +885,7 @@ public class CourseDAO extends DBContext {
                 course.put("created_at", rs.getTimestamp("created_at"));
                 course.put("submitted_at", rs.getTimestamp("submitted_at"));
                 course.put("approved_at", rs.getTimestamp("approved_at"));
+                course.put("allow_edit_after_approval", rs.getBoolean("allow_edit_after_approval"));
                 courses.add(course);
             }
         }
@@ -1490,14 +1491,26 @@ public class CourseDAO extends DBContext {
      * Resubmit course for approval after edit
      */
     public boolean resubmitForApproval(int courseId) throws SQLException {
-        String sql = "UPDATE study_package SET approval_status = 'PENDING_APPROVAL', "
-                + "submitted_at = CURRENT_TIMESTAMP, allow_edit_after_approval = 0, "
-                + "approved_at = NULL, approved_by = NULL "
-                + "WHERE id = ? AND type = 'COURSE'";
+        String sql = "UPDATE study_package SET "
+                + "approval_status = 'PENDING_APPROVAL', "
+                + "submitted_at = CURRENT_TIMESTAMP, "
+                + "allow_edit_after_approval = 0, "
+                + "approved_at = NULL, "
+                + "approved_by = NULL, "
+                + "rejection_reason = NULL, "
+                + "updated_at = CURRENT_TIMESTAMP "
+                + "WHERE id = ? AND type = 'COURSE' AND approval_status IN ('DRAFT', 'REJECTED', 'APPROVED')";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, courseId);
-            return ps.executeUpdate() > 0;
+            int result = ps.executeUpdate();
+
+            System.out.println("Resubmit course result: " + result + " rows affected for courseId: " + courseId);
+            return result > 0;
+        } catch (SQLException e) {
+            System.err.println("Error resubmitting course: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
     }
 
@@ -1539,5 +1552,128 @@ public class CourseDAO extends DBContext {
             }
         }
         return null;
+    }
+
+    /**
+     * Check if course can be edited based on approval status and edit
+     * permission
+     */
+    public boolean canEditCourse(int courseId, String userRole) throws SQLException {
+        String sql = "SELECT approval_status, allow_edit_after_approval, created_by FROM study_package WHERE id = ? AND type = 'COURSE'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                String approvalStatus = rs.getString("approval_status");
+                boolean allowEditAfterApproval = rs.getBoolean("allow_edit_after_approval");
+
+                // Admin can always edit
+                if ("admin".equals(userRole)) {
+                    return true;
+                }
+
+                // For teachers
+                if ("teacher".equals(userRole)) {
+                    switch (approvalStatus) {
+                        case "DRAFT":
+                        case "REJECTED":
+                            return true;
+                        case "APPROVED":
+                            return allowEditAfterApproval;
+                        case "PENDING_APPROVAL":
+                            return false;
+                        default:
+                            return false;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if course can be built (accessed for content editing)
+     */
+    public boolean canBuildCourse(int courseId, String userRole, int userId) throws SQLException {
+        String sql = "SELECT approval_status, allow_edit_after_approval, created_by FROM study_package WHERE id = ? AND type = 'COURSE'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                String approvalStatus = rs.getString("approval_status");
+                boolean allowEditAfterApproval = rs.getBoolean("allow_edit_after_approval");
+                int createdBy = rs.getInt("created_by");
+
+                // Admin can always build
+                if ("admin".equals(userRole)) {
+                    return true;
+                }
+
+                // For teachers - must be the creator
+                if ("teacher".equals(userRole) && createdBy == userId) {
+                    switch (approvalStatus) {
+                        case "DRAFT":
+                        case "REJECTED":
+                            return true;
+                        case "APPROVED":
+                            return allowEditAfterApproval;
+                        case "PENDING_APPROVAL":
+                            return false; // Cannot edit while pending
+                        default:
+                            return false;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if teacher can edit approved course based on edit permission
+     */
+    public boolean canTeacherEditApprovedCourse(int courseId, int teacherId) throws SQLException {
+        String sql = "SELECT allow_edit_after_approval, created_by FROM study_package "
+                + "WHERE id = ? AND type = 'COURSE' AND approval_status = 'APPROVED'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                boolean allowEdit = rs.getBoolean("allow_edit_after_approval");
+                int createdBy = rs.getInt("created_by");
+
+                // Teacher can edit if they created it AND admin allowed editing
+                return (createdBy == teacherId) && allowEdit;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get course edit permission details for UI
+     */
+    public Map<String, Object> getCourseEditPermission(int courseId) throws SQLException {
+        String sql = "SELECT approval_status, allow_edit_after_approval, created_by FROM study_package "
+                + "WHERE id = ? AND type = 'COURSE'";
+
+        Map<String, Object> result = new HashMap<>();
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                result.put("approval_status", rs.getString("approval_status"));
+                result.put("allow_edit_after_approval", rs.getBoolean("allow_edit_after_approval"));
+                result.put("created_by", rs.getInt("created_by"));
+            }
+        }
+
+        return result;
     }
 }

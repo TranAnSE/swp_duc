@@ -911,14 +911,22 @@
                                 <i class="fas fa-rocket"></i> 
                                 <c:choose>
                                     <c:when test="${courseDetails.approval_status == 'DRAFT'}">Ready to Publish?</c:when>
-                                    <c:when test="${courseDetails.approval_status == 'PENDING_APPROVAL'}">Pending Approval</c:when>
+                                    <c:when test="${courseDetails.approval_status == 'PENDING_APPROVAL'}">
+                                        <i class="fas fa-clock text-warning"></i> Pending Approval - Editing Locked
+                                    </c:when>
                                     <c:when test="${courseDetails.approval_status == 'APPROVED'}">
                                         <c:choose>
-                                            <c:when test="${courseDetails.allow_edit_after_approval}">Course Approved - Edit Mode</c:when>
-                                            <c:otherwise>Course Approved</c:otherwise>
+                                            <c:when test="${courseDetails.allow_edit_after_approval}">
+                                                <i class="fas fa-edit text-info"></i> Course Approved - Edit Mode Enabled
+                                            </c:when>
+                                            <c:otherwise>
+                                                <i class="fas fa-lock text-success"></i> Course Approved - Locked
+                                            </c:otherwise>
                                         </c:choose>
                                     </c:when>
-                                    <c:when test="${courseDetails.approval_status == 'REJECTED'}">Course Rejected</c:when>
+                                    <c:when test="${courseDetails.approval_status == 'REJECTED'}">
+                                        <i class="fas fa-times text-danger"></i> Course Rejected
+                                    </c:when>
                                 </c:choose>
                             </h5>
                             <p class="mb-0">
@@ -927,20 +935,33 @@
                                         Submit your course for admin approval to make it available to students.
                                     </c:when>
                                     <c:when test="${courseDetails.approval_status == 'PENDING_APPROVAL'}">
-                                        Your course is waiting for admin approval. You cannot edit while pending.
+                                        <span class="text-warning">
+                                            <strong>Your course is waiting for admin approval.</strong><br>
+                                            All editing functions are locked while pending approval. You cannot modify content, add/remove chapters, lessons, or tests.
+                                        </span>
                                     </c:when>
                                     <c:when test="${courseDetails.approval_status == 'APPROVED'}">
                                         <c:choose>
                                             <c:when test="${courseDetails.allow_edit_after_approval}">
-                                                Your course is approved but you have permission to edit. Remember to resubmit after changes!
+                                                <span class="text-info">
+                                                    <strong>Edit permission granted!</strong><br>
+                                                    Your course is approved but you have special permission to edit. Remember to resubmit after making changes!
+                                                </span>
                                             </c:when>
                                             <c:otherwise>
-                                                Your course has been approved and is available to students!
+                                                <span class="text-success">
+                                                    <strong>Your course has been approved and is available to students!</strong><br>
+                                                    Course content is locked to maintain quality. Contact admin if you need to make changes.
+                                                </span>
                                             </c:otherwise>
                                         </c:choose>
                                     </c:when>
                                     <c:when test="${courseDetails.approval_status == 'REJECTED'}">
-                                        Your course was rejected. Reason: ${courseDetails.rejection_reason}
+                                        <span class="text-danger">
+                                            <strong>Your course was rejected.</strong><br>
+                                            Reason: ${courseDetails.rejection_reason}<br>
+                                            Please address the issues and resubmit for approval.
+                                        </span>
                                     </c:when>
                                 </c:choose>
                             </p>
@@ -961,13 +982,24 @@
                                 </c:when>
                                 <c:when test="${courseDetails.approval_status == 'APPROVED' && courseDetails.allow_edit_after_approval}">
                                     <button class="btn btn-warning btn-lg" onclick="resubmitForApproval()">
-                                        <i class="fas fa-paper-plane"></i> Resubmit for Approval
+                                        <i class="fas fa-paper-plane"></i> Resubmit Changes
+                                    </button>
+                                </c:when>
+                                <c:when test="${courseDetails.approval_status == 'PENDING_APPROVAL'}">
+                                    <button class="btn btn-secondary btn-lg" disabled>
+                                        <i class="fas fa-clock"></i> Waiting for Approval
+                                    </button>
+                                </c:when>
+                                <c:when test="${courseDetails.approval_status == 'APPROVED' && not courseDetails.allow_edit_after_approval}">
+                                    <button class="btn btn-success btn-lg" disabled>
+                                        <i class="fas fa-check"></i> Course Approved
                                     </button>
                                 </c:when>
                             </c:choose>
                         </div>
                     </div>
                 </div>
+                    
                 <!-- Action Buttons -->
                 <div class="d-flex justify-content-between mt-4">
                     <a href="${pageContext.request.contextPath}/course" class="btn btn-secondary">

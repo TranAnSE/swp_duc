@@ -422,7 +422,7 @@
                                         </td>
                                         <td>
                                             <c:choose>
-                                                <c:when test="${course.approval_status == 'APPROVED' && course.allow_edit_after_approval}">
+                                                <c:when test="${course.approval_status == 'APPROVED' && course.allow_edit_after_approval == true}">
                                                     <span class="status-badge status-approved-editable">
                                                         <i class="fas fa-edit"></i> Approved (Editable)
                                                     </span>
@@ -471,6 +471,11 @@
                                                                     <i class="fas fa-cogs"></i> Build
                                                                 </a>
                                                             </c:if>
+                                                            <c:if test="${sessionScope.account.role == 'teacher'}">
+                                                                <button class="btn btn-sm btn-secondary" disabled title="Pending approval - cannot edit">
+                                                                    <i class="fas fa-clock"></i> Pending
+                                                                </button>
+                                                            </c:if>
                                                         </c:when>
                                                         <c:when test="${course.approval_status == 'APPROVED'}">
                                                             <!-- For approved courses, check edit permission -->
@@ -481,17 +486,21 @@
                                                                         <i class="fas fa-cogs"></i> Build
                                                                     </a>
                                                                 </c:when>
-                                                                <c:when test="${course.allow_edit_after_approval}">
-                                                                    <a href="${pageContext.request.contextPath}/course?action=build&id=${course.course_id}" 
-                                                                       class="btn btn-sm btn-primary" title="Build Course">
-                                                                        <i class="fas fa-cogs"></i> Build
-                                                                    </a>
+                                                                <c:when test="${sessionScope.account.role == 'teacher'}">
+                                                                    <c:choose>
+                                                                        <c:when test="${course.allow_edit_after_approval == true}">
+                                                                            <a href="${pageContext.request.contextPath}/course?action=build&id=${course.course_id}" 
+                                                                               class="btn btn-sm btn-primary" title="Build Course (Edit Permission Granted)">
+                                                                                <i class="fas fa-cogs"></i> Build
+                                                                            </a>
+                                                                        </c:when>
+                                                                        <c:otherwise>
+                                                                            <button class="btn btn-sm btn-secondary" disabled title="Approved - Edit permission required">
+                                                                                <i class="fas fa-lock"></i> Locked
+                                                                            </button>
+                                                                        </c:otherwise>
+                                                                    </c:choose>
                                                                 </c:when>
-                                                                <c:otherwise>
-                                                                    <button class="btn btn-sm btn-secondary" disabled title="Edit permission required">
-                                                                        <i class="fas fa-lock"></i> Locked
-                                                                    </button>
-                                                                </c:otherwise>
                                                             </c:choose>
                                                         </c:when>
                                                         <c:otherwise>
@@ -507,17 +516,38 @@
                                                 <!-- Edit Course Info -->
                                                 <c:if test="${sessionScope.account.role == 'admin' || sessionScope.account.role == 'teacher'}">
                                                     <c:choose>
-                                                        <c:when test="${course.approval_status == 'DRAFT' || course.approval_status == 'REJECTED' || sessionScope.account.role == 'admin'}">
+                                                        <c:when test="${sessionScope.account.role == 'admin'}">
+                                                            <!-- Admin can always edit -->
                                                             <a href="${pageContext.request.contextPath}/course?action=edit&id=${course.course_id}" 
                                                                class="btn btn-sm btn-secondary" title="Edit Course">
                                                                 <i class="fas fa-edit"></i> Edit
                                                             </a>
                                                         </c:when>
-                                                        <c:when test="${course.approval_status == 'APPROVED' && course.allow_edit_after_approval && sessionScope.account.role == 'teacher'}">
-                                                            <a href="${pageContext.request.contextPath}/course?action=edit&id=${course.course_id}" 
-                                                               class="btn btn-sm btn-secondary" title="Edit Course">
-                                                                <i class="fas fa-edit"></i> Edit
-                                                            </a>
+                                                        <c:when test="${sessionScope.account.role == 'teacher'}">
+                                                            <c:choose>
+                                                                <c:when test="${course.approval_status == 'DRAFT' || course.approval_status == 'REJECTED'}">
+                                                                    <a href="${pageContext.request.contextPath}/course?action=edit&id=${course.course_id}" 
+                                                                       class="btn btn-sm btn-secondary" title="Edit Course">
+                                                                        <i class="fas fa-edit"></i> Edit
+                                                                    </a>
+                                                                </c:when>
+                                                                <c:when test="${course.approval_status == 'APPROVED' && course.allow_edit_after_approval == true}">
+                                                                    <a href="${pageContext.request.contextPath}/course?action=edit&id=${course.course_id}" 
+                                                                       class="btn btn-sm btn-secondary" title="Edit Course (Permission Granted)">
+                                                                        <i class="fas fa-edit"></i> Edit
+                                                                    </a>
+                                                                </c:when>
+                                                                <c:when test="${course.approval_status == 'PENDING_APPROVAL'}">
+                                                                    <button class="btn btn-sm btn-secondary" disabled title="Pending approval - cannot edit">
+                                                                        <i class="fas fa-clock"></i> Pending
+                                                                    </button>
+                                                                </c:when>
+                                                                <c:when test="${course.approval_status == 'APPROVED'}">
+                                                                    <button class="btn btn-sm btn-secondary" disabled title="Approved - Edit permission required">
+                                                                        <i class="fas fa-lock"></i> Locked
+                                                                    </button>
+                                                                </c:when>
+                                                            </c:choose>
                                                         </c:when>
                                                     </c:choose>
                                                 </c:if>
@@ -539,7 +569,7 @@
                                                                 <i class="fas fa-paper-plane"></i> Resubmit
                                                             </a>
                                                         </c:when>
-                                                        <c:when test="${course.approval_status == 'APPROVED' && course.allow_edit_after_approval}">
+                                                        <c:when test="${course.approval_status == 'APPROVED' && course.allow_edit_after_approval == true}">
                                                             <a href="${pageContext.request.contextPath}/course?action=resubmit&id=${course.course_id}" 
                                                                class="btn btn-sm btn-warning" title="Resubmit for Approval"
                                                                onclick="return confirm('Resubmit this edited course for approval?')">
@@ -566,7 +596,7 @@
                                                     <c:if test="${course.approval_status == 'APPROVED'}">
                                                         <!-- Edit Permission Management -->
                                                         <c:choose>
-                                                            <c:when test="${course.allow_edit_after_approval}">
+                                                            <c:when test="${course.allow_edit_after_approval == true}">
                                                                 <a href="${pageContext.request.contextPath}/course?action=revokeEdit&id=${course.course_id}" 
                                                                    class="btn btn-sm btn-outline-warning" title="Revoke Edit Permission"
                                                                    onclick="return confirm('Revoke edit permission for this course?')">
