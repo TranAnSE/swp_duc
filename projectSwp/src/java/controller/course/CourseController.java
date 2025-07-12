@@ -23,11 +23,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
+import service.ImageService;
+import jakarta.servlet.annotation.MultipartConfig;
+import jakarta.servlet.http.Part;
+import java.lang.System.Logger.Level;
 
 /**
  *
  * @author ankha
  */
+@MultipartConfig(
+        fileSizeThreshold = 1024 * 1024 * 2, // 2MB
+        maxFileSize = 1024 * 1024 * 10, // 10MB
+        maxRequestSize = 1024 * 1024 * 50 // 50MB
+)
+
 @WebServlet("/course")
 public class CourseController extends HttpServlet {
 
@@ -37,6 +47,17 @@ public class CourseController extends HttpServlet {
     private ChapterDAO chapterDAO = new ChapterDAO();
     private LessonDAO lessonDAO = new LessonDAO();
     private CourseDAO courseManagementDAO = new CourseDAO();
+    private ImageService imageService;
+
+    @Override
+    public void init() throws ServletException {
+        super.init();
+        try {
+            imageService = new ImageService(getServletContext());
+        } catch (Exception e) {
+            throw new ServletException("Could not initialize ImageService", e);
+        }
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -403,23 +424,40 @@ public class CourseController extends HttpServlet {
             String description = request.getParameter("description");
             int subjectId = Integer.parseInt(request.getParameter("subjectId"));
 
-            // Create new course (StudyPackage with type COURSE)
+            // Handle thumbnail upload
+            Integer thumbnailImageId = null;
+            Part thumbnailPart = request.getPart("thumbnail");
+            if (thumbnailPart != null && thumbnailPart.getSize() > 0) {
+                try {
+                    thumbnailImageId = imageService.uploadAndSaveImage(thumbnailPart);
+                } catch (Exception e) {
+                    request.setAttribute("errorMessage", "Failed to upload thumbnail: " + e.getMessage());
+                    showCreateForm(request, response);
+                    return;
+                }
+            }
+
+            // Create new course
             StudyPackage course = new StudyPackage();
-            course.setName(courseTitle); // Use name field for course title
+            course.setName(courseTitle);
             course.setPrice(price);
             course.setType("COURSE");
             course.setDuration_days(durationDays);
             course.setDescription(description);
-            course.setMax_students(1); // Always 1 for new system
-            course.setIs_active(false); // Inactive until approved
+            course.setMax_students(1);
+            course.setIs_active(false);
 
-            // Set additional fields through DAO
-            int courseId = courseManagementDAO.createCourse(course, subjectId, account.getId());
+            // Create course with thumbnail
+            int courseId = courseManagementDAO.createCourseWithThumbnail(course, subjectId, account.getId(), thumbnailImageId);
 
             if (courseId > 0) {
                 request.setAttribute("message", "Course created successfully! You can now build the course content.");
                 response.sendRedirect("course?action=build&id=" + courseId);
             } else {
+                // Clean up uploaded thumbnail if course creation failed
+                if (thumbnailImageId != null) {
+                    imageService.deleteImageById(thumbnailImageId);
+                }
                 request.setAttribute("errorMessage", "Failed to create course.");
                 showCreateForm(request, response);
             }
@@ -598,17 +636,6 @@ public class CourseController extends HttpServlet {
     private void updateCourse(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            // Debug: Print all parameters first
-            System.out.println("=== UPDATE COURSE DEBUG ===");
-            System.out.println("courseId: " + request.getParameter("courseId"));
-            System.out.println("courseTitle: " + request.getParameter("courseTitle"));
-            System.out.println("price: " + request.getParameter("price"));
-            System.out.println("durationDays: " + request.getParameter("durationDays"));
-            System.out.println("description: " + request.getParameter("description"));
-            System.out.println("subjectId: " + request.getParameter("subjectId"));
-            System.out.println("===========================");
-
-            // Validate and parse courseId
             String courseIdParam = request.getParameter("courseId");
             if (courseIdParam == null || courseIdParam.trim().isEmpty()) {
                 throw new IllegalArgumentException("Course ID is required");
@@ -622,45 +649,56 @@ public class CourseController extends HttpServlet {
                 return;
             }
 
-            // Validate courseTitle
+            // Get current course details for thumbnail handling
+            Map<String, Object> currentCourse = courseManagementDAO.getCourseDetailsWithEditPermission(courseId);
+            Integer currentThumbnailId = (Integer) currentCourse.get("image_thumbnail_id");
+
+            // Validate and get form parameters
             String courseTitle = request.getParameter("courseTitle");
             if (courseTitle == null || courseTitle.trim().isEmpty()) {
                 throw new IllegalArgumentException("Course title is required");
             }
             courseTitle = courseTitle.trim();
 
-            // Validate and parse price
             String priceParam = request.getParameter("price");
             if (priceParam == null || priceParam.trim().isEmpty()) {
                 throw new IllegalArgumentException("Price is required");
             }
             String price = priceParam.trim();
 
-            // Validate and parse durationDays
             String durationParam = request.getParameter("durationDays");
             if (durationParam == null || durationParam.trim().isEmpty()) {
                 throw new IllegalArgumentException("Duration is required");
             }
             int durationDays = Integer.parseInt(durationParam.trim());
 
-            // Get description (can be empty)
             String description = request.getParameter("description");
             if (description == null) {
                 description = "";
             }
             description = description.trim();
 
-            // Validate and parse subjectId
             String subjectIdParam = request.getParameter("subjectId");
             if (subjectIdParam == null || subjectIdParam.trim().isEmpty()) {
                 throw new IllegalArgumentException("Subject ID is required");
             }
             int subjectId = Integer.parseInt(subjectIdParam.trim());
 
-            System.out.println("Parsed values - courseId: " + courseId + ", subjectId: " + subjectId + ", durationDays: " + durationDays);
+            // Handle thumbnail upload
+            Integer thumbnailImageId = currentThumbnailId; // Keep current by default
+            Part thumbnailPart = request.getPart("thumbnail");
+            if (thumbnailPart != null && thumbnailPart.getSize() > 0) {
+                try {
+                    thumbnailImageId = imageService.updateImage(thumbnailPart, currentThumbnailId);
+                } catch (Exception e) {
+                    request.setAttribute("errorMessage", "Failed to update thumbnail: " + e.getMessage());
+                    showEditForm(request, response);
+                    return;
+                }
+            }
 
-            boolean success = courseManagementDAO.updateCourse(courseId, courseTitle, price,
-                    durationDays, description, subjectId);
+            boolean success = courseManagementDAO.updateCourseWithThumbnail(courseId, courseTitle, price,
+                    durationDays, description, subjectId, thumbnailImageId);
 
             if (success) {
                 request.setAttribute("message", "Course updated successfully!");
@@ -670,34 +708,6 @@ public class CourseController extends HttpServlet {
                 showEditForm(request, response);
             }
 
-        } catch (NumberFormatException e) {
-            e.printStackTrace();
-            request.setAttribute("errorMessage", "Invalid number format in form data: " + e.getMessage());
-            String courseIdParam = request.getParameter("courseId");
-            if (courseIdParam != null && !courseIdParam.trim().isEmpty()) {
-                try {
-                    int courseId = Integer.parseInt(courseIdParam.trim());
-                    showEditForm(request, response);
-                    return;
-                } catch (NumberFormatException ex) {
-                    // Fall through to redirect
-                }
-            }
-            response.sendRedirect("course");
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-            request.setAttribute("errorMessage", "Missing required field: " + e.getMessage());
-            String courseIdParam = request.getParameter("courseId");
-            if (courseIdParam != null && !courseIdParam.trim().isEmpty()) {
-                try {
-                    int courseId = Integer.parseInt(courseIdParam.trim());
-                    showEditForm(request, response);
-                    return;
-                } catch (NumberFormatException ex) {
-                    // Fall through to redirect
-                }
-            }
-            response.sendRedirect("course");
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("errorMessage", "Error updating course: " + e.getMessage());

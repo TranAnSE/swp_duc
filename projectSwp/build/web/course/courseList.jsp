@@ -234,6 +234,30 @@
                     font-size: 0.9em;
                 }
             }
+            .thumbnail-cell {
+                width: 80px;
+                text-align: center;
+            }
+
+            .course-thumbnail {
+                width: 60px;
+                height: 40px;
+                object-fit: cover;
+                border-radius: 4px;
+                border: 1px solid #dee2e6;
+            }
+
+            .thumbnail-placeholder {
+                width: 60px;
+                height: 40px;
+                background-color: #f8f9fa;
+                border: 1px dashed #dee2e6;
+                border-radius: 4px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #6c757d;
+            }
         </style>
     </head>
     <body>
@@ -375,6 +399,7 @@
                     <thead class="table-dark">
                         <tr>
                             <th>ID</th>
+                            <th>Thumbnail</th>
                             <th>Hierarchy</th>
                             <th>Course Title</th>
                             <th>Price</th>
@@ -392,6 +417,21 @@
                                 <c:forEach items="${courses}" var="course">
                                     <tr>
                                         <td><strong>#${course.course_id}</strong></td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${not empty course.thumbnail_url}">
+                                                    <img src="${course.thumbnail_url}" alt="Thumbnail" 
+                                                         style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <div style="width: 60px; height: 40px; background-color: #f8f9fa;
+                                                         border: 1px dashed #dee2e6; border-radius: 4px;
+                                                         display: flex; align-items: center; justify-content: center;">
+                                                        <i class="fas fa-image text-muted"></i>
+                                                    </div>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </td>
                                         <td>
                                             <div class="hierarchy-path">
                                                 <small>
@@ -879,6 +919,33 @@
 
                                         // Submit form to apply filter
                                         $('#filterForm').submit();
+                                    }
+                                });
+                                
+                                $('#thumbnail').on('change', function () {
+                                    const file = this.files[0];
+                                    if (file) {
+                                        // Check file size (10MB)
+                                        if (file.size > 10 * 1024 * 1024) {
+                                            alert('File size must be less than 10MB');
+                                            this.value = '';
+                                            return;
+                                        }
+
+                                        // Check file type
+                                        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                                        if (!allowedTypes.includes(file.type)) {
+                                            alert('Only JPG, PNG, and GIF files are allowed');
+                                            this.value = '';
+                                            return;
+                                        }
+
+                                        // Show preview if needed
+                                        const reader = new FileReader();
+                                        reader.onload = function (e) {
+                                            // You can add preview functionality here if desired
+                                        };
+                                        reader.readAsDataURL(file);
                                     }
                                 });
         </script>

@@ -139,10 +139,12 @@ public class CourseDAO extends DBContext {
     }
 
     public Map<String, Object> getCourseDetails(int courseId) throws SQLException {
-        String sql = "SELECT sp.*, s.name as subject_name, s.id as subject_id, g.name as grade_name, g.id as grade_id "
+        String sql = "SELECT sp.*, s.name as subject_name, s.id as subject_id, g.name as grade_name, g.id as grade_id, "
+                + "img.image_data as thumbnail_url "
                 + "FROM study_package sp "
                 + "JOIN subject s ON sp.subject_id = s.id "
                 + "JOIN grade g ON s.grade_id = g.id "
+                + "LEFT JOIN image img ON sp.image_thumbnail_id = img.id "
                 + "WHERE sp.id = ? AND sp.type = 'COURSE'";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -167,6 +169,8 @@ public class CourseDAO extends DBContext {
                 course.put("submitted_at", rs.getTimestamp("submitted_at"));
                 course.put("approved_at", rs.getTimestamp("approved_at"));
                 course.put("rejection_reason", rs.getString("rejection_reason"));
+                course.put("image_thumbnail_id", rs.getObject("image_thumbnail_id"));
+                course.put("thumbnail_url", rs.getString("thumbnail_url"));
                 return course;
             }
         }
@@ -886,6 +890,8 @@ public class CourseDAO extends DBContext {
                 course.put("submitted_at", rs.getTimestamp("submitted_at"));
                 course.put("approved_at", rs.getTimestamp("approved_at"));
                 course.put("allow_edit_after_approval", rs.getBoolean("allow_edit_after_approval"));
+                course.put("thumbnail_url", rs.getString("thumbnail_url"));
+                course.put("image_thumbnail_id", rs.getObject("image_thumbnail_id"));
                 courses.add(course);
             }
         }
@@ -1519,10 +1525,11 @@ public class CourseDAO extends DBContext {
      */
     public Map<String, Object> getCourseDetailsWithEditPermission(int courseId) throws SQLException {
         String sql = "SELECT sp.*, s.name as subject_name, s.id as subject_id, g.name as grade_name, g.id as grade_id, "
-                + "sp.allow_edit_after_approval "
+                + "sp.allow_edit_after_approval, img.image_data as thumbnail_url "
                 + "FROM study_package sp "
                 + "JOIN subject s ON sp.subject_id = s.id "
                 + "JOIN grade g ON s.grade_id = g.id "
+                + "LEFT JOIN image img ON sp.image_thumbnail_id = img.id "
                 + "WHERE sp.id = ? AND sp.type = 'COURSE'";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -1548,6 +1555,8 @@ public class CourseDAO extends DBContext {
                 course.put("approved_at", rs.getTimestamp("approved_at"));
                 course.put("rejection_reason", rs.getString("rejection_reason"));
                 course.put("allow_edit_after_approval", rs.getBoolean("allow_edit_after_approval"));
+                course.put("image_thumbnail_id", rs.getObject("image_thumbnail_id"));
+                course.put("thumbnail_url", rs.getString("thumbnail_url"));
                 return course;
             }
         }
@@ -1717,5 +1726,109 @@ public class CourseDAO extends DBContext {
             }
         }
         return false;
+    }
+
+    /**
+     * Update course with thumbnail
+     */
+    public boolean updateCourseWithThumbnail(int courseId, String courseTitle, String price,
+            int durationDays, String description, int subjectId, Integer thumbnailImageId) throws SQLException {
+        String getGradeSql = "SELECT grade_id FROM subject WHERE id = ?";
+        int gradeId = 0;
+
+        try (PreparedStatement ps = connection.prepareStatement(getGradeSql)) {
+            ps.setInt(1, subjectId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                gradeId = rs.getInt("grade_id");
+            } else {
+                throw new SQLException("Subject not found");
+            }
+        }
+
+        String sql = "UPDATE study_package SET course_title = ?, price = ?, duration_days = ?, "
+                + "description = ?, subject_id = ?, grade_id = ?, image_thumbnail_id = ?, "
+                + "updated_at = CURRENT_TIMESTAMP WHERE id = ? AND type = 'COURSE'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, courseTitle);
+            ps.setString(2, price);
+            ps.setInt(3, durationDays);
+            ps.setString(4, description);
+            ps.setInt(5, subjectId);
+            ps.setInt(6, gradeId);
+            if (thumbnailImageId != null) {
+                ps.setInt(7, thumbnailImageId);
+            } else {
+                ps.setNull(7, Types.INTEGER);
+            }
+            ps.setInt(8, courseId);
+
+            int result = ps.executeUpdate();
+            System.out.println("Updated course " + courseId + " with thumbnail: " + thumbnailImageId);
+            return result > 0;
+        }
+    }
+
+    /**
+     * Create course with thumbnail
+     */
+    public int createCourseWithThumbnail(StudyPackage course, int subjectId, int createdBy, Integer thumbnailImageId) throws SQLException {
+        String getGradeSql = "SELECT grade_id FROM subject WHERE id = ?";
+        int gradeId = 0;
+
+        try (PreparedStatement ps = connection.prepareStatement(getGradeSql)) {
+            ps.setInt(1, subjectId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                gradeId = rs.getInt("grade_id");
+            } else {
+                throw new SQLException("Subject not found");
+            }
+        }
+
+        String sql = "INSERT INTO study_package (course_title, price, type, subject_id, grade_id, duration_days, "
+                + "description, max_students, is_active, approval_status, created_by, created_at, image_thumbnail_id) "
+                + "VALUES (?, ?, 'COURSE', ?, ?, ?, ?, 1, 0, 'DRAFT', ?, CURRENT_TIMESTAMP, ?)";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, course.getName());
+            ps.setString(2, course.getPrice());
+            ps.setInt(3, subjectId);
+            ps.setInt(4, gradeId);
+            ps.setInt(5, course.getDuration_days());
+            ps.setString(6, course.getDescription());
+            ps.setInt(7, createdBy);
+            if (thumbnailImageId != null) {
+                ps.setInt(8, thumbnailImageId);
+            } else {
+                ps.setNull(8, Types.INTEGER);
+            }
+
+            int result = ps.executeUpdate();
+            if (result > 0) {
+                ResultSet rs = ps.getGeneratedKeys();
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+
+    public String getThumbnailUrl(Integer imageId) throws SQLException {
+        if (imageId == null) {
+            return null;
+        }
+
+        String sql = "SELECT image_data FROM image WHERE id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, imageId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getString("image_data");
+            }
+        }
+        return null;
     }
 }

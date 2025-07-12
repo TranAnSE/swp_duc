@@ -538,40 +538,69 @@
         <div class="build-container">
             <!-- Course Header -->
             <div class="course-header">
-                <div class="hierarchy-path">
-                    <span>${courseDetails.grade_name}</span>
-                    <i class="fas fa-arrow-right hierarchy-arrow"></i>
-                    <span>${courseDetails.subject_name}</span>
-                    <i class="fas fa-arrow-right hierarchy-arrow"></i>
-                    <span><strong>${courseDetails.course_title}</strong></span>
-                </div>
-
-                <div class="course-info">
-                    <div class="info-item">
-                        <h6>Price</h6>
-                        <strong><fmt:formatNumber value="${courseDetails.price}" type="number" groupingUsed="true"/> VND</strong>
-                    </div>
-                    <div class="info-item">
-                        <h6>Duration</h6>
-                        <strong>${courseDetails.duration_days} days</strong>
-                    </div>
-                    <div class="info-item">
-                        <h6>Status</h6>
-                        <strong>
-                            <c:choose>
-                                <c:when test="${courseDetails.approval_status == 'DRAFT'}">Draft</c:when>
-                                <c:when test="${courseDetails.approval_status == 'PENDING_APPROVAL'}">Pending Approval</c:when>
-                                <c:when test="${courseDetails.approval_status == 'APPROVED'}">Approved</c:when>
-                                <c:when test="${courseDetails.approval_status == 'REJECTED'}">Rejected</c:when>
-                            </c:choose>
-                        </strong>
-                    </div>
-                    <c:if test="${not empty courseDetails.description}">
-                        <div class="info-item">
-                            <h6>Description</h6>
-                            <p>${courseDetails.description}</p>
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="hierarchy-path">
+                            <span>${courseDetails.grade_name}</span>
+                            <i class="fas fa-arrow-right hierarchy-arrow"></i>
+                            <span>${courseDetails.subject_name}</span>
+                            <i class="fas fa-arrow-right hierarchy-arrow"></i>
+                            <span><strong>${courseDetails.course_title}</strong></span>
                         </div>
-                    </c:if>
+
+                        <div class="course-info">
+                            <div class="info-item">
+                                <h6>Price</h6>
+                                <strong><fmt:formatNumber value="${courseDetails.price}" type="number" groupingUsed="true"/> VND</strong>
+                            </div>
+                            <div class="info-item">
+                                <h6>Duration</h6>
+                                <strong>${courseDetails.duration_days} days</strong>
+                            </div>
+                            <div class="info-item">
+                                <h6>Status</h6>
+                                <strong>
+                                    <c:choose>
+                                        <c:when test="${courseDetails.approval_status == 'DRAFT'}">Draft</c:when>
+                                        <c:when test="${courseDetails.approval_status == 'PENDING_APPROVAL'}">Pending Approval</c:when>
+                                        <c:when test="${courseDetails.approval_status == 'APPROVED'}">Approved</c:when>
+                                        <c:when test="${courseDetails.approval_status == 'REJECTED'}">Rejected</c:when>
+                                    </c:choose>
+                                </strong>
+                            </div>
+                            <c:if test="${not empty courseDetails.description}">
+                                <div class="info-item">
+                                    <h6>Description</h6>
+                                    <p>${courseDetails.description}</p>
+                                </div>
+                            </c:if>
+                        </div>
+                    </div>
+
+                    <!-- Add thumbnail display column -->
+                    <div class="col-md-4 text-right">
+                        <c:choose>
+                            <c:when test="${not empty courseDetails.thumbnail_url}">
+                                <div class="course-thumbnail-preview">
+                                    <h6 style="color: rgba(255,255,255,0.8); margin-bottom: 10px;">Course Thumbnail</h6>
+                                    <img src="${courseDetails.thumbnail_url}" alt="Course Thumbnail" 
+                                         style="width: 150px; height: 100px; object-fit: cover; border-radius: 8px;
+                                         border: 2px solid rgba(255,255,255,0.3); box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                                </div>
+                            </c:when>
+                            <c:otherwise>
+                                <div class="course-thumbnail-placeholder" 
+                                     style="width: 150px; height: 100px; background-color: rgba(255,255,255,0.1);
+                                     border: 2px dashed rgba(255,255,255,0.3); border-radius: 8px;
+                                     display: flex; align-items: center; justify-content: center; margin-left: auto;">
+                                    <div style="text-align: center; color: rgba(255,255,255,0.6);">
+                                        <i class="fas fa-image fa-2x mb-2"></i>
+                                        <br><small>No Thumbnail</small>
+                                    </div>
+                                </div>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
                 </div>
             </div>
 

@@ -223,7 +223,7 @@
             <c:choose>
                 <c:when test="${isEdit}">
                     <!-- Edit Mode Form -->
-                    <form id="courseForm" action="course" method="post">
+                    <form id="courseForm" action="course" method="post" enctype="multipart/form-data">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="courseId" value="${courseDetails.course_id}">
 
@@ -297,6 +297,30 @@
                         <div class="form-group">
                             <label for="description" class="form-label">Course Description</label>
                             <textarea id="description" name="description" class="form-control" rows="4">${courseDetails.description}</textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="thumbnail" class="form-label">Course Thumbnail</label>
+                            <input type="file" id="thumbnail" name="thumbnail" class="form-control" 
+                                   accept="image/jpeg,image/jpg,image/png,image/gif">
+                            <small class="text-muted">Upload an image for course thumbnail (JPG, PNG, GIF - Max 10MB)</small>
+
+                            <c:if test="${isEdit && not empty courseDetails.thumbnail_url}">
+                                <div class="mt-3">
+                                    <label class="form-label">Current Thumbnail:</label>
+                                    <div>
+                                        <img src="${courseDetails.thumbnail_url}" alt="Current Thumbnail" 
+                                             style="width: 120px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #dee2e6;">
+                                    </div>
+                                    <small class="text-info">Upload a new image to replace the current thumbnail.</small>
+                                </div>
+                            </c:if>
+
+                            <c:if test="${isEdit && empty courseDetails.thumbnail_url}">
+                                <div class="mt-2">
+                                    <small class="text-muted">No thumbnail currently set. Upload an image to add one.</small>
+                                </div>
+                            </c:if>
                         </div>
 
                         <div class="btn-container">
@@ -384,6 +408,20 @@
                                 <label for="description" class="form-label">Course Description</label>
                                 <textarea id="description" name="description" class="form-control" rows="4" 
                                           placeholder="Enter course description"></textarea>
+                            </div>
+
+                            <!-- Course Thumbnail -->
+                            <div class="form-group">
+                                <label for="thumbnail" class="form-label">Course Thumbnail</label>
+                                <input type="file" id="thumbnail" name="thumbnail" class="form-control" 
+                                       accept="image/jpeg,image/jpg,image/png,image/gif">
+                                <small class="text-muted">Upload an image for course thumbnail (JPG, PNG, GIF - Max 10MB)</small>
+
+                                <c:if test="${isEdit && not empty courseDetails.image_thumbnail_id}">
+                                    <div class="mt-2">
+                                        <small class="text-info">Current thumbnail exists. Upload a new image to replace it.</small>
+                                    </div>
+                                </c:if>
                             </div>
 
                             <div class="btn-container">
