@@ -312,13 +312,21 @@ public class CourseDAO extends DBContext {
     }
 
     public boolean rejectCourse(int courseId, String rejectionReason) throws SQLException {
-        String sql = "UPDATE study_package SET approval_status = 'REJECTED', rejection_reason = ? "
+        String sql = "UPDATE study_package SET approval_status = 'REJECTED', rejection_reason = ?, "
+                + "updated_at = CURRENT_TIMESTAMP "
                 + "WHERE id = ? AND type = 'COURSE' AND approval_status = 'PENDING_APPROVAL'";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, rejectionReason);
             ps.setInt(2, courseId);
-            return ps.executeUpdate() > 0;
+            int result = ps.executeUpdate();
+
+            System.out.println("Reject course result: " + result + " rows affected for courseId: " + courseId);
+            return result > 0;
+        } catch (SQLException e) {
+            System.err.println("Error rejecting course: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
     }
 

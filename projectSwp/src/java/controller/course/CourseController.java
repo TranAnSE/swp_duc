@@ -178,7 +178,9 @@ public class CourseController extends HttpServlet {
                 case "removeTest":
                     removeTestFromCourse(request, response);
                     break;
-
+                case "reject":
+                    rejectCoursePost(request, response);
+                    break;
                 default:
                     System.out.println("Unknown action: " + action); // Debug log
                     if (isAjaxRequest(request)) {
@@ -1336,6 +1338,44 @@ public class CourseController extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             response.getWriter().write("[]");
+        }
+    }
+
+    private void rejectCoursePost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        if (!AuthUtil.hasRole(request, RoleConstants.ADMIN)) {
+            response.sendRedirect("/error.jsp");
+            return;
+        }
+
+        try {
+            int courseId = Integer.parseInt(request.getParameter("id"));
+            String rejectionReason = request.getParameter("rejectionReason");
+
+            if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
+                request.setAttribute("errorMessage", "Rejection reason is required.");
+                response.sendRedirect("course");
+                return;
+            }
+
+            boolean success = courseManagementDAO.rejectCourse(courseId, rejectionReason.trim());
+
+            if (success) {
+                request.getSession().setAttribute("message", "Course rejected successfully!");
+            } else {
+                request.getSession().setAttribute("errorMessage", "Failed to reject course.");
+            }
+
+            response.sendRedirect("course");
+
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+            request.getSession().setAttribute("errorMessage", "Invalid course ID format.");
+            response.sendRedirect("course");
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.getSession().setAttribute("errorMessage", "Error rejecting course: " + e.getMessage());
+            response.sendRedirect("course");
         }
     }
 }
