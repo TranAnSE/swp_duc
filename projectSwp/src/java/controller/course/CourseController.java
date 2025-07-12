@@ -491,7 +491,14 @@ public class CourseController extends HttpServlet {
     private void showEditForm(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            int courseId = Integer.parseInt(request.getParameter("id"));
+            String courseIdParam = request.getParameter("id");
+            if (courseIdParam == null || courseIdParam.trim().isEmpty()) {
+                request.setAttribute("errorMessage", "Course ID is required.");
+                response.sendRedirect("course");
+                return;
+            }
+
+            int courseId = Integer.parseInt(courseIdParam.trim());
 
             Map<String, Object> courseDetails = courseManagementDAO.getCourseDetails(courseId);
             if (courseDetails == null) {
@@ -531,6 +538,10 @@ public class CourseController extends HttpServlet {
 
             request.getRequestDispatcher("/course/courseForm.jsp").forward(request, response);
 
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Invalid course ID format.");
+            response.sendRedirect("course");
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("errorMessage", "Error loading edit form: " + e.getMessage());
@@ -541,12 +552,59 @@ public class CourseController extends HttpServlet {
     private void updateCourse(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            int courseId = Integer.parseInt(request.getParameter("courseId"));
+            // Debug: Print all parameters first
+            System.out.println("=== UPDATE COURSE DEBUG ===");
+            System.out.println("courseId: " + request.getParameter("courseId"));
+            System.out.println("courseTitle: " + request.getParameter("courseTitle"));
+            System.out.println("price: " + request.getParameter("price"));
+            System.out.println("durationDays: " + request.getParameter("durationDays"));
+            System.out.println("description: " + request.getParameter("description"));
+            System.out.println("subjectId: " + request.getParameter("subjectId"));
+            System.out.println("===========================");
+
+            // Validate and parse courseId
+            String courseIdParam = request.getParameter("courseId");
+            if (courseIdParam == null || courseIdParam.trim().isEmpty()) {
+                throw new IllegalArgumentException("Course ID is required");
+            }
+            int courseId = Integer.parseInt(courseIdParam.trim());
+
+            // Validate courseTitle
             String courseTitle = request.getParameter("courseTitle");
-            String price = request.getParameter("price");
-            int durationDays = Integer.parseInt(request.getParameter("durationDays"));
+            if (courseTitle == null || courseTitle.trim().isEmpty()) {
+                throw new IllegalArgumentException("Course title is required");
+            }
+            courseTitle = courseTitle.trim();
+
+            // Validate and parse price
+            String priceParam = request.getParameter("price");
+            if (priceParam == null || priceParam.trim().isEmpty()) {
+                throw new IllegalArgumentException("Price is required");
+            }
+            String price = priceParam.trim();
+
+            // Validate and parse durationDays
+            String durationParam = request.getParameter("durationDays");
+            if (durationParam == null || durationParam.trim().isEmpty()) {
+                throw new IllegalArgumentException("Duration is required");
+            }
+            int durationDays = Integer.parseInt(durationParam.trim());
+
+            // Get description (can be empty)
             String description = request.getParameter("description");
-            int subjectId = Integer.parseInt(request.getParameter("subjectId"));
+            if (description == null) {
+                description = "";
+            }
+            description = description.trim();
+
+            // Validate and parse subjectId
+            String subjectIdParam = request.getParameter("subjectId");
+            if (subjectIdParam == null || subjectIdParam.trim().isEmpty()) {
+                throw new IllegalArgumentException("Subject ID is required");
+            }
+            int subjectId = Integer.parseInt(subjectIdParam.trim());
+
+            System.out.println("Parsed values - courseId: " + courseId + ", subjectId: " + subjectId + ", durationDays: " + durationDays);
 
             boolean success = courseManagementDAO.updateCourse(courseId, courseTitle, price,
                     durationDays, description, subjectId);
@@ -559,6 +617,34 @@ public class CourseController extends HttpServlet {
                 showEditForm(request, response);
             }
 
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Invalid number format in form data: " + e.getMessage());
+            String courseIdParam = request.getParameter("courseId");
+            if (courseIdParam != null && !courseIdParam.trim().isEmpty()) {
+                try {
+                    int courseId = Integer.parseInt(courseIdParam.trim());
+                    showEditForm(request, response);
+                    return;
+                } catch (NumberFormatException ex) {
+                    // Fall through to redirect
+                }
+            }
+            response.sendRedirect("course");
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Missing required field: " + e.getMessage());
+            String courseIdParam = request.getParameter("courseId");
+            if (courseIdParam != null && !courseIdParam.trim().isEmpty()) {
+                try {
+                    int courseId = Integer.parseInt(courseIdParam.trim());
+                    showEditForm(request, response);
+                    return;
+                } catch (NumberFormatException ex) {
+                    // Fall through to redirect
+                }
+            }
+            response.sendRedirect("course");
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("errorMessage", "Error updating course: " + e.getMessage());

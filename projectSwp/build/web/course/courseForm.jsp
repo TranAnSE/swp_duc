@@ -191,6 +191,8 @@
                                     </option>
                                 </c:forEach>
                             </select>
+                            <!-- Add hidden field for gradeId since select is disabled -->
+                            <input type="hidden" name="gradeId" value="${courseDetails.grade_id}">
                             <small class="text-muted">Grade cannot be changed after course creation</small>
                         </div>
 
@@ -204,6 +206,8 @@
                                     </option>
                                 </c:forEach>
                             </select>
+                            <!-- Add hidden field for subjectId since select is disabled -->
+                            <input type="hidden" name="subjectId" value="${courseDetails.subject_id}">
                             <small class="text-muted">Subject cannot be changed after course creation</small>
                         </div>
 

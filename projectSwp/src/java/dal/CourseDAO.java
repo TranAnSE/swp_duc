@@ -490,8 +490,21 @@ public class CourseDAO extends DBContext {
 
     public boolean updateCourse(int courseId, String courseTitle, String price,
             int durationDays, String description, int subjectId) throws SQLException {
+        String getGradeSql = "SELECT grade_id FROM subject WHERE id = ?";
+        int gradeId = 0;
+
+        try (PreparedStatement ps = connection.prepareStatement(getGradeSql)) {
+            ps.setInt(1, subjectId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                gradeId = rs.getInt("grade_id");
+            } else {
+                throw new SQLException("Subject not found");
+            }
+        }
+
         String sql = "UPDATE study_package SET course_title = ?, price = ?, duration_days = ?, "
-                + "description = ?, subject_id = ?, updated_at = CURRENT_TIMESTAMP "
+                + "description = ?, subject_id = ?, grade_id = ?, updated_at = CURRENT_TIMESTAMP "
                 + "WHERE id = ? AND type = 'COURSE'";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -500,8 +513,12 @@ public class CourseDAO extends DBContext {
             ps.setInt(3, durationDays);
             ps.setString(4, description);
             ps.setInt(5, subjectId);
-            ps.setInt(6, courseId);
-            return ps.executeUpdate() > 0;
+            ps.setInt(6, gradeId);
+            ps.setInt(7, courseId);
+
+            int result = ps.executeUpdate();
+            System.out.println("Updated course " + courseId + " with description: " + description);
+            return result > 0;
         }
     }
 
