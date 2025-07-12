@@ -1075,54 +1075,6 @@ public class CourseDAO extends DBContext {
         return content;
     }
 
-    public Map<String, Object> getCourseStructureForViewer(int courseId) throws SQLException {
-        Map<String, Object> courseStructure = new HashMap<>();
-
-        // Get course details
-        Map<String, Object> courseDetails = getCourseDetails(courseId);
-        if (courseDetails == null) {
-            return null;
-        }
-
-        courseStructure.put("course", courseDetails);
-
-        // Get chapters with lessons
-        String sql = """
-        SELECT 
-            cc.chapter_id,
-            c.name as chapter_name,
-            c.description as chapter_description,
-            cc.display_order as chapter_order
-        FROM course_chapter cc
-        JOIN chapter c ON cc.chapter_id = c.id
-        WHERE cc.course_id = ? AND cc.is_active = 1
-        ORDER BY cc.display_order
-        """;
-
-        List<Map<String, Object>> chapters = new ArrayList<>();
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, courseId);
-            ResultSet rs = ps.executeQuery();
-
-            while (rs.next()) {
-                Map<String, Object> chapter = new HashMap<>();
-                chapter.put("chapter_id", rs.getInt("chapter_id"));
-                chapter.put("chapter_name", rs.getString("chapter_name"));
-                chapter.put("chapter_description", rs.getString("chapter_description"));
-                chapter.put("chapter_order", rs.getInt("chapter_order"));
-
-                // Get lessons for this chapter
-                List<Map<String, Object>> lessons = getCourseLessonsForChapter(courseId, rs.getInt("chapter_id"));
-                chapter.put("lessons", lessons);
-
-                chapters.add(chapter);
-            }
-        }
-
-        courseStructure.put("chapters", chapters);
-        return courseStructure;
-    }
-
     public List<Map<String, Object>> getCourseLessonsForChapter(int courseId, int chapterId) throws SQLException {
         String sql = """
         SELECT 
@@ -1830,5 +1782,182 @@ public class CourseDAO extends DBContext {
             }
         }
         return null;
+    }
+
+    /**
+     * Get course structure for video viewer with lesson order and tests
+     */
+    public Map<String, Object> getCourseStructureForViewer(int courseId) throws SQLException {
+        Map<String, Object> courseStructure = new HashMap<>();
+
+        // Get course details
+        Map<String, Object> courseDetails = getCourseDetails(courseId);
+        if (courseDetails == null) {
+            return null;
+        }
+        courseStructure.put("course", courseDetails);
+
+        // Get chapters with lessons and tests in proper order
+        String sql = """
+        SELECT 
+            cc.chapter_id,
+            c.name as chapter_name,
+            c.description as chapter_description,
+            cc.display_order as chapter_order
+        FROM course_chapter cc
+        JOIN chapter c ON cc.chapter_id = c.id
+        WHERE cc.course_id = ? AND cc.is_active = 1
+        ORDER BY cc.display_order
+    """;
+
+        List<Map<String, Object>> chapters = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> chapter = new HashMap<>();
+                int chapterId = rs.getInt("chapter_id");
+
+                chapter.put("chapter_id", chapterId);
+                chapter.put("chapter_name", rs.getString("chapter_name"));
+                chapter.put("chapter_description", rs.getString("chapter_description"));
+                chapter.put("chapter_order", rs.getInt("chapter_order"));
+
+                // Get lessons for this chapter
+                List<Map<String, Object>> lessons = getCourseLessonsForChapter(courseId, chapterId);
+                chapter.put("lessons", lessons);
+
+                // Get tests for this chapter
+                List<Map<String, Object>> tests = getCourseTestsForChapter(courseId, chapterId);
+                chapter.put("tests", tests);
+
+                chapters.add(chapter);
+            }
+        }
+
+        // Get course-level tests (not assigned to any chapter)
+        List<Map<String, Object>> courseLevelTests = getCourseTestsForChapter(courseId, null);
+
+        courseStructure.put("chapters", chapters);
+        courseStructure.put("courseLevelTests", courseLevelTests);
+
+        return courseStructure;
+    }
+
+    /**
+     * Get tests for a specific chapter (or course-level if chapterId is null)
+     */
+    public List<Map<String, Object>> getCourseTestsForChapter(int courseId, Integer chapterId) throws SQLException {
+        String sql = """
+        SELECT 
+            ct.test_id,
+            t.name as test_name,
+            t.description as test_description,
+            t.is_practice,
+            t.duration_minutes,
+            t.num_questions,
+            ct.display_order,
+            ct.test_type
+        FROM course_test ct
+        JOIN test t ON ct.test_id = t.id
+        WHERE ct.course_id = ? AND ct.is_active = 1
+    """;
+
+        if (chapterId != null) {
+            sql += " AND ct.chapter_id = ?";
+        } else {
+            sql += " AND ct.chapter_id IS NULL";
+        }
+
+        sql += " ORDER BY ct.display_order";
+
+        List<Map<String, Object>> tests = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, courseId);
+            if (chapterId != null) {
+                ps.setInt(2, chapterId);
+            }
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> test = new HashMap<>();
+                test.put("test_id", rs.getInt("test_id"));
+                test.put("test_name", rs.getString("test_name"));
+                test.put("test_description", rs.getString("test_description"));
+                test.put("is_practice", rs.getBoolean("is_practice"));
+                test.put("duration_minutes", rs.getInt("duration_minutes"));
+                test.put("num_questions", rs.getInt("num_questions"));
+                test.put("display_order", rs.getInt("display_order"));
+                test.put("test_type", rs.getString("test_type"));
+                tests.add(test);
+            }
+        }
+        return tests;
+    }
+
+    /**
+     * Check if student has access to specific course
+     */
+    public boolean hasStudentAccessToCourse(int studentId, int courseId) throws SQLException {
+        String sql = """
+        SELECT COUNT(*) 
+        FROM student_package sp
+        JOIN study_package pkg ON sp.package_id = pkg.id
+        WHERE sp.student_id = ? AND pkg.id = ? 
+        AND sp.is_active = 1 AND sp.expires_at > NOW()
+        AND pkg.type = 'COURSE' AND pkg.approval_status = 'APPROVED'
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, courseId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get accessible courses for student
+     */
+    public List<Map<String, Object>> getAccessibleCoursesForStudent(int studentId) throws SQLException {
+        String sql = """
+        SELECT DISTINCT
+            pkg.id as course_id,
+            pkg.course_title,
+            pkg.description,
+            pkg.created_by,
+            teacher.full_name as teacher_name,
+            sp.expires_at
+        FROM student_package sp
+        JOIN study_package pkg ON sp.package_id = pkg.id
+        LEFT JOIN account teacher ON pkg.created_by = teacher.id
+        WHERE sp.student_id = ? 
+        AND sp.is_active = 1 AND sp.expires_at > NOW()
+        AND pkg.type = 'COURSE' AND pkg.approval_status = 'APPROVED'
+        ORDER BY pkg.course_title
+    """;
+
+        List<Map<String, Object>> courses = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> course = new HashMap<>();
+                course.put("course_id", rs.getInt("course_id"));
+                course.put("course_title", rs.getString("course_title"));
+                course.put("description", rs.getString("description"));
+                course.put("created_by", rs.getInt("created_by"));
+                course.put("teacher_name", rs.getString("teacher_name"));
+                course.put("expires_at", rs.getTimestamp("expires_at"));
+                courses.add(course);
+            }
+        }
+        return courses;
     }
 }

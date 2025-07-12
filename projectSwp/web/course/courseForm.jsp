@@ -336,7 +336,7 @@
                 </c:when>
                 <c:otherwise>
                     <!-- Create Mode Form -->
-                    <form id="courseForm" action="course" method="post">
+                    <form id="courseForm" action="course" method="post" enctype="multipart/form-data">
                         <input type="hidden" name="action" value="create">
 
                         <!-- Step 1: Grade and Subject Selection -->

@@ -7,14 +7,14 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
+<%@taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
 <!DOCTYPE html>
 <html>
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${currentLesson.name} - Video Learning</title>
+        <title>${currentLesson.lesson_name} - ${courseStructure.course.course_title}</title>
 
-        <!-- Bootstrap 4 CSS -->
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
         <link rel="stylesheet" href="/assets/css/fontawesome-all.min.css">
         <link rel="stylesheet" href="/assets/css/style.css">
@@ -49,9 +49,77 @@
                 backdrop-filter: blur(10px);
             }
 
-            /* Header Adjustments */
             .content-wrapper {
                 padding: 20px 0;
+            }
+
+            /* Course Progress Header */
+            .course-progress-header {
+                background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+                color: white;
+                padding: 20px;
+                border-radius: 16px;
+                margin-bottom: 20px;
+                box-shadow: var(--shadow-lg);
+            }
+
+            .progress-info {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 20px;
+            }
+
+            .course-title-section h2 {
+                margin: 0 0 5px 0;
+                font-size: 1.5rem;
+                font-weight: 700;
+            }
+
+            .teacher-info {
+                font-size: 0.9rem;
+                opacity: 0.9;
+            }
+
+            .progress-stats {
+                display: flex;
+                gap: 30px;
+                align-items: center;
+            }
+
+            .progress-item {
+                text-align: center;
+            }
+
+            .progress-number {
+                font-size: 1.5rem;
+                font-weight: 700;
+                display: block;
+            }
+
+            .progress-label {
+                font-size: 0.8rem;
+                opacity: 0.9;
+            }
+
+            .progress-bar-container {
+                width: 100%;
+                margin-top: 15px;
+            }
+
+            .progress-bar-custom {
+                height: 8px;
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 4px;
+                overflow: hidden;
+            }
+
+            .progress-bar-fill {
+                height: 100%;
+                background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+                border-radius: 4px;
+                transition: width 0.3s ease;
             }
 
             /* Sidebar Styles */
@@ -60,7 +128,7 @@
                 border-radius: 16px;
                 box-shadow: var(--shadow-lg);
                 padding: 24px;
-                height: calc(100vh - 140px);
+                height: calc(100vh - 200px);
                 overflow-y: auto;
                 position: sticky;
                 top: 120px;
@@ -81,32 +149,6 @@
                 font-size: 1.1rem;
             }
 
-            .user-role-badge {
-                display: inline-block;
-                padding: 4px 12px;
-                border-radius: 20px;
-                font-size: 0.75rem;
-                font-weight: 600;
-                margin-top: 8px;
-            }
-
-            .role-student {
-                background: #dbeafe;
-                color: #1d4ed8;
-            }
-            .role-teacher {
-                background: #dcfce7;
-                color: #166534;
-            }
-            .role-admin {
-                background: #fef3c7;
-                color: #92400e;
-            }
-            .role-parent {
-                background: #fce7f3;
-                color: #be185d;
-            }
-
             /* Course Tree Styles */
             .course-tree {
                 list-style: none;
@@ -114,15 +156,15 @@
                 margin: 0;
             }
 
-            .grade-item {
+            .chapter-item {
                 margin-bottom: 16px;
             }
 
-            .grade-header {
-                background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            .chapter-header {
+                background: linear-gradient(135deg, var(--warning-color) 0%, #d97706 100%);
                 color: white;
                 padding: 12px 16px;
-                border-radius: 12px;
+                border-radius: 8px;
                 cursor: pointer;
                 transition: all 0.3s ease;
                 display: flex;
@@ -135,137 +177,33 @@
                 text-align: left;
             }
 
-            .grade-header:hover {
-                transform: translateY(-2px);
-                box-shadow: var(--shadow-md);
-                background: linear-gradient(135deg, #6366f1 0%, #0891b2 100%);
-            }
-
-            .grade-header:focus {
-                outline: none;
-                box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
-            }
-
-            .grade-header i.fa-chevron-down {
-                transition: transform 0.3s ease;
-            }
-
-            .grade-header[aria-expanded="false"] i.fa-chevron-down {
-                transform: rotate(-90deg);
-            }
-
-            .subject-list {
-                background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-                border-radius: 0 0 12px 12px;
-                padding: 12px;
-                border: 1px solid var(--border-color);
-                border-top: none;
-            }
-
-            .subject-item {
-                margin-bottom: 12px;
-            }
-
-            .subject-header {
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                color: white;
-                padding: 10px 14px;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                border: none;
-                font-weight: 500;
-                width: 100%;
-                text-align: left;
-                box-shadow: var(--shadow-sm);
-            }
-
-            .subject-header:hover {
-                background: linear-gradient(135deg, #059669 0%, #047857 100%);
-                transform: translateY(-1px);
-                box-shadow: var(--shadow-md);
-                color: white;
-            }
-
-            .subject-header:focus {
-                outline: none;
-                box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
-                color: white;
-            }
-
-            .subject-header i.fa-chevron-down {
-                transition: transform 0.3s ease;
-                color: rgba(255, 255, 255, 0.9);
-            }
-
-            .subject-header[aria-expanded="false"] i.fa-chevron-down {
-                transform: rotate(-90deg);
-            }
-
-            .chapter-list {
-                padding: 12px 0 0 16px;
-                background: linear-gradient(135deg, #fefefe 0%, #f9fafb 100%);
-                border-radius: 8px;
-                margin-top: 8px;
-            }
-
-            .chapter-item {
-                margin-bottom: 10px;
-            }
-
-            .chapter-header {
-                padding: 8px 12px;
-                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                color: white;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                box-shadow: var(--shadow-sm);
-                font-weight: 500;
-                width: 100%;
-                text-align: left;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-            }
-
             .chapter-header:hover {
                 background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
                 color: white;
-                transform: translateX(4px);
+                transform: translateY(-1px);
                 box-shadow: var(--shadow-md);
-            }
-
-            .chapter-header:focus {
-                outline: none;
-                box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
-                color: white;
             }
 
             .chapter-header i.fa-chevron-down {
                 transition: transform 0.3s ease;
-                color: rgba(255, 255, 255, 0.9);
             }
 
             .chapter-header[aria-expanded="false"] i.fa-chevron-down {
                 transform: rotate(-90deg);
             }
 
-            .lesson-list {
-                padding: 8px 0 0 20px;
-                background: rgba(255, 255, 255, 0.7);
-                border-radius: 6px;
-                margin-top: 6px;
-                border-left: 3px solid #f59e0b;
+            .chapter-content {
+                background: linear-gradient(135deg, #fefefe 0%, #f9fafb 100%);
+                border-radius: 0 0 8px 8px;
+                padding: 12px;
+                border: 1px solid var(--border-color);
+                border-top: none;
             }
 
-            .lesson-item {
-                padding: 8px 12px;
-                margin: 4px 0;
+            /* Lesson Items */
+            .lesson-item, .test-item {
+                padding: 10px 14px;
+                margin: 6px 0;
                 border-radius: 6px;
                 cursor: pointer;
                 transition: all 0.3s ease;
@@ -275,6 +213,11 @@
                 color: var(--text-secondary);
                 font-size: 0.9rem;
                 border: 1px solid transparent;
+                position: relative;
+            }
+
+            .lesson-item {
+                background: rgba(255, 255, 255, 0.8);
             }
 
             .lesson-item:hover {
@@ -291,74 +234,39 @@
                 color: white;
                 font-weight: 600;
                 box-shadow: var(--shadow-md);
-                border-color: transparent;
             }
 
-            .lesson-item.active:hover {
-                background: linear-gradient(135deg, #6366f1 0%, #0891b2 100%);
+            .lesson-item.completed {
+                background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
                 color: white;
             }
 
-            .lesson-item i {
+            .lesson-item.completed::after {
+                content: '\f00c';
+                font-family: 'Font Awesome 5 Free';
+                font-weight: 900;
+                position: absolute;
+                right: 10px;
+                font-size: 0.8rem;
+            }
+
+            .test-item {
+                background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                color: #92400e;
+                border: 1px solid #f59e0b;
+            }
+
+            .test-item:hover {
+                background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+                color: #92400e;
+                text-decoration: none;
+                transform: translateX(4px);
+            }
+
+            .lesson-item i, .test-item i {
                 margin-right: 10px;
                 width: 16px;
                 text-align: center;
-            }
-
-            /* Enhanced hover effects for the entire tree structure */
-            .grade-item:hover .grade-header {
-                box-shadow: var(--shadow-lg);
-            }
-
-            .subject-item:hover .subject-header {
-                box-shadow: var(--shadow-md);
-            }
-
-            .chapter-item:hover .chapter-header {
-                box-shadow: var(--shadow-md);
-            }
-
-            /* Consistent spacing and visual hierarchy */
-            .grade-header .fa-layer-group {
-                color: rgba(255, 255, 255, 0.9);
-            }
-
-            .subject-header .fa-book {
-                color: rgba(255, 255, 255, 0.9);
-            }
-
-            .chapter-header .fa-folder {
-                color: rgba(255, 255, 255, 0.9);
-            }
-
-            /* Improved visual feedback for expanded states */
-            .grade-header[aria-expanded="true"] {
-                border-radius: 12px 12px 0 0;
-                box-shadow: var(--shadow-md);
-            }
-
-            .subject-header[aria-expanded="true"] {
-                border-radius: 8px 8px 0 0;
-                box-shadow: var(--shadow-sm);
-            }
-
-            .chapter-header[aria-expanded="true"] {
-                border-radius: 6px 6px 0 0;
-                box-shadow: var(--shadow-sm);
-            }
-
-            /* Responsive adjustments for colors */
-            @media (max-width: 768px) {
-                .grade-header,
-                .subject-header,
-                .chapter-header {
-                    padding: 10px 12px;
-                }
-
-                .lesson-item {
-                    padding: 6px 10px;
-                    font-size: 0.85rem;
-                }
             }
 
             /* Video Player Styles */
@@ -463,73 +371,51 @@
                 margin: 0;
             }
 
-            /* Related Lessons */
-            .related-lessons {
-                background: #fff;
-                border-radius: 16px;
-                box-shadow: var(--shadow-lg);
-                padding: 24px;
-                border: 1px solid var(--border-color);
-            }
-
-            .related-lessons h5 {
-                color: var(--text-primary);
-                font-weight: 700;
-                margin-bottom: 20px;
-            }
-
-            .related-lesson-item {
+            /* Navigation Buttons */
+            .lesson-navigation {
                 display: flex;
-                align-items: center;
-                padding: 16px;
-                border-radius: 12px;
-                margin-bottom: 12px;
+                gap: 15px;
+                margin-top: 20px;
+            }
+
+            .nav-btn {
+                flex: 1;
+                padding: 12px 20px;
+                border-radius: 8px;
+                text-decoration: none;
+                text-align: center;
+                font-weight: 600;
                 transition: all 0.3s ease;
-                text-decoration: none;
-                color: inherit;
-                border: 1px solid var(--border-color);
-                background: #fff;
-            }
-
-            .related-lesson-item:hover {
-                background: var(--light-color);
-                text-decoration: none;
-                color: inherit;
-                transform: translateY(-2px);
-                box-shadow: var(--shadow-md);
-                border-color: var(--primary-color);
-            }
-
-            .related-lesson-icon {
-                width: 48px;
-                height: 48px;
-                background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-                border-radius: 12px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                gap: 8px;
+            }
+
+            .nav-btn.prev {
+                background: #6c757d;
                 color: white;
-                margin-right: 16px;
-                flex-shrink: 0;
             }
 
-            .related-lesson-content h6 {
-                margin: 0 0 4px 0;
-                font-weight: 600;
-                color: var(--text-primary);
+            .nav-btn.next {
+                background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+                color: white;
             }
 
-            .related-lesson-content small {
-                color: var(--text-secondary);
+            .nav-btn:hover {
+                text-decoration: none;
+                color: white;
+                transform: translateY(-2px);
+                box-shadow: var(--shadow-md);
+            }
+
+            .nav-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
             }
 
             /* Responsive Design */
-            @media (max-width: 1200px) {
-                .video-player, .video-placeholder {
-                    height: 400px;
-                }
-            }
-
             @media (max-width: 992px) {
                 .main-container {
                     padding-top: 90px;
@@ -546,23 +432,20 @@
                     height: 350px;
                 }
 
-                .video-title {
-                    font-size: 1.5rem;
+                .progress-stats {
+                    gap: 20px;
                 }
             }
 
             @media (max-width: 768px) {
-                .main-container {
-                    padding-top: 80px;
+                .progress-info {
+                    flex-direction: column;
+                    text-align: center;
                 }
 
-                .content-wrapper {
-                    padding: 15px 0;
-                }
-
-                .course-sidebar {
-                    padding: 16px;
-                    max-height: 300px;
+                .progress-stats {
+                    justify-content: center;
+                    gap: 15px;
                 }
 
                 .video-player, .video-placeholder {
@@ -577,46 +460,8 @@
                     font-size: 1.25rem;
                 }
 
-                .video-meta {
-                    gap: 12px;
-                }
-
-                .meta-item {
-                    font-size: 0.8rem;
-                    padding: 6px 10px;
-                }
-
-                .related-lessons {
-                    padding: 16px;
-                }
-
-                .related-lesson-item {
-                    padding: 12px;
-                }
-
-                .related-lesson-icon {
-                    width: 40px;
-                    height: 40px;
-                    margin-right: 12px;
-                }
-            }
-
-            @media (max-width: 576px) {
-                .video-meta {
+                .lesson-navigation {
                     flex-direction: column;
-                    gap: 8px;
-                }
-
-                .meta-item {
-                    justify-content: center;
-                }
-
-                .breadcrumb {
-                    font-size: 0.8rem;
-                }
-
-                .sidebar-header h5 {
-                    font-size: 1rem;
                 }
             }
 
@@ -639,26 +484,11 @@
                 background: var(--text-secondary);
             }
 
-            /* Loading Animation */
-            .loading-spinner {
-                display: inline-block;
-                width: 20px;
-                height: 20px;
-                border: 3px solid rgba(255,255,255,.3);
-                border-radius: 50%;
-                border-top-color: #fff;
-                animation: spin 1s ease-in-out infinite;
-            }
-
-            @keyframes spin {
-                to {
-                    transform: rotate(360deg);
-                }
-            }
-
-            /* Smooth transitions */
-            * {
-                transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+            /* Progress indicator for lessons */
+            .lesson-progress {
+                font-size: 0.7rem;
+                opacity: 0.8;
+                margin-left: auto;
             }
         </style>
     </head>
@@ -668,82 +498,126 @@
         <div class="main-container">
             <div class="content-wrapper">
                 <div class="container-fluid">
+                    <!-- Course Progress Header (only for students) -->
+                    <c:if test="${isTrackingEnabled && not empty courseProgress}">
+                        <div class="course-progress-header">
+                            <div class="progress-info">
+                                <div class="course-title-section">
+                                    <h2>${courseStructure.course.course_title}</h2>
+                                    <div class="teacher-info">
+                                        <i class="fas fa-user-tie mr-2"></i>
+                                        Instructor: ${courseProgress.teacherName}
+                                    </div>
+                                </div>
+                                <div class="progress-stats">
+                                    <div class="progress-item">
+                                        <span class="progress-number">${courseProgress.completedLessons}</span>
+                                        <span class="progress-label">Completed</span>
+                                    </div>
+                                    <div class="progress-item">
+                                        <span class="progress-number">${courseProgress.totalLessons}</span>
+                                        <span class="progress-label">Total Lessons</span>
+                                    </div>
+                                    <div class="progress-item">
+                                        <span class="progress-number">
+                                            <fmt:formatNumber value="${courseProgress.completionPercentage}" maxFractionDigits="1"/>%
+                                        </span>
+                                        <span class="progress-label">Progress</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-custom">
+                                    <div class="progress-bar-fill" style="width: ${courseProgress.completionPercentage}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </c:if>
+
                     <div class="row">
                         <!-- Sidebar -->
                         <div class="col-xl-3 col-lg-4 col-md-12">
                             <div class="course-sidebar">
                                 <div class="sidebar-header">
-                                    <h5><i class="fas fa-graduation-cap mr-2"></i>Course Library</h5>
-                                    <span class="user-role-badge role-${userRole}">
-                                        <c:choose>
-                                            <c:when test="${userRole == 'student'}">Student</c:when>
-                                            <c:when test="${userRole == 'teacher'}">Teacher</c:when>
-                                            <c:when test="${userRole == 'admin'}">Administrator</c:when>
-                                            <c:when test="${userRole == 'parent'}">Parent</c:when>
-                                            <c:otherwise>User</c:otherwise>
-                                        </c:choose>
-                                    </span>
+                                    <h5><i class="fas fa-book-open mr-2"></i>Course Content</h5>
                                 </div>
 
                                 <ul class="course-tree">
-                                    <c:forEach var="gradeData" items="${courseStructure.grades}">
-                                        <li class="grade-item">
-                                            <button class="grade-header" type="button" 
+                                    <c:forEach var="chapter" items="${courseStructure.chapters}">
+                                        <li class="chapter-item">
+                                            <button class="chapter-header" type="button" 
                                                     data-toggle="collapse" 
-                                                    data-target="#grade-${gradeData.grade.id}"
+                                                    data-target="#chapter-${chapter.chapter_id}"
                                                     aria-expanded="false"
-                                                    aria-controls="grade-${gradeData.grade.id}">
-                                                <span><i class="fas fa-layer-group mr-2"></i>${gradeData.grade.name}</span>
+                                                    aria-controls="chapter-${chapter.chapter_id}">
+                                                <span><i class="fas fa-folder mr-2"></i>${chapter.chapter_name}</span>
                                                 <i class="fas fa-chevron-down"></i>
                                             </button>
 
-                                            <div class="collapse" id="grade-${gradeData.grade.id}">
-                                                <div class="subject-list">
-                                                    <c:forEach var="subjectData" items="${gradeData.subjects}">
-                                                        <div class="subject-item">
-                                                            <button class="subject-header" type="button"
-                                                                    data-toggle="collapse" 
-                                                                    data-target="#subject-${subjectData.subject.id}"
-                                                                    aria-expanded="false"
-                                                                    aria-controls="subject-${subjectData.subject.id}">
-                                                                <span><i class="fas fa-book mr-2"></i>${subjectData.subject.name}</span>
-                                                                <i class="fas fa-chevron-down"></i>
-                                                            </button>
+                                            <div class="collapse" id="chapter-${chapter.chapter_id}">
+                                                <div class="chapter-content">
+                                                    <!-- Lessons -->
+                                                    <c:forEach var="lesson" items="${chapter.lessons}">
+                                                        <c:set var="lessonProgress" value="${lessonProgressMap[lesson.lesson_id]}" />
+                                                        <c:set var="isCurrentLesson" value="${lesson.lesson_id == currentLesson.lesson_id}" />
+                                                        <c:set var="isCompleted" value="${lessonProgress != null && lessonProgress.completed}" />
 
-                                                            <div class="collapse" id="subject-${subjectData.subject.id}">
-                                                                <div class="chapter-list">
-                                                                    <c:forEach var="chapterData" items="${subjectData.chapters}">
-                                                                        <div class="chapter-item">
-                                                                            <button class="chapter-header" type="button"
-                                                                                    data-toggle="collapse" 
-                                                                                    data-target="#chapter-${chapterData.chapter.id}"
-                                                                                    aria-expanded="false"
-                                                                                    aria-controls="chapter-${chapterData.chapter.id}">
-                                                                                <span><i class="fas fa-folder mr-2"></i>${chapterData.chapter.name}</span>
-                                                                                <i class="fas fa-chevron-down"></i>
-                                                                            </button>
+                                                        <a href="/video-viewer?courseId=${courseId}&lessonId=${lesson.lesson_id}" 
+                                                           class="lesson-item ${isCurrentLesson ? 'active' : ''} ${isCompleted ? 'completed' : ''}">
+                                                            <i class="fas ${not empty lesson.video_link ? 'fa-play-circle' : 'fa-file-text'}"></i>
+                                                            <span>${lesson.lesson_name}</span>
+                                                            <c:if test="${isTrackingEnabled && lessonProgress != null}">
+                                                                <span class="lesson-progress">
+                                                                    <fmt:formatNumber value="${lessonProgress.completionPercentage}" maxFractionDigits="0"/>%
+                                                                </span>
+                                                            </c:if>
+                                                        </a>
+                                                    </c:forEach>
 
-                                                                            <div class="collapse" id="chapter-${chapterData.chapter.id}">
-                                                                                <div class="lesson-list">
-                                                                                    <c:forEach var="lesson" items="${chapterData.lessons}">
-                                                                                        <a href="/video-viewer?lessonId=${lesson.id}" 
-                                                                                           class="lesson-item ${lesson.id == currentLesson.id ? 'active' : ''}">
-                                                                                            <i class="fas ${not empty lesson.video_link ? 'fa-play-circle' : 'fa-file-text'}"></i>
-                                                                                            <span>${lesson.name}</span>
-                                                                                        </a>
-                                                                                    </c:forEach>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </c:forEach>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                    <!-- Tests -->
+                                                    <c:forEach var="test" items="${chapter.tests}">
+                                                        <a href="/student/taketest?action=start&testId=${test.test_id}" 
+                                                           class="test-item">
+                                                            <i class="fas ${test.is_practice ? 'fa-dumbbell' : 'fa-clipboard-check'}"></i>
+                                                            <span>${test.test_name}</span>
+                                                            <c:if test="${test.is_practice}">
+                                                                <small class="ml-2">(Practice)</small>
+                                                            </c:if>
+                                                        </a>
                                                     </c:forEach>
                                                 </div>
                                             </div>
                                         </li>
                                     </c:forEach>
+
+                                    <!-- Course-level tests -->
+                                    <c:if test="${not empty courseStructure.courseLevelTests}">
+                                        <li class="chapter-item">
+                                            <button class="chapter-header" type="button" 
+                                                    data-toggle="collapse" 
+                                                    data-target="#course-tests"
+                                                    aria-expanded="false"
+                                                    aria-controls="course-tests">
+                                                <span><i class="fas fa-clipboard-list mr-2"></i>Course Tests</span>
+                                                <i class="fas fa-chevron-down"></i>
+                                            </button>
+
+                                            <div class="collapse" id="course-tests">
+                                                <div class="chapter-content">
+                                                    <c:forEach var="test" items="${courseStructure.courseLevelTests}">
+                                                        <a href="/student/taketest?action=start&testId=${test.test_id}" 
+                                                           class="test-item">
+                                                            <i class="fas ${test.is_practice ? 'fa-dumbbell' : 'fa-clipboard-check'}"></i>
+                                                            <span>${test.test_name}</span>
+                                                            <c:if test="${test.is_practice}">
+                                                                <small class="ml-2">(Practice)</small>
+                                                            </c:if>
+                                                        </a>
+                                                    </c:forEach>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </c:if>
                                 </ul>
                             </div>
                         </div>
@@ -755,25 +629,16 @@
                                 <nav aria-label="breadcrumb">
                                     <ol class="breadcrumb">
                                         <li class="breadcrumb-item">
-                                            <a href="/"><i class="fas fa-home mr-1"></i>Home</a>
+                                            <a href="/student/home.jsp"><i class="fas fa-home mr-1"></i>Home</a>
                                         </li>
-                                        <c:if test="${not empty currentGrade}">
-                                            <li class="breadcrumb-item">
-                                                <a href="#">${currentGrade.name}</a>
-                                            </li>
-                                        </c:if>
-                                        <c:if test="${not empty currentSubject}">
-                                            <li class="breadcrumb-item">
-                                                <a href="#">${currentSubject.name}</a>
-                                            </li>
-                                        </c:if>
-                                        <c:if test="${not empty currentChapter}">
-                                            <li class="breadcrumb-item">
-                                                <a href="#">${currentChapter.name}</a>
-                                            </li>
-                                        </c:if>
+                                        <li class="breadcrumb-item">
+                                            <a href="/video-viewer?courseId=${courseId}">${courseStructure.course.course_title}</a>
+                                        </li>
+                                        <li class="breadcrumb-item">
+                                            <a href="#">${currentLesson.chapter_name}</a>
+                                        </li>
                                         <li class="breadcrumb-item active" aria-current="page">
-                                            ${currentLesson.name}
+                                            ${currentLesson.lesson_name}
                                         </li>
                                     </ol>
                                 </nav>
@@ -783,7 +648,10 @@
                             <div class="video-container">
                                 <c:choose>
                                     <c:when test="${not empty currentLesson.video_link}">
-                                        <video class="video-player" controls preload="metadata" id="mainVideo">
+                                        <video class="video-player" controls preload="metadata" id="mainVideo"
+                                               data-lesson-id="${currentLesson.lesson_id}"
+                                               data-course-id="${courseId}"
+                                               data-tracking-enabled="${isTrackingEnabled}">
                                             <source src="${currentLesson.video_link}" type="video/mp4">
                                             <source src="${currentLesson.video_link}" type="video/webm">
                                             <source src="${currentLesson.video_link}" type="video/ogg">
@@ -793,8 +661,8 @@
                                     <c:otherwise>
                                         <div class="video-placeholder">
                                             <div class="text-center">
-                                                <i class="fas fa-video fa-4x mb-3"></i>
-                                                <h4>No Video Available</h4>
+                                                <i class="fas fa-file-text fa-4x mb-3"></i>
+                                                <h4>Text-Based Lesson</h4>
                                                 <p class="mb-0">This lesson contains text content only.</p>
                                             </div>
                                         </div>
@@ -802,87 +670,71 @@
                                 </c:choose>
 
                                 <div class="video-info">
-                                    <h1 class="video-title">${currentLesson.name}</h1>
+                                    <h1 class="video-title">${currentLesson.lesson_name}</h1>
 
                                     <div class="video-meta">
-                                        <c:if test="${not empty currentSubject}">
-                                            <div class="meta-item">
-                                                <i class="fas fa-book"></i>
-                                                <span>${currentSubject.name}</span>
-                                            </div>
-                                        </c:if>
-                                        <c:if test="${not empty currentChapter}">
-                                            <div class="meta-item">
-                                                <i class="fas fa-folder"></i>
-                                                <span>${currentChapter.name}</span>
-                                            </div>
-                                        </c:if>
                                         <div class="meta-item">
-                                            <i class="fas fa-clock"></i>
-                                            <span>${lessonStats.estimatedDuration}</span>
+                                            <i class="fas fa-folder"></i>
+                                            <span>${currentLesson.chapter_name}</span>
                                         </div>
-                                        <c:if test="${lessonStats.hasVideo}">
+                                        <c:if test="${not empty currentLesson.video_link}">
                                             <div class="meta-item">
                                                 <i class="fas fa-play-circle"></i>
-                                                <span>Video Available</span>
+                                                <span>Video Lesson</span>
                                             </div>
+                                        </c:if>
+                                        <c:if test="${isTrackingEnabled}">
+                                            <c:set var="currentProgress" value="${lessonProgressMap[currentLesson.lesson_id]}" />
+                                            <c:if test="${currentProgress != null}">
+                                                <div class="meta-item">
+                                                    <i class="fas fa-chart-line"></i>
+                                                    <span>Progress: <fmt:formatNumber value="${currentProgress.completionPercentage}" maxFractionDigits="1"/>%</span>
+                                                </div>
+                                            </c:if>
                                         </c:if>
                                     </div>
 
-                                    <c:if test="${not empty currentLesson.content}">
+                                    <c:if test="${not empty currentLesson.lesson_content}">
                                         <div class="video-description">
                                             <h6><i class="fas fa-info-circle mr-2"></i>Lesson Content</h6>
-                                            <p>${currentLesson.content}</p>
+                                            <p>${currentLesson.lesson_content}</p>
                                         </div>
                                     </c:if>
-                                </div>
-                            </div>
 
-                            <!-- Related Lessons -->
-                            <c:if test="${not empty relatedLessons}">
-                                <div class="related-lessons">
-                                    <h5><i class="fas fa-list mr-2"></i>More Lessons in This Chapter</h5>
-                                    <div class="row">
-                                        <c:forEach var="relatedLesson" items="${relatedLessons}" varStatus="status">
-                                            <div class="col-lg-6 col-md-12">
-                                                <a href="/video-viewer?lessonId=${relatedLesson.id}" class="related-lesson-item">
-                                                    <div class="related-lesson-icon">
-                                                        <i class="fas ${not empty relatedLesson.video_link ? 'fa-play' : 'fa-file-text'}"></i>
-                                                    </div>
-                                                    <div class="related-lesson-content">
-                                                        <h6>${relatedLesson.name}</h6>
-                                                        <small>
-                                                            ${not empty relatedLesson.video_link ? 'Video Lesson' : 'Text Lesson'}
-                                                            <c:if test="${not empty relatedLesson.content}">
-                                                                • ${fn:length(relatedLesson.content) > 100 ? 'Long' : 'Short'} content
-                                                            </c:if>
-                                                        </small>
-                                                    </div>
+                                    <!-- Navigation Buttons -->
+                                    <div class="lesson-navigation">
+                                        <c:choose>
+                                            <c:when test="${not empty navigation.previousLesson}">
+                                                <a href="/video-viewer?courseId=${courseId}&lessonId=${navigation.previousLesson.lesson_id}" 
+                                                   class="nav-btn prev">
+                                                    <i class="fas fa-arrow-left"></i>
+                                                    <span>Previous: ${navigation.previousLesson.lesson_name}</span>
                                                 </a>
-                                            </div>
-                                            <c:if test="${status.index % 2 == 1}">
-                                            </div><div class="row">
-                                            </c:if>
-                                        </c:forEach>
-                                    </div>
-                                </div>
-                            </c:if>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <div class="nav-btn prev" style="opacity: 0.5; cursor: not-allowed;">
+                                                    <i class="fas fa-arrow-left"></i>
+                                                    <span>No Previous Lesson</span>
+                                                </div>
+                                            </c:otherwise>
+                                        </c:choose>
 
-                            <!-- Navigation Buttons -->
-                            <div class="row mt-4">
-                                <div class="col-6">
-                                    <c:if test="${not empty relatedLessons and fn:length(relatedLessons) > 0}">
-                                        <a href="/video-viewer?lessonId=${relatedLessons[0].id}" class="btn btn-outline-primary btn-lg btn-block">
-                                            <i class="fas fa-arrow-left mr-2"></i>Previous Lesson
-                                        </a>
-                                    </c:if>
-                                </div>
-                                <div class="col-6">
-                                    <c:if test="${not empty relatedLessons and fn:length(relatedLessons) > 1}">
-                                        <a href="/video-viewer?lessonId=${relatedLessons[1].id}" class="btn btn-primary btn-lg btn-block">
-                                            Next Lesson<i class="fas fa-arrow-right ml-2"></i>
-                                        </a>
-                                    </c:if>
+                                        <c:choose>
+                                            <c:when test="${not empty navigation.nextLesson}">
+                                                <a href="/video-viewer?courseId=${courseId}&lessonId=${navigation.nextLesson.lesson_id}" 
+                                                   class="nav-btn next">
+                                                    <span>Next: ${navigation.nextLesson.lesson_name}</span>
+                                                    <i class="fas fa-arrow-right"></i>
+                                                </a>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <div class="nav-btn next" style="opacity: 0.5; cursor: not-allowed;">
+                                                    <span>Course Complete</span>
+                                                    <i class="fas fa-check"></i>
+                                                </div>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -893,16 +745,13 @@
 
         <jsp:include page="/footer.jsp" />
 
-        <!-- Bootstrap 4 JS -->
         <script src="/assets/js/vendor/jquery-1.12.4.min.js"></script>
         <script src="/assets/js/bootstrap.min.js"></script>
 
         <script>
             $(document).ready(function () {
-                // Auto-expand current lesson's path
+                // Auto-expand current lesson's chapter
                 $('.lesson-item.active').parents('.collapse').addClass('show');
-
-                // Set aria
                 $('.lesson-item.active').parents('.collapse').each(function () {
                     const targetId = $(this).attr('id');
                     const trigger = $('[data-target="#' + targetId + '"]');
@@ -914,75 +763,159 @@
                     const targetId = $(this).attr('id');
                     const trigger = $('[data-target="#' + targetId + '"]');
                     trigger.attr('aria-expanded', 'true');
-                    trigger.find('.fa-chevron-down').removeClass('collapsed');
                 });
 
                 $('.collapse').on('hide.bs.collapse', function () {
                     const targetId = $(this).attr('id');
                     const trigger = $('[data-target="#' + targetId + '"]');
                     trigger.attr('aria-expanded', 'false');
-                    trigger.find('.fa-chevron-down').addClass('collapsed');
                 });
 
-                // Smooth scrolling for lesson navigation
-                $('.lesson-item').click(function (e) {
-                    // Add loading state
-                    if (!$(this).hasClass('active')) {
-                        $(this).append('<span class="loading-spinner ml-2"></span>');
-                    }
-                });
-
-                // Video player enhancements
+                // Video progress tracking
                 const video = document.getElementById('mainVideo');
-                if (video) {
+                if (video && video.dataset.trackingEnabled === 'true') {
+                    const lessonId = parseInt(video.dataset.lessonId);
+                    const courseId = parseInt(video.dataset.courseId);
+                    let progressUpdateInterval;
+                    let lastSavedPosition = 0;
+                    let hasStartedWatching = false;
+
+                    // Prevent seeking beyond watched position initially
+                    let maxWatchedPosition = 0;
+                    const savedProgress = localStorage.getItem(`lesson_${lessonId}_progress`);
+                    if (savedProgress) {
+                        const progressData = JSON.parse(savedProgress);
+                        maxWatchedPosition = progressData.maxPosition || 0;
+
+                        // Restore last position if significant progress was made
+                        if (progressData.lastPosition > 10) {
+                            video.currentTime = progressData.lastPosition;
+                        }
+                    }
+
                     video.addEventListener('loadedmetadata', function () {
-                        console.log('Video loaded successfully');
-                        // Update duration in meta if needed
-                        const duration = Math.ceil(video.duration / 60);
-                        $('.meta-item:contains("minutes")').html('<i class="fas fa-clock"></i><span>' + duration + ' minutes</span>');
+                        console.log('Video loaded, duration:', video.duration);
                     });
 
-                    video.addEventListener('error', function () {
-                        console.log('Error loading video');
-                        $(video).parent().html(`
-                            <div class="video-placeholder">
-                                <div class="text-center">
-                                    <i class="fas fa-exclamation-triangle fa-4x mb-3"></i>
-                                    <h4>Video Loading Error</h4>
-                                    <p class="mb-0">There was an error loading this video. Please try again later.</p>
-                                    <button class="btn btn-outline-light mt-3" onclick="location.reload()">
-                                        <i class="fas fa-redo mr-2"></i>Retry
-                                    </button>
-                                </div>
-                            </div>
-                        `);
+                    video.addEventListener('play', function () {
+                        if (!hasStartedWatching) {
+                            hasStartedWatching = true;
+                            console.log('Started watching lesson:', lessonId);
+                        }
+
+                        // Update progress every 5 seconds while playing
+                        progressUpdateInterval = setInterval(function () {
+                            updateProgress();
+                        }, 5000);
                     });
 
-                    // Save video progress (could be enhanced with AJAX)
-                    video.addEventListener('timeupdate', function () {
-                        if (video.currentTime > 0) {
-                            localStorage.setItem('lesson_${currentLesson.id}_progress', video.currentTime);
+                    video.addEventListener('pause', function () {
+                        if (progressUpdateInterval) {
+                            clearInterval(progressUpdateInterval);
+                        }
+                        updateProgress();
+                    });
+
+                    video.addEventListener('ended', function () {
+                        if (progressUpdateInterval) {
+                            clearInterval(progressUpdateInterval);
+                        }
+                        updateProgress();
+                    });
+
+                    // Prevent skipping ahead (anti-cheat mechanism)
+                    video.addEventListener('seeking', function () {
+                        if (video.currentTime > maxWatchedPosition + 10) {
+                            console.log('Preventing skip ahead from', video.currentTime, 'to max allowed:', maxWatchedPosition + 10);
+                            video.currentTime = maxWatchedPosition;
+
+                            // Show warning message
+                            showWarningMessage('You cannot skip ahead in the video. Please watch the content sequentially.');
                         }
                     });
 
-                    // Restore video progress
-                    const savedProgress = localStorage.getItem('lesson_${currentLesson.id}_progress');
-                    if (savedProgress && savedProgress > 10) {
-                        video.currentTime = parseFloat(savedProgress);
-                    }
-                }
+                    video.addEventListener('timeupdate', function () {
+                        // Update max watched position
+                        if (video.currentTime > maxWatchedPosition) {
+                            maxWatchedPosition = video.currentTime;
 
-                // Mobile responsive adjustments
-                function adjustForMobile() {
-                    if ($(window).width() < 768) {
-                        // Collapse sidebar by default on mobile except for current lesson path
-                        $('.course-sidebar .collapse').not('.lesson-item.active').parents('.collapse').removeClass('show');
-                        $('.course-sidebar button[aria-expanded="true"]').not('.lesson-item.active').parents().find('button').attr('aria-expanded', 'false');
-                    }
-                }
+                            // Save to localStorage for persistence
+                            const progressData = {
+                                lastPosition: video.currentTime,
+                                maxPosition: maxWatchedPosition,
+                                timestamp: Date.now()
+                            };
+                            localStorage.setItem(`lesson_${lessonId}_progress`, JSON.stringify(progressData));
+                        }
+                    });
 
-                adjustForMobile();
-                $(window).resize(adjustForMobile);
+                    function updateProgress() {
+                        if (!video.duration || video.duration === 0)
+                            return;
+
+                        const watchDuration = Math.floor(video.currentTime);
+                        const totalDuration = Math.floor(video.duration);
+                        const lastPosition = Math.floor(video.currentTime);
+
+                        // Only update if there's meaningful progress
+                        if (Math.abs(lastPosition - lastSavedPosition) < 5 && watchDuration < totalDuration * 0.95) {
+                            return;
+                        }
+
+                        lastSavedPosition = lastPosition;
+
+                        $.ajax({
+                            url: '/progress',
+                            method: 'POST',
+                            data: {
+                                action: 'updateProgress',
+                                lessonId: lessonId,
+                                courseId: courseId,
+                                watchDuration: watchDuration,
+                                totalDuration: totalDuration,
+                                lastPosition: lastPosition
+                            },
+                            success: function (response) {
+                                if (response.success) {
+                                    console.log('Progress updated successfully');
+
+                                    // Check if lesson was just completed
+                                    const completionPercentage = (watchDuration / totalDuration) * 100;
+                                    if (completionPercentage >= 30) {
+                                        markLessonAsCompleted(lessonId);
+                                    }
+                                } else {
+                                    console.error('Failed to update progress:', response.message);
+                                }
+                            },
+                            error: function (xhr, status, error) {
+                                console.error('Error updating progress:', error);
+                            }
+                        });
+                    }
+
+                    function markLessonAsCompleted(lessonId) {
+                        const lessonItem = $(`.lesson-item[href*="lessonId=${lessonId}"]`);
+                        if (!lessonItem.hasClass('completed')) {
+                            lessonItem.addClass('completed');
+
+                            // Show completion message
+                            showSuccessMessage('Lesson completed! Great job!');
+
+                            // Update course progress display if visible
+                            setTimeout(function () {
+                                location.reload();
+                            }, 2000);
+                        }
+                    }
+
+                    // Save progress when leaving page
+                    $(window).on('beforeunload', function () {
+                        if (video.currentTime > 0) {
+                            updateProgress();
+                        }
+                    });
+                }
 
                 // Keyboard navigation
                 $(document).keydown(function (e) {
@@ -998,13 +931,13 @@
                         }
                         // Arrow keys for navigation
                         if (e.which === 37) { // Left arrow - previous lesson
-                            const prevBtn = $('.btn-outline-primary[href*="lessonId"]');
+                            const prevBtn = $('.nav-btn.prev[href]');
                             if (prevBtn.length) {
                                 window.location.href = prevBtn.attr('href');
                             }
                         }
                         if (e.which === 39) { // Right arrow - next lesson
-                            const nextBtn = $('.btn-primary[href*="lessonId"]');
+                            const nextBtn = $('.nav-btn.next[href]');
                             if (nextBtn.length) {
                                 window.location.href = nextBtn.attr('href');
                             }
@@ -1012,40 +945,55 @@
                     }
                 });
 
-                // Smooth page transitions
-                $('a[href*="video-viewer"]').click(function (e) {
-                    const href = $(this).attr('href');
-                    if (href && href !== window.location.href) {
-                        $('body').fadeOut(200, function () {
-                            window.location.href = href;
-                        });
-                        e.preventDefault();
+                // Mobile responsive adjustments
+                function adjustForMobile() {
+                    if ($(window).width() < 768) {
+                        // Collapse sidebar by default on mobile except for current lesson
+                        $('.course-sidebar .collapse').not(':has(.lesson-item.active)').removeClass('show');
                     }
-                });
+                }
 
-                // Show loading on page load
-                $(window).on('beforeunload', function () {
-                    $('body').fadeOut(200);
-                });
-
-                // Fix for nested collapse behavior
-                $('.course-tree').on('click', 'button[data-toggle="collapse"]', function (e) {
-                    e.stopPropagation();
-                    const target = $($(this).data('target'));
-                    const isExpanded = $(this).attr('aria-expanded') === 'true';
-
-                    if (isExpanded) {
-                        target.collapse('hide');
-                    } else {
-                        target.collapse('show');
-                    }
-                });
-
-                // Prevent event bubbling on lesson clicks
-                $('.lesson-item').click(function (e) {
-                    e.stopPropagation();
-                });
+                adjustForMobile();
+                $(window).resize(adjustForMobile);
             });
+
+            function showWarningMessage(message) {
+                // Create and show warning toast
+                const toast = $(`
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert" style="position: fixed; top: 120px; right: 20px; z-index: 9999; min-width: 300px;">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+            ${message}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                `);
+
+                $('body').append(toast);
+
+                setTimeout(function () {
+                    toast.fadeOut();
+                }, 5000);
+            }
+
+            function showSuccessMessage(message) {
+                // Create and show success toast
+                const toast = $(`
+                    <div class="alert alert-success alert-dismissible fade show" role="alert" style="position: fixed; top: 120px; right: 20px; z-index: 9999; min-width: 300px;">
+                        <i class="fas fa-check-circle mr-2"></i>
+            ${message}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                `);
+
+                $('body').append(toast);
+
+                setTimeout(function () {
+                    toast.fadeOut();
+                }, 5000);
+            }
         </script>
     </body>
 </html>
