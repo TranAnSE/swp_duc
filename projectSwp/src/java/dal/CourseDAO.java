@@ -16,17 +16,31 @@ import java.util.*;
 public class CourseDAO extends DBContext {
 
     public int createCourse(StudyPackage course, int subjectId, int createdBy) throws SQLException {
-        String sql = "INSERT INTO study_package (course_title, price, type, subject_id, duration_days, "
+        String getGradeSql = "SELECT grade_id FROM subject WHERE id = ?";
+        int gradeId = 0;
+
+        try (PreparedStatement ps = connection.prepareStatement(getGradeSql)) {
+            ps.setInt(1, subjectId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                gradeId = rs.getInt("grade_id");
+            } else {
+                throw new SQLException("Subject not found");
+            }
+        }
+
+        String sql = "INSERT INTO study_package (course_title, price, type, subject_id, grade_id, duration_days, "
                 + "description, max_students, is_active, approval_status, created_by, created_at) "
-                + "VALUES (?, ?, 'COURSE', ?, ?, ?, 1, 0, 'DRAFT', ?, CURRENT_TIMESTAMP)";
+                + "VALUES (?, ?, 'COURSE', ?, ?, ?, ?, 1, 0, 'DRAFT', ?, CURRENT_TIMESTAMP)";
 
         try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, course.getName());
             ps.setString(2, course.getPrice());
             ps.setInt(3, subjectId);
-            ps.setInt(4, course.getDuration_days());
-            ps.setString(5, course.getDescription());
-            ps.setInt(6, createdBy);
+            ps.setInt(4, gradeId);
+            ps.setInt(5, course.getDuration_days());
+            ps.setString(6, course.getDescription());
+            ps.setInt(7, createdBy);
 
             int result = ps.executeUpdate();
             if (result > 0) {

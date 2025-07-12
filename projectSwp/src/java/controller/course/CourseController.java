@@ -99,6 +99,9 @@ public class CourseController extends HttpServlet {
                 case "getAvailableTests":
                     getAvailableTests(request, response);
                     return;
+                case "getSubjectsByGrade":
+                    getSubjectsByGrade(request, response);
+                    return;
                 default:
                     listCourses(request, response);
                     break;
@@ -1208,6 +1211,45 @@ public class CourseController extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             response.getWriter().write("{\"success\": false, \"message\": \"Error: " + e.getMessage() + "\"}");
+        }
+    }
+
+    private void getSubjectsByGrade(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        try {
+            String gradeIdParam = request.getParameter("gradeId");
+            if (gradeIdParam == null || gradeIdParam.isEmpty()) {
+                response.getWriter().write("[]");
+                return;
+            }
+
+            int gradeId = Integer.parseInt(gradeIdParam);
+            List<Subject> subjects = subjectDAO.findSubjectsByGrade(gradeId);
+
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < subjects.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+                Subject subject = subjects.get(i);
+                json.append("{")
+                        .append("\"id\":").append(subject.getId())
+                        .append(",\"name\":\"").append(escapeJson(subject.getName()))
+                        .append("\",\"description\":\"").append(escapeJson(subject.getDescription()))
+                        .append("\"}");
+            }
+            json.append("]");
+
+            response.getWriter().write(json.toString());
+
+        } catch (NumberFormatException e) {
+            response.getWriter().write("[]");
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("[]");
         }
     }
 }

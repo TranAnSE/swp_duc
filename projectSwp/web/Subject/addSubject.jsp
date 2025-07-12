@@ -231,5 +231,29 @@
                 });
             });
         </script>
+        <script>
+            $(document).ready(function () {
+            <c:if test="${preSelectedGradeId != null}">
+                // Pre-select grade and disable it
+                $('#grade_id').val('${preSelectedGradeId}');
+                $('#grade_id').prop('disabled', true);
+
+                // Add hidden field to preserve value on form submit
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: 'grade_id',
+                    value: '${preSelectedGradeId}'
+                }).appendTo('form');
+
+                // Show message
+                const gradeName = $('#grade_id option:selected').text();
+                const messageHtml = '<div class="alert alert-info">' +
+                        '<i class="fas fa-info-circle"></i> ' +
+                        'Creating subject for grade: <strong>' + gradeName + '</strong>' +
+                        '</div>';
+                $('.form-container').prepend(messageHtml);
+            </c:if>
+            });
+        </script>
     </body>
 </html>

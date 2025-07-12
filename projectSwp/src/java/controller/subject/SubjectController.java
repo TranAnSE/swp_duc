@@ -42,8 +42,25 @@ public class SubjectController extends HttpServlet {
         try {
             // Load grade map for all requests
             loadGradeMap(req);
+            if ("create".equals(action)) {
+                Subject newSubject = new Subject();
 
-            if ("edit".equals(action)) {
+                // Check if coming from course creation with pre-selected grade
+                String preSelectedGradeId = req.getParameter("gradeId");
+                if (preSelectedGradeId != null && !preSelectedGradeId.isEmpty()) {
+                    try {
+                        int gradeId = Integer.parseInt(preSelectedGradeId);
+                        newSubject.setGrade_id(gradeId);
+                        req.setAttribute("preSelectedGradeId", gradeId);
+                    } catch (NumberFormatException e) {
+                        // Ignore invalid grade ID
+                    }
+                }
+
+                req.setAttribute("subject", newSubject);
+                req.getRequestDispatcher("Subject/addSubject.jsp").forward(req, resp);
+
+            } else if ("edit".equals(action)) {
                 int id = Integer.parseInt(req.getParameter("id"));
                 Subject subject = daoSubject.findById(id);
                 if (subject == null) {

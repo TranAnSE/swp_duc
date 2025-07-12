@@ -172,4 +172,36 @@ public class DAOSubject extends DBContext {
         }
         return 0;
     }
+
+    public List<Subject> findSubjectsByGrade(int gradeId) throws SQLException {
+        String sql = "SELECT * FROM subject WHERE grade_id = ? ORDER BY name";
+        List<Subject> subjects = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, gradeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Subject sub = new Subject();
+                    sub.setId(rs.getInt("id"));
+                    sub.setName(rs.getString("name"));
+                    sub.setDescription(rs.getString("description"));
+                    sub.setGrade_id(rs.getInt("grade_id"));
+                    subjects.add(sub);
+                }
+            }
+        }
+        return subjects;
+    }
+
+    public int countSubjectsByGrade(int gradeId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM subject WHERE grade_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, gradeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
 }

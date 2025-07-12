@@ -425,35 +425,62 @@
                     const $subjectSelect = $('#subjectId');
 
                     if (selectedGradeId) {
-                        // Filter subjects by selected grade
-                        $subjectSelect.find('option').each(function () {
-                            const $option = $(this);
-                            const gradeId = $option.data('grade-id');
+                        // Show loading state
+                        $subjectSelect.html('<option value="">Loading subjects...</option>');
+                        $subjectSelect.prop('disabled', true);
 
-                            if (gradeId && gradeId != selectedGradeId) {
-                                $option.hide();
-                            } else {
-                                $option.show();
+                        // Fetch subjects for selected grade
+                        $.ajax({
+                            url: '${pageContext.request.contextPath}/course',
+                            type: 'GET',
+                            data: {
+                                action: 'getSubjectsByGrade',
+                                gradeId: selectedGradeId
+                            },
+                            dataType: 'json',
+                            success: function (subjects) {
+                                $subjectSelect.html('<option value="">-- Select Subject --</option>');
+
+                                if (subjects.length === 0) {
+                                    $subjectSelect.html('<option value="">No subjects available for this grade</option>');
+                                    // Show message to create subject
+                                    showNoSubjectsMessage(selectedGradeId);
+                                } else {
+                                    $.each(subjects, function (index, subject) {
+                                        $subjectSelect.append(
+                                                '<option value="' + subject.id + '">' +
+                                                escapeHtml(subject.name) + '</option>'
+                                                );
+                                    });
+                                    hideNoSubjectsMessage();
+                                }
+
+                                $subjectSelect.prop('disabled', false);
+
+                                // Refresh Select2
+                                $subjectSelect.select2('destroy').select2({
+                                    placeholder: '-- Select Subject --',
+                                    allowClear: true,
+                                    width: '100%',
+                                    dropdownParent: $('body')
+                                });
+
+                                // Check if pre-selected subject matches
+                    <c:if test="${preSelectedSubjectId != null}">
+                                $subjectSelect.val('${preSelectedSubjectId}').trigger('change');
+                    </c:if>
+                            },
+                            error: function () {
+                                $subjectSelect.html('<option value="">Error loading subjects</option>');
+                                $subjectSelect.prop('disabled', false);
+                                showNoSubjectsMessage(selectedGradeId);
                             }
                         });
-
-                        // Clear subject selection if it doesn't match the grade
-                        const currentSubjectGradeId = $subjectSelect.find('option:selected').data('grade-id');
-                        if (currentSubjectGradeId && currentSubjectGradeId != selectedGradeId) {
-                            $subjectSelect.val('').trigger('change');
-                        }
-
-                        // Refresh Select2
-                        $subjectSelect.select2('destroy').select2({
-                            placeholder: '-- Select Subject --',
-                            allowClear: true,
-                            width: '100%',
-                            dropdownParent: $('body')
-                        });
                     } else {
-                        // Show all subjects
-                        $subjectSelect.find('option').show();
-                        $subjectSelect.val('').trigger('change');
+                        // Reset subject selection
+                        $subjectSelect.html('<option value="">-- Select Subject --</option>');
+                        $subjectSelect.prop('disabled', false);
+                        hideNoSubjectsMessage();
 
                         // Refresh Select2
                         $subjectSelect.select2('destroy').select2({
@@ -541,6 +568,33 @@
                 </c:otherwise>
             </c:choose>
             });
+            function showNoSubjectsMessage(gradeId) {
+                const gradeName = $('#gradeId option:selected').text();
+                let messageHtml = '<div id="noSubjectsAlert" class="alert alert-warning mt-3">';
+                messageHtml += '<i class="fas fa-exclamation-triangle"></i> ';
+                messageHtml += 'No subjects available for <strong>' + escapeHtml(gradeName) + '</strong>. ';
+                messageHtml += '<a href="${pageContext.request.contextPath}/subjects?action=create&gradeId=' + gradeId + '" class="alert-link">';
+                messageHtml += 'Create a subject first</a>.';
+                messageHtml += '</div>';
+
+                // Remove existing message
+                $('#noSubjectsAlert').remove();
+
+                // Add message after subject select
+                $('#subjectId').closest('.form-group').after(messageHtml);
+            }
+
+            function hideNoSubjectsMessage() {
+                $('#noSubjectsAlert').remove();
+            }
+
+            function escapeHtml(text) {
+                if (!text)
+                    return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
         </script>
     </body>
 </html>
