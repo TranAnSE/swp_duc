@@ -38,92 +38,106 @@
             /* Sidebar styles */
             .question-sidebar {
                 width: 280px;
-                background: white;
-                border-radius: 8px;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border-radius: 12px;
                 padding: 20px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
                 position: sticky;
                 top: 120px;
                 height: fit-content;
                 max-height: calc(100vh - 140px);
                 overflow-y: auto;
+                border: 1px solid #dee2e6;
             }
 
             .sidebar-title {
                 font-size: 1.1em;
                 font-weight: bold;
-                color: #333;
+                color: #495057;
                 margin-bottom: 15px;
                 text-align: center;
-                border-bottom: 2px solid #007bff;
+                border-bottom: 2px solid #6c757d;
                 padding-bottom: 10px;
             }
 
             .question-grid {
                 display: grid;
                 grid-template-columns: repeat(4, 1fr);
-                gap: 8px;
+                gap: 10px;
                 margin-bottom: 20px;
             }
 
             .question-nav-btn {
-                width: 40px;
-                height: 40px;
-                border: 2px solid #ddd;
-                background: white;
-                border-radius: 6px;
+                width: 42px;
+                height: 42px;
+                border: 2px solid #ced4da;
+                background: #ffffff;
+                border-radius: 8px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-weight: bold;
+                font-weight: 600;
                 font-size: 0.9em;
                 cursor: pointer;
                 transition: all 0.3s ease;
                 position: relative;
+                color: #495057;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
 
             .question-nav-btn:hover {
                 border-color: #007bff;
                 background: #e3f2fd;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.15);
             }
 
             .question-nav-btn.active {
-                background: #007bff;
+                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
                 color: white;
-                border-color: #007bff;
+                border-color: #0056b3;
+                box-shadow: 0 4px 12px rgba(0,123,255,0.3);
             }
 
             .question-nav-btn.answered {
-                background: #28a745;
+                background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
                 color: white;
-                border-color: #28a745;
+                border-color: #1e7e34;
+                box-shadow: 0 3px 8px rgba(40,167,69,0.3);
             }
 
             .question-nav-btn.marked {
-                background: #ffc107;
-                color: #333;
-                border-color: #ffc107;
+                background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+                color: #212529;
+                border-color: #d39e00;
+                font-weight: 700;
+                box-shadow: 0 3px 8px rgba(255,193,7,0.3);
             }
 
             .question-nav-btn.answered.marked {
-                background: linear-gradient(45deg, #28a745 50%, #ffc107 50%);
-                color: white;
+                background: linear-gradient(45deg, #28a745 0%, #28a745 45%, #ffc107 55%, #ffc107 100%);
+                color: #212529;
+                font-weight: 700;
+                border: 2px solid #d39e00;
+                box-shadow: 0 4px 12px rgba(255,193,7,0.4);
             }
 
-            /* Mark icon */
+            /* Mark icon - Improved visibility */
             .question-nav-btn .mark-icon {
                 position: absolute;
-                top: -5px;
-                right: -5px;
-                background: #ffc107;
-                color: #333;
+                top: -8px;
+                right: -8px;
+                background: #dc3545;
+                color: white;
                 border-radius: 50%;
-                width: 16px;
-                height: 16px;
+                width: 18px;
+                height: 18px;
                 font-size: 10px;
                 display: none;
                 align-items: center;
                 justify-content: center;
+                border: 2px solid white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             }
 
             .question-nav-btn.marked .mark-icon {
@@ -132,57 +146,95 @@
 
             /* Legend */
             .sidebar-legend {
-                border-top: 1px solid #eee;
+                border-top: 1px solid #dee2e6;
                 padding-top: 15px;
                 margin-top: 15px;
+                background: rgba(255,255,255,0.7);
+                border-radius: 8px;
+                padding: 15px;
             }
 
             .legend-item {
                 display: flex;
                 align-items: center;
-                margin-bottom: 8px;
+                margin-bottom: 10px;
                 font-size: 0.85em;
+                color: #495057;
             }
 
             .legend-color {
-                width: 16px;
-                height: 16px;
-                border-radius: 3px;
-                margin-right: 8px;
-                border: 1px solid #ddd;
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                margin-right: 10px;
+                border: 1px solid #dee2e6;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             }
 
             .legend-color.current {
-                background: #007bff;
+                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
             }
 
             .legend-color.answered {
-                background: #28a745;
+                background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
             }
 
             .legend-color.marked {
-                background: #ffc107;
+                background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
             }
 
             .legend-color.unanswered {
-                background: white;
+                background: #ffffff;
             }
 
             /* Main content area */
             .test-content {
                 flex: 1;
-                background: white;
-                border-radius: 8px;
+                background: #ffffff;
+                border-radius: 12px;
                 padding: 30px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                border: 1px solid #dee2e6;
             }
 
+            /* Test header */
             .test-header {
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white;
-                padding: 20px;
-                border-radius: 8px;
-                margin-bottom: 30px;
+                padding: 25px;
+                border-radius: 12px;
+                margin-bottom: 25px;
+                text-align: center;
+                box-shadow: 0 4px 15px rgba(102,126,234,0.3);
+                border: 1px solid rgba(255,255,255,0.1);
+            }
+
+
+            .test-header h3 {
+                margin-bottom: 10px;
+                font-size: 1.6rem;
+                font-weight: 600;
+                color: white;
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+            .test-header .badge {
+                font-size: 0.95rem;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-weight: 600;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+                border: 2px solid rgba(255,255,255,0.2);
+            }
+
+            .test-header .badge-success {
+                background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+                color: white;
+            }
+
+            .test-header .badge-danger {
+                background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+                color: white;
             }
 
             .question-container {
@@ -192,15 +244,15 @@
 
             .question-header {
                 display: flex;
-                justify-content: between;
+                justify-content: space-between;
                 align-items: center;
                 margin-bottom: 20px;
                 padding-bottom: 15px;
-                border-bottom: 2px solid #f1f1f1;
+                border-bottom: 2px solid #e9ecef;
             }
 
             .question-number {
-                background: #007bff;
+                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
                 color: white;
                 width: 45px;
                 height: 45px;
@@ -210,6 +262,7 @@
                 justify-content: center;
                 font-weight: bold;
                 font-size: 1.1em;
+                box-shadow: 0 3px 8px rgba(0,123,255,0.3);
             }
 
             .question-info {
@@ -219,7 +272,7 @@
 
             .question-counter {
                 font-size: 1em;
-                color: #666;
+                color: #6c757d;
                 font-weight: 500;
             }
 
@@ -230,34 +283,47 @@
             }
 
             .mark-button {
-                background: #ffc107;
-                color: #333;
+                background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+                color: #212529;
                 border: none;
                 padding: 8px 15px;
                 border-radius: 20px;
                 font-size: 0.9em;
-                font-weight: 500;
+                font-weight: 600;
                 cursor: pointer;
                 transition: all 0.3s ease;
                 display: flex;
                 align-items: center;
                 gap: 5px;
+                box-shadow: 0 2px 6px rgba(255,193,7,0.3);
             }
 
             .mark-button:hover {
-                background: #e0a800;
+                background: linear-gradient(135deg, #e0a800 0%, #d39e00 100%);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 10px rgba(255,193,7,0.4);
             }
 
             .mark-button.marked {
-                background: #dc3545;
+                background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
                 color: white;
+                box-shadow: 0 2px 6px rgba(220,53,69,0.3);
+            }
+
+            .mark-button.marked:hover {
+                background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+                box-shadow: 0 4px 10px rgba(220,53,69,0.4);
             }
 
             .question-text {
                 font-size: 1.1em;
-                color: #333;
+                color: #212529;
                 margin-bottom: 25px;
                 line-height: 1.6;
+                background: #f8f9fa;
+                padding: 20px;
+                border-radius: 8px;
+                border-left: 4px solid #007bff;
             }
 
             .option-container {
@@ -268,21 +334,26 @@
                 display: block;
                 padding: 15px 20px;
                 border: 2px solid #e9ecef;
-                border-radius: 8px;
+                border-radius: 10px;
                 cursor: pointer;
                 transition: all 0.3s ease;
                 background: #f8f9fa;
+                color: #495057;
             }
 
             .option-label:hover {
                 border-color: #007bff;
                 background: #e3f2fd;
+                transform: translateX(5px);
+                box-shadow: 0 3px 8px rgba(0,123,255,0.2);
             }
 
             .option-input:checked + .option-label {
                 border-color: #007bff;
-                background: #007bff;
+                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
                 color: white;
+                font-weight: 600;
+                box-shadow: 0 4px 12px rgba(0,123,255,0.3);
             }
 
             .option-input {
@@ -292,26 +363,48 @@
             .question-image {
                 max-width: 100%;
                 height: auto;
-                border-radius: 8px;
+                border-radius: 10px;
                 margin: 20px 0;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             }
 
-            .test-info {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
+            .question-type-label {
+                margin-bottom: 20px;
             }
 
-            .badge-practice {
-                background-color: #28a745;
+            .question-type-label .badge {
+                font-size: 0.9rem;
+                padding: 8px 15px;
+                border-radius: 20px;
             }
 
-            .badge-official {
-                background-color: #dc3545;
+            .badge-primary {
+                background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            }
+
+            .badge-warning {
+                background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+                color: #212529;
             }
 
             .progress-container {
-                margin-bottom: 20px;
+                margin-bottom: 25px;
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+                border: 1px solid #dee2e6;
+            }
+
+            .progress {
+                height: 8px;
+                border-radius: 10px;
+                background: #e9ecef;
+            }
+
+            .progress-bar {
+                background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+                border-radius: 10px;
+                transition: width 0.3s ease;
             }
 
             .navigation-container {
@@ -320,12 +413,21 @@
                 align-items: center;
                 margin-top: 30px;
                 padding-top: 20px;
-                border-top: 1px solid #eee;
+                border-top: 1px solid #dee2e6;
             }
 
             .btn-navigation {
                 min-width: 120px;
                 margin: 0 10px;
+                border-radius: 25px;
+                font-weight: 600;
+                padding: 10px 20px;
+                transition: all 0.3s ease;
+            }
+
+            .btn-navigation:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             }
 
             /* Timer styles */
@@ -333,46 +435,62 @@
                 position: fixed;
                 top: 90px;
                 right: 20px;
-                background: white;
-                border-radius: 8px;
-                padding: 10px 15px;
-                box-shadow: 0 2px 15px rgba(0,0,0,0.2);
+                background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+                color: white;
+                border-radius: 12px;
+                padding: 15px 20px;
+                box-shadow: 0 4px 20px rgba(220,53,69,0.3);
                 z-index: 999;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                min-width: 150px;
+                min-width: 160px;
+                border: 2px solid rgba(255,255,255,0.2);
             }
 
             .timer-label {
-                font-size: 0.9em;
-                color: #666;
+                font-size: 0.85em;
                 margin-bottom: 5px;
+                opacity: 0.9;
             }
 
             .timer-display {
-                font-size: 1.5em;
+                font-size: 1.8em;
                 font-weight: bold;
-                color: #333;
+                font-family: 'Courier New', monospace;
             }
 
             .timer-warning {
-                color: #dc3545;
-                animation: blink 1s infinite;
+                animation: pulse 1s infinite;
             }
 
             .submit-section {
                 text-align: center;
                 margin-top: 40px;
                 padding: 30px;
-                background: #f8f9fa;
-                border-radius: 8px;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border-radius: 12px;
                 border: 2px dashed #007bff;
             }
 
             .submit-section h5 {
                 color: #007bff;
                 margin-bottom: 15px;
+                font-weight: 600;
+            }
+
+            .submit-section .btn {
+                border-radius: 25px;
+                padding: 12px 30px;
+                font-weight: 600;
+                font-size: 1.1rem;
+                box-shadow: 0 4px 15px rgba(40,167,69,0.3);
+                transition: all 0.3s ease;
+            }
+
+            .submit-section .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(40,167,69,0.4);
             }
 
             /* Responsive design */
@@ -401,16 +519,33 @@
                 }
             }
 
-            @keyframes blink {
+            @keyframes pulse {
                 0% {
                     opacity: 1;
                 }
                 50% {
-                    opacity: 0.5;
+                    opacity: 0.6;
                 }
                 100% {
                     opacity: 1;
                 }
+            }
+
+            /* Additional improvements */
+            .breadcrumb {
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 10px 15px;
+            }
+
+            .breadcrumb-item + .breadcrumb-item::before {
+                color: #6c757d;
+            }
+
+            .alert {
+                border-radius: 8px;
+                border: none;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             }
         </style>
 
@@ -434,11 +569,11 @@
                 <!-- Breadcrumb -->
                 <nav aria-label="breadcrumb" class="mb-4">
                     <div class="d-flex align-items-center justify-content-between">
-                        <a href="/student/taketest" class="btn btn-outline-secondary">
-                            « Quay lại
+                        <a href="/student/taketest" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Quay lại
                         </a>
-                        <h4 class="m-0 font-weight-bold text-center flex-grow-1">${test.name}</h4>
-                        <div style="width: 85px;"></div>
+                        <h4 class="m-0 font-weight-bold text-center flex-grow-1 text-muted">${test.name}</h4>
+                        <div style="width: 100px;"></div>
                     </div>
                 </nav>
 
@@ -452,22 +587,15 @@
 
                 <!-- Test Header -->
                 <div class="test-header">
-                    <div class="test-info">
-                        <div>
-                            <h3 class="mb-1">${test.name}</h3>
-                            <p class="mb-0">${test.description}</p>
-                        </div>
-                        <div>
-                            <c:choose>
-                                <c:when test="${test.is_practice}">
-                                    <span class="badge badge-practice badge-lg">Luyện tập</span>
-                                </c:when>
-                                <c:otherwise>
-                                    <span class="badge badge-official badge-lg">Kiểm tra chính thức</span>
-                                </c:otherwise>
-                            </c:choose>
-                        </div>
-                    </div>
+                    <h3>${test.name}</h3>
+                    <c:choose>
+                        <c:when test="${test.is_practice}">
+                            <span class="badge badge-success">Luyện tập</span>
+                        </c:when>
+                        <c:otherwise>
+                            <span class="badge badge-danger">Kiểm tra chính thức</span>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
 
                 <!-- Error message if exists -->
@@ -480,9 +608,11 @@
                 <!-- Progress Bar -->
                 <div class="progress-container">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <small class="text-muted">Tiến độ hoàn thành</small>
-                        <small class="text-muted">
-                            Đã trả lời: <span id="answeredCount">0</span> / ${totalQuestions}
+                        <small class="text-muted font-weight-600">
+                            <i class="fas fa-chart-line"></i> Tiến độ hoàn thành
+                        </small>
+                        <small class="text-muted font-weight-600">
+                            Đã trả lời: <span id="answeredCount" class="text-primary font-weight-bold">0</span> / ${totalQuestions}
                         </small>
                     </div>
                     <div class="progress">
@@ -521,7 +651,7 @@
                         <div class="sidebar-legend">
                             <div class="legend-item">
                                 <div class="legend-color current"></div>
-                                <span>Câu hiện tại</span>
+                                <span>Đang làm</span>
                             </div>
                             <div class="legend-item">
                                 <div class="legend-color answered"></div>
@@ -538,8 +668,8 @@
                         </div>
 
                         <div class="mt-3 text-center">
-                            <button type="button" class="btn btn-info btn-sm" onclick="showMarkedQuestions()">
-                                <i class="fas fa-star"></i> Câu đã đánh dấu
+                            <button type="button" class="btn btn-outline-info btn-sm" onclick="showMarkedQuestions()">
+                                <i class="fas fa-star"></i> Xem câu đã đánh dấu
                             </button>
                         </div>
                     </div>
