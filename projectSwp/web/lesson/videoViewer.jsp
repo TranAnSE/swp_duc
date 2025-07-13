@@ -1142,18 +1142,18 @@
             }
 
             /* Adjust navigation layout when return button is present */
-            .lesson-navigation:has(.return-course) {
+            .lesson-navigation.has-return-button {
                 flex-wrap: wrap;
                 gap: 10px;
             }
 
-            .lesson-navigation:has(.return-course) .nav-btn:not(.return-course) {
+            .lesson-navigation.has-return-button .nav-btn:not(.return-course) {
                 flex: 1;
             }
 
             /* Mobile responsive adjustments */
             @media (max-width: 768px) {
-                .lesson-navigation:has(.return-course) {
+                .lesson-navigation.has-return-button {
                     flex-direction: column;
                 }
 
