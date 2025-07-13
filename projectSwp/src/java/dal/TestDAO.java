@@ -910,10 +910,17 @@ public class TestDAO extends DBContext {
             t.test_order,
             sp.id as course_id,
             COALESCE(sp.course_title, sp.name) as course_name,
+            sp.description as course_description,
             s.name as subject_name,
             g.name as grade_name,
             c.name as chapter_name,
-            -- Check if student has taken this test (for official tests only)
+            -- Count total tests in course
+            (SELECT COUNT(*) FROM test t2 WHERE t2.course_id = sp.id) as total_tests_in_course,
+            -- Count completed tests by student in course
+            (SELECT COUNT(DISTINCT tr.test_id) FROM test_record tr 
+             JOIN test t3 ON tr.test_id = t3.id 
+             WHERE tr.student_id = ? AND t3.course_id = sp.id AND tr.finish_at IS NOT NULL) as completed_tests_in_course,
+            -- Check if student has taken this specific test
             CASE 
                 WHEN t.is_practice = 0 THEN 
                     (SELECT COUNT(*) FROM test_record tr 
@@ -944,6 +951,7 @@ public class TestDAO extends DBContext {
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, studentId);
             ps.setInt(2, studentId);
+            ps.setInt(3, studentId);
 
             ResultSet rs = ps.executeQuery();
 
@@ -951,8 +959,10 @@ public class TestDAO extends DBContext {
                 String courseName = rs.getString("course_name");
                 String subjectName = rs.getString("subject_name");
                 String gradeName = rs.getString("grade_name");
+                int totalTests = rs.getInt("total_tests_in_course");
+                int completedTests = rs.getInt("completed_tests_in_course");
 
-                // Create course display name
+                // Create enhanced course display name with progress info
                 String courseDisplayName = courseName;
                 if (subjectName != null && gradeName != null) {
                     courseDisplayName = courseName + " (" + subjectName + " - " + gradeName + ")";
@@ -968,8 +978,11 @@ public class TestDAO extends DBContext {
                 testInfo.put("test_order", rs.getInt("test_order"));
                 testInfo.put("course_id", rs.getInt("course_id"));
                 testInfo.put("course_name", courseName);
+                testInfo.put("course_description", rs.getString("course_description"));
                 testInfo.put("chapter_name", rs.getString("chapter_name"));
                 testInfo.put("has_taken", rs.getBoolean("has_taken"));
+                testInfo.put("total_tests_in_course", totalTests);
+                testInfo.put("completed_tests_in_course", completedTests);
 
                 // Group by course
                 testsByCourse.computeIfAbsent(courseDisplayName, k -> new ArrayList<>()).add(testInfo);
