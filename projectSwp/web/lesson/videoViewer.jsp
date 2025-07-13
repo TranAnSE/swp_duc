@@ -1335,7 +1335,7 @@
                                 <nav aria-label="breadcrumb">
                                     <ol class="breadcrumb">
                                         <li class="breadcrumb-item">
-                                            <a href="/student/home.jsp"><i class="fas fa-home mr-1"></i>Home</a>
+                                            <a href="/dashboard"><i class="fas fa-home mr-1"></i>Home</a>
                                         </li>
                                         <li class="breadcrumb-item">
                                             <a href="/video-viewer?courseId=${courseId}">${courseStructure.course.course_title}</a>

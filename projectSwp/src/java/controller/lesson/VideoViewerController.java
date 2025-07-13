@@ -61,10 +61,10 @@ public class VideoViewerController extends HttpServlet {
                 showCourseSelection(request, response);
             }
         } catch (NumberFormatException e) {
-            handleError(request, response, "Invalid course or lesson ID format", "/student/home.jsp");
+            handleError(request, response, "Invalid course or lesson ID format", "/dashboard");
         } catch (Exception e) {
             e.printStackTrace();
-            handleError(request, response, "An error occurred while loading the course", "/student/home.jsp");
+            handleError(request, response, "An error occurred while loading the course", "/dashboard");
         }
     }
 
@@ -120,7 +120,7 @@ public class VideoViewerController extends HttpServlet {
         // Get course structure
         Map<String, Object> courseStructure = courseDAO.getCourseStructureForViewer(courseId);
         if (courseStructure == null) {
-            handleError(request, response, "Course not found", "/student/home.jsp");
+            handleError(request, response, "Course not found", "/dashboard");
             return;
         }
 
@@ -131,7 +131,7 @@ public class VideoViewerController extends HttpServlet {
         // Check access for students
         if (student != null) {
             if (!courseDAO.hasStudentAccessToCourse(student.getId(), courseId)) {
-                handleError(request, response, "You don't have access to this course", "/student/home.jsp");
+                handleError(request, response, "You don't have access to this course", "/dashboard");
                 return;
             }
         }
@@ -150,7 +150,7 @@ public class VideoViewerController extends HttpServlet {
             // Get first lesson in course
             currentLesson = getFirstLessonInCourse(courseStructure);
             if (currentLesson == null) {
-                handleError(request, response, "No accessible lessons found in this course", "/student/home.jsp");
+                handleError(request, response, "No accessible lessons found in this course", "/dashboard");
                 return;
             }
         }
@@ -221,10 +221,10 @@ public class VideoViewerController extends HttpServlet {
             }
 
             // If lesson not found in any course, redirect to course selection
-            handleError(request, response, "Lesson not found in any course", "/student/home.jsp");
+            handleError(request, response, "Lesson not found in any course", "/dashboard");
 
         } catch (NumberFormatException e) {
-            handleError(request, response, "Invalid lesson ID", "/student/home.jsp");
+            handleError(request, response, "Invalid lesson ID", "/dashboard");
         }
     }
 
@@ -257,7 +257,7 @@ public class VideoViewerController extends HttpServlet {
         List<Map<String, Object>> accessibleCourses = courseDAO.getAccessibleCoursesForStudent(student.getId());
 
         if (accessibleCourses.isEmpty()) {
-            handleError(request, response, "No accessible courses found. Please contact your parent to purchase courses.", "/student/home.jsp");
+            handleError(request, response, "No accessible courses found. Please contact your parent to purchase courses.", "/dashboard");
             return;
         }
 
