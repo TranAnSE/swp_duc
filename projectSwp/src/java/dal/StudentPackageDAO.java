@@ -821,4 +821,43 @@ public class StudentPackageDAO extends DBContext {
     public List<Map<String, Object>> getParentPurchaseHistory(int parentId, int packageId) {
         return packagePurchaseDAO.getParentPurchaseHistory(parentId, packageId);
     }
+
+    /**
+     * Get student packages by parent with course title
+     */
+    public List<StudentPackage> getStudentPackagesByParentWithCourseTitle(int parentId) {
+        List<StudentPackage> list = new ArrayList<>();
+        String sql = "SELECT sp.*, "
+                + "CASE WHEN pkg.course_title IS NOT NULL AND pkg.course_title != '' "
+                + "     THEN pkg.course_title "
+                + "     ELSE pkg.name "
+                + "END as package_name, "
+                + "s.full_name as student_name, a.full_name as parent_name "
+                + "FROM student_package sp "
+                + "JOIN study_package pkg ON sp.package_id = pkg.id "
+                + "JOIN student s ON sp.student_id = s.id "
+                + "JOIN account a ON sp.parent_id = a.id "
+                + "WHERE sp.parent_id = ? ORDER BY sp.purchased_at DESC";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                StudentPackage studentPackage = new StudentPackage();
+                studentPackage.setId(rs.getInt("id"));
+                studentPackage.setStudent_id(rs.getInt("student_id"));
+                studentPackage.setPackage_id(rs.getInt("package_id"));
+                studentPackage.setParent_id(rs.getInt("parent_id"));
+                studentPackage.setPurchased_at(rs.getTimestamp("purchased_at").toLocalDateTime());
+                studentPackage.setExpires_at(rs.getTimestamp("expires_at").toLocalDateTime());
+                studentPackage.setIs_active(rs.getBoolean("is_active"));
+                studentPackage.setPackage_name(rs.getString("package_name"));
+                studentPackage.setStudent_name(rs.getString("student_name"));
+                studentPackage.setParent_name(rs.getString("parent_name"));
+                list.add(studentPackage);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 }

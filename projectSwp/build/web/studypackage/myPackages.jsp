@@ -131,14 +131,7 @@
                         <div class="package-card ${studentPackage.statusClass}">
                             <div class="package-header">
                                 <div class="package-title">
-                                    <c:choose>
-                                        <c:when test="${not empty packageInfo.course_title}">
-                                            ${packageInfo.course_title}
-                                        </c:when>
-                                        <c:otherwise>
-                                            ${packageInfo.packageName}
-                                        </c:otherwise>
-                                    </c:choose>
+                                    ${studentPackage.package_name}
                                 </div>
                             </div>
 
@@ -176,7 +169,7 @@
                                     <i class="fas fa-eye"></i> View Package Details
                                 </a>
                                 <c:if test="${studentPackage.active}">
-                                    <a href="${pageContext.request.contextPath}/video-viewer" 
+                                    <a href="${pageContext.request.contextPath}/video-viewer?courseId=${studentPackage.package_id}" 
                                        class="btn btn-success btn-sm">
                                         <i class="fas fa-play"></i> Start Learning
                                     </a>

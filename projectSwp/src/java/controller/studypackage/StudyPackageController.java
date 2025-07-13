@@ -357,14 +357,13 @@ public class StudyPackageController extends HttpServlet {
         List<StudentPackage> studentPackages = new ArrayList<>();
 
         if (account != null && RoleConstants.PARENT.equals(account.getRole())) {
-            studentPackages = studentPackageDAO.getStudentPackagesByParent(account.getId());
+            studentPackages = studentPackageDAO.getStudentPackagesByParentWithCourseTitle(account.getId());
             request.setAttribute("studentPackages", studentPackages);
             request.getRequestDispatcher("/studypackage/myPackages.jsp").forward(request, response);
             return;
         }
 
         if (student != null) {
-            // Sử dụng phương thức mới sẽ được tạo ở Bước 3
             studentPackages = studentPackageDAO.getStudentPackagesByStudentId(student.getId());
             request.setAttribute("studentPackages", studentPackages);
             request.getRequestDispatcher("/studypackage/myPackages.jsp").forward(request, response);
