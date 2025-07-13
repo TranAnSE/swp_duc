@@ -1125,6 +1125,44 @@
                 font-size: 0.95rem !important;
                 font-weight: 500 !important;
             }
+            .nav-btn.return-course {
+                background: linear-gradient(135deg,
+                    rgba(139, 69, 19, 0.9) 0%,
+                    rgba(160, 82, 45, 0.9) 100%);
+                color: white;
+                flex: 0 0 auto;
+                margin-right: 10px;
+            }
+
+            .nav-btn.return-course:hover {
+                background: linear-gradient(135deg,
+                    rgba(160, 82, 45, 0.95) 0%,
+                    rgba(139, 69, 19, 0.95) 100%);
+                color: white;
+            }
+
+            /* Adjust navigation layout when return button is present */
+            .lesson-navigation:has(.return-course) {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .lesson-navigation:has(.return-course) .nav-btn:not(.return-course) {
+                flex: 1;
+            }
+
+            /* Mobile responsive adjustments */
+            @media (max-width: 768px) {
+                .lesson-navigation:has(.return-course) {
+                    flex-direction: column;
+                }
+
+                .nav-btn.return-course {
+                    order: -1;
+                    margin-right: 0;
+                    margin-bottom: 10px;
+                }
+            }
         </style>
     </head>
     <body>
@@ -1436,12 +1474,21 @@
 
                                     <!-- Navigation Buttons -->
                                     <div class="lesson-navigation">
+                                        <!-- Return to Course Builder Button (if applicable) -->
+                                        <c:if test="${showReturnToCourse}">
+                                            <a href="${pageContext.request.contextPath}/${returnToCourseUrl}" 
+                                               class="nav-btn return-course">
+                                                <i class="fas fa-arrow-left"></i>
+                                                <span>${returnToCourseLabel}</span>
+                                            </a>
+                                        </c:if>
+
                                         <c:choose>
                                             <c:when test="${not empty navigation.previousLesson}">
-                                                <a href="/video-viewer?courseId=${courseId}&lessonId=${navigation.previousLesson.lesson_id}" 
+                                                <a href="/video-viewer?courseId=${courseId}&lessonId=${navigation.previousLesson.lesson_id}<c:if test='${showReturnToCourse}'>&returnTo=buildCourse</c:if>" 
                                                    class="nav-btn prev">
-                                                    <i class="fas fa-arrow-left"></i>
-                                                    <span>Previous: ${navigation.previousLesson.lesson_name}</span>
+                                                        <i class="fas fa-arrow-left"></i>
+                                                        <span>Previous: ${navigation.previousLesson.lesson_name}</span>
                                                 </a>
                                             </c:when>
                                             <c:otherwise>
@@ -1454,9 +1501,9 @@
 
                                         <c:choose>
                                             <c:when test="${not empty navigation.nextLesson}">
-                                                <a href="/video-viewer?courseId=${courseId}&lessonId=${navigation.nextLesson.lesson_id}" 
+                                                <a href="/video-viewer?courseId=${courseId}&lessonId=${navigation.nextLesson.lesson_id}<c:if test='${showReturnToCourse}'>&returnTo=buildCourse</c:if>" 
                                                    class="nav-btn next">
-                                                    <span>Next: ${navigation.nextLesson.lesson_name}</span>
+                                                        <span>Next: ${navigation.nextLesson.lesson_name}</span>
                                                     <i class="fas fa-arrow-right"></i>
                                                 </a>
                                             </c:when>
@@ -1748,7 +1795,7 @@
                                                             }
 
                                                             function showToastNotification(message, type, iconClass) {
-                                                                 // Remove any existing notifications
+                                                                // Remove any existing notifications
                                                                 const existingToasts = document.querySelectorAll('.toast-notification');
                                                                 existingToasts.forEach(toast => toast.remove());
 

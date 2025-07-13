@@ -64,13 +64,16 @@ public class LessonController extends HttpServlet {
                     String courseId = request.getParameter("courseId");
                     String chapterId = request.getParameter("chapterId");
 
-                    if ("course".equals(returnTo) && courseId != null) {
+                    if ("buildCourse".equals(returnTo) && courseId != null) {
                         request.setAttribute("returnToCourse", true);
                         request.setAttribute("courseId", courseId);
                         if (chapterId != null) {
                             request.setAttribute("preSelectedChapterId", chapterId);
                         }
                     }
+
+                    // Set return navigation attributes
+                    setReturnAttributes(request);
 
                     request.getRequestDispatcher("lesson/addLesson.jsp").forward(request, response);
                     return;
@@ -84,6 +87,10 @@ public class LessonController extends HttpServlet {
                             List<Chapter> chapter = new ChapterDAO().getChapter("select * from chapter");
                             request.setAttribute("chapter", chapter);
                             request.setAttribute("lesson", lesson);
+
+                            // Set return navigation attributes
+                            setReturnAttributes(request);
+
                             request.getRequestDispatcher("lesson/updateLesson.jsp").forward(request, response);
                             return;
                         } else {
@@ -252,8 +259,8 @@ public class LessonController extends HttpServlet {
                 String returnTo = request.getParameter("returnTo");
                 String courseId = request.getParameter("courseId");
 
-                if ("course".equals(returnTo) && courseId != null) {
-                    response.sendRedirect("/course?action=build&id=" + courseId + "&message=Lesson created successfully");
+                if ("buildCourse".equals(returnTo) && courseId != null) {
+                    response.sendRedirect("course?action=build&id=" + courseId + "&message=Lesson created successfully");
                     return;
                 }
 
@@ -264,24 +271,33 @@ public class LessonController extends HttpServlet {
                 String content = request.getParameter("content");
                 int chapterId = Integer.parseInt(request.getParameter("chapter_id"));
 
-                // Lấy thông tin bài học hiện tại
+                // Get current lesson info
                 Lesson currentLesson = lessonDAO.getLessonById(id);
                 String currentVideoLink = currentLesson != null ? currentLesson.getVideo_link() : "";
 
-                // Tạo đối tượng Lesson mới với thông tin cập nhật
+                // Create updated lesson object
                 Lesson lesson = new Lesson(id, name, content, chapterId, currentVideoLink);
 
-                // Xử lý nếu có file video mới
+                // Handle new video file if present
                 Part videoPart = request.getPart("video_file");
                 if (videoPart != null && videoPart.getSize() > 0) {
                     String videoUrl = videoService.uploadAndUpdateLesson(videoPart, lesson);
                     lesson.setVideo_link(videoUrl);
                 }
 
-                // Cập nhật bài học vào database
+                // Update lesson in database
                 lessonDAO.updateLesson(lesson);
-                request.setAttribute("message", "Cập nhật bài học thành công");
 
+                // Check if should return to course builder
+                String returnTo = request.getParameter("returnTo");
+                String courseId = request.getParameter("courseId");
+
+                if ("buildCourse".equals(returnTo) && courseId != null) {
+                    response.sendRedirect("course?action=build&id=" + courseId + "&message=Lesson updated successfully");
+                    return;
+                }
+
+                request.setAttribute("message", "Lesson updated successfully");
             } else if ("delete".equals(action)) {
                 int id = Integer.parseInt(request.getParameter("id"));
                 // Lấy thông tin lesson trước khi xóa để xóa video
@@ -309,5 +325,30 @@ public class LessonController extends HttpServlet {
         }
 
         request.getRequestDispatcher("lesson/lessonList.jsp").forward(request, response);
+    }
+
+    private String getReturnUrl(HttpServletRequest request) {
+        String returnTo = request.getParameter("returnTo");
+        String courseId = request.getParameter("courseId");
+
+        if ("buildCourse".equals(returnTo) && courseId != null && !courseId.isEmpty()) {
+            return "course?action=build&id=" + courseId;
+        }
+        return "LessonURL"; // Default return
+    }
+
+    private void setReturnAttributes(HttpServletRequest request) {
+        String returnTo = request.getParameter("returnTo");
+        String courseId = request.getParameter("courseId");
+
+        if ("buildCourse".equals(returnTo) && courseId != null && !courseId.isEmpty()) {
+            request.setAttribute("returnTo", returnTo);
+            request.setAttribute("courseId", courseId);
+            request.setAttribute("returnUrl", "course?action=build&id=" + courseId);
+            request.setAttribute("returnLabel", "Back to Course Builder");
+        } else {
+            request.setAttribute("returnUrl", "LessonURL");
+            request.setAttribute("returnLabel", "Back to Lesson List");
+        }
     }
 }

@@ -530,10 +530,75 @@
                 font-style: italic;
                 color: #6c757d;
             }
+            .lesson-actions {
+                display: flex;
+                gap: 5px;
+                align-items: center;
+            }
+
+            .lesson-actions .btn {
+                padding: 4px 8px;
+                font-size: 0.75rem;
+                border-radius: 4px;
+                transition: all 0.2s ease;
+            }
+
+            .lesson-actions .btn:hover {
+                transform: translateY(-1px);
+            }
+
+            .lesson-item .content-item-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .lesson-item .content-item-header > div:first-child {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .lesson-item .content-item-header .lesson-actions {
+                flex-shrink: 0;
+            }
+
+            /* Responsive adjustments for lesson actions */
+            @media (max-width: 768px) {
+                .lesson-actions {
+                    flex-direction: column;
+                    gap: 3px;
+                }
+
+                .lesson-actions .btn {
+                    width: 100%;
+                    font-size: 0.7rem;
+                    padding: 3px 6px;
+                }
+            }
         </style>
     </head>
     <body>
         <%@include file="../header.jsp" %>
+
+        <!-- Success/Error Messages -->
+        <c:if test="${not empty param.message}">
+            <div class="alert alert-success alert-dismissible fade show position-fixed" 
+                 style="top: 120px; right: 20px; z-index: 1050; min-width: 300px;" role="alert">
+                <i class="fas fa-check-circle mr-2"></i>
+                ${param.message}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <script>
+                // Auto-hide success message after 5 seconds
+                setTimeout(function () {
+                    $('.alert-success').fadeOut();
+                }, 5000);
+            </script>
+        </c:if>
 
         <div class="build-container">
             <!-- Course Header -->
@@ -753,9 +818,20 @@
                                                                             <i class="fas fa-video text-primary ml-2" title="Has video"></i>
                                                                         </c:if>
                                                                     </div>
-                                                                    <div>
-                                                                        <button class="btn btn-sm btn-outline-danger" 
-                                                                                onclick="removeFromCourse('lesson', ${lesson.lesson_id})">
+                                                                    <div class="lesson-actions">
+                                                                        <!-- View Lesson Button -->
+                                                                        <a href="/video-viewer?courseId=${courseId}&lessonId=${lesson.lesson_id}&returnTo=buildCourse"
+                                                                           class="btn btn-sm btn-outline-info" title="View Lesson">
+                                                                            <i class="fas fa-eye"></i>
+                                                                        </a>
+                                                                        <!-- Edit Lesson Button -->
+                                                                        <a href="${pageContext.request.contextPath}/LessonURL?action=updateForm&id=${lesson.lesson_id}&returnTo=buildCourse&courseId=${courseId}"
+                                                                           class="btn btn-sm btn-outline-warning" title="Edit Lesson">
+                                                                            <i class="fas fa-edit"></i>
+                                                                        </a>
+                                                                        <!-- Remove Lesson Button -->
+                                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                                onclick="removeFromCourse('lesson', ${lesson.lesson_id})" title="Remove from Course">
                                                                             <i class="fas fa-trash"></i>
                                                                         </button>
                                                                     </div>
@@ -767,7 +843,6 @@
                                                         </c:if>
                                                     </c:forEach>
                                                 </c:if>
-
                                                 <!-- Show message if no lessons in chapter -->
                                                 <c:if test="${empty chapterLessons}">
                                                     <div class="text-muted small mt-2">
@@ -2342,6 +2417,23 @@
                                                             // Redirect to controller with specific action for resubmit after reject
                                                             window.location.href = '${pageContext.request.contextPath}/course?action=resubmitAfterReject&id=${courseId}';
                                                                 }
+
+                                                                // Update sidebar lesson links to preserve return navigation
+                                                                function updateLessonLinksForReturn() {
+                                                                    if (window.location.search.includes('returnTo=buildCourse')) {
+                                                                        const lessonLinks = document.querySelectorAll('.lesson-item[href*="video-viewer"]');
+                                                                        lessonLinks.forEach(link => {
+                                                                            const href = link.getAttribute('href');
+                                                                            if (href && !href.includes('returnTo=buildCourse')) {
+                                                                                const separator = href.includes('?') ? '&' : '?';
+                                                                                link.setAttribute('href', href + separator + 'returnTo=buildCourse');
+                                                                            }
+                                                                        });
+                                                                    }
+                                                                }
+
+                                                                // Call on page load
+                                                                document.addEventListener('DOMContentLoaded', updateLessonLinksForReturn);
         </script>
         <!-- Browse Tests Modal -->
         <div class="modal fade" id="browseTestModal" tabindex="-1">

@@ -75,6 +75,14 @@
                                 <form id="lessonForm" action="LessonURL" method="post" onsubmit="return validateForm()" enctype="multipart/form-data">
                                     <input type="hidden" name="action" value="insert">
 
+                                    <!-- Return navigation hidden fields -->
+                                    <c:if test="${not empty returnTo}">
+                                        <input type="hidden" name="returnTo" value="${returnTo}">
+                                    </c:if>
+                                    <c:if test="${not empty courseId}">
+                                        <input type="hidden" name="courseId" value="${courseId}">
+                                    </c:if>
+
                                     <div class="mb-3">
                                         <label for="name" class="form-label">Tên bài học</label>
                                         <input type="text" class="form-control" id="name" name="name">
@@ -106,8 +114,21 @@
                                     </div>
 
                                     <div class="d-grid gap-2">
-                                        <button type="submit" class="btn btn-success">Thêm bài học</button>
-                                        <a href="LessonURL" class="btn btn-outline-secondary">Quay lại danh sách</a>
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fas fa-plus"></i> Add Lesson
+                                        </button>
+                                        <c:choose>
+                                            <c:when test="${not empty returnUrl}">
+                                                <a href="${pageContext.request.contextPath}/${returnUrl}" class="btn btn-outline-secondary">
+                                                    <i class="fas fa-arrow-left"></i> ${returnLabel}
+                                                </a>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <a href="LessonURL" class="btn btn-outline-secondary">
+                                                    <i class="fas fa-arrow-left"></i> Back to Lesson List
+                                                </a>
+                                            </c:otherwise>
+                                        </c:choose>
                                     </div>
                                 </form>
                             </div>

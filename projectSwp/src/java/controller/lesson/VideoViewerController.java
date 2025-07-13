@@ -193,6 +193,9 @@ public class VideoViewerController extends HttpServlet {
         request.setAttribute("isTrackingEnabled", isTrackingEnabled);
         request.setAttribute("courseId", courseId);
 
+        // Set return navigation if coming from course builder
+        setReturnNavigation(request);
+
         request.getRequestDispatcher("/lesson/videoViewer.jsp").forward(request, response);
     }
 
@@ -368,5 +371,16 @@ public class VideoViewerController extends HttpServlet {
         HttpSession session = request.getSession();
         session.setAttribute("errorMessage", errorMessage);
         response.sendRedirect(redirectUrl);
+    }
+
+    private void setReturnNavigation(HttpServletRequest request) {
+        String returnTo = request.getParameter("returnTo");
+        String courseId = request.getParameter("courseId");
+
+        if ("buildCourse".equals(returnTo) && courseId != null && !courseId.isEmpty()) {
+            request.setAttribute("showReturnToCourse", true);
+            request.setAttribute("returnToCourseUrl", "course?action=build&id=" + courseId);
+            request.setAttribute("returnToCourseLabel", "Back to Course Builder");
+        }
     }
 }
