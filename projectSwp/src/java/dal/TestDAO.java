@@ -891,4 +891,168 @@ public class TestDAO extends DBContext {
 
         return 0;
     }
+
+    public List<Map<String, Object>> getTestsByTeacherWithPagination(int teacherId,
+            String searchKeyword, String testType, Integer courseId, int page, int pageSize) {
+
+        List<Map<String, Object>> tests = new ArrayList<>();
+        StringBuilder sql = new StringBuilder();
+
+        // Sử dụng cả 2 cách join: trực tiếp từ test.course_id và qua bảng course_test
+        sql.append("SELECT DISTINCT ");
+        sql.append("    t.id AS test_id, ");
+        sql.append("    t.name AS test_name, ");
+        sql.append("    t.description AS test_description, ");
+        sql.append("    t.is_practice, ");
+        sql.append("    t.duration_minutes, ");
+        sql.append("    t.num_questions, ");
+        sql.append("    t.test_order, ");
+        sql.append("    t.created_at, ");
+        sql.append("    t.updated_at, ");
+        sql.append("    t.created_by, ");
+        sql.append("    COALESCE(sp1.id, sp2.id) AS course_id, ");
+        sql.append("    COALESCE(sp1.course_title, sp2.course_title) AS course_name, ");
+        sql.append("    c.id AS chapter_id, ");
+        sql.append("    c.name AS chapter_name, ");
+        sql.append("    COALESCE(s1.name, s2.name) AS subject_name, ");
+        sql.append("    COALESCE(g1.name, g2.name) AS grade_name, ");
+        sql.append("    creator.full_name AS created_by_name, ");
+        sql.append("    COUNT(tq.question_id) AS total_questions_assigned ");
+        sql.append("FROM test t ");
+
+        // Join trực tiếp qua test.course_id
+        sql.append("LEFT JOIN study_package sp1 ON t.course_id = sp1.id ");
+        sql.append("LEFT JOIN subject s1 ON sp1.subject_id = s1.id ");
+        sql.append("LEFT JOIN grade g1 ON s1.grade_id = g1.id ");
+
+        // Join qua bảng course_test
+        sql.append("LEFT JOIN course_test ct ON t.id = ct.test_id ");
+        sql.append("LEFT JOIN study_package sp2 ON ct.course_id = sp2.id ");
+        sql.append("LEFT JOIN subject s2 ON sp2.subject_id = s2.id ");
+        sql.append("LEFT JOIN grade g2 ON s2.grade_id = g2.id ");
+
+        // Các join khác
+        sql.append("LEFT JOIN chapter c ON t.chapter_id = c.id ");
+        sql.append("LEFT JOIN account creator ON t.created_by = creator.id ");
+        sql.append("LEFT JOIN test_question tq ON t.id = tq.test_id ");
+        sql.append("WHERE t.created_by = ? ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(teacherId);
+
+        // Add filters
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            sql.append("AND (t.name LIKE ? OR t.description LIKE ?) ");
+            String keyword = "%" + searchKeyword.trim() + "%";
+            params.add(keyword);
+            params.add(keyword);
+        }
+
+        if (testType != null && !testType.isEmpty() && !"all".equals(testType)) {
+            if ("practice".equals(testType)) {
+                sql.append("AND t.is_practice = 1 ");
+            } else if ("official".equals(testType)) {
+                sql.append("AND t.is_practice = 0 ");
+            }
+        }
+
+        if (courseId != null) {
+            sql.append("AND (sp1.id = ? OR sp2.id = ?) ");
+            params.add(courseId);
+            params.add(courseId);
+        }
+
+        sql.append("GROUP BY ");
+        sql.append("    t.id, t.name, t.description, t.is_practice, t.duration_minutes, ");
+        sql.append("    t.num_questions, t.test_order, t.created_at, t.updated_at, t.created_by, ");
+        sql.append("    COALESCE(sp1.id, sp2.id), COALESCE(sp1.course_title, sp2.course_title), ");
+        sql.append("    c.id, c.name, COALESCE(s1.name, s2.name), COALESCE(g1.name, g2.name), creator.full_name ");
+        sql.append("ORDER BY t.created_at DESC LIMIT ? OFFSET ?");
+
+        params.add(pageSize);
+        params.add((page - 1) * pageSize);
+
+        try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> test = new HashMap<>();
+                test.put("test_id", rs.getInt("test_id"));
+                test.put("test_name", rs.getString("test_name"));
+                test.put("test_description", rs.getString("test_description"));
+                test.put("is_practice", rs.getBoolean("is_practice"));
+                test.put("duration_minutes", rs.getInt("duration_minutes"));
+                test.put("num_questions", rs.getInt("num_questions"));
+                test.put("test_order", rs.getInt("test_order"));
+                test.put("course_id", rs.getObject("course_id"));
+                test.put("course_name", rs.getString("course_name"));
+                test.put("chapter_id", rs.getObject("chapter_id"));
+                test.put("chapter_name", rs.getString("chapter_name"));
+                test.put("subject_name", rs.getString("subject_name"));
+                test.put("grade_name", rs.getString("grade_name"));
+                test.put("created_by", rs.getInt("created_by"));
+                test.put("created_by_name", rs.getString("created_by_name"));
+                test.put("total_questions_assigned", rs.getInt("total_questions_assigned"));
+                test.put("created_at", rs.getTimestamp("created_at"));
+                test.put("updated_at", rs.getTimestamp("updated_at"));
+                tests.add(test);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return tests;
+    }
+
+    public int getTotalTestsByTeacherCountWithFilters(int teacherId, String searchKeyword,
+            String testType, Integer courseId) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(DISTINCT t.id) ");
+        sql.append("FROM test t ");
+        sql.append("LEFT JOIN study_package sp1 ON t.course_id = sp1.id ");
+        sql.append("LEFT JOIN course_test ct ON t.id = ct.test_id ");
+        sql.append("LEFT JOIN study_package sp2 ON ct.course_id = sp2.id ");
+        sql.append("WHERE t.created_by = ? ");
+
+        List<Object> params = new ArrayList<>();
+        params.add(teacherId);
+
+        // Add same filters as above
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            sql.append("AND (t.name LIKE ? OR t.description LIKE ?) ");
+            String keyword = "%" + searchKeyword.trim() + "%";
+            params.add(keyword);
+            params.add(keyword);
+        }
+
+        if (testType != null && !testType.isEmpty() && !"all".equals(testType)) {
+            if ("practice".equals(testType)) {
+                sql.append("AND t.is_practice = 1 ");
+            } else if ("official".equals(testType)) {
+                sql.append("AND t.is_practice = 0 ");
+            }
+        }
+
+        if (courseId != null) {
+            sql.append("AND (sp1.id = ? OR sp2.id = ?) ");
+            params.add(courseId);
+            params.add(courseId);
+        }
+
+        try (PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
 }

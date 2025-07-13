@@ -175,6 +175,7 @@ public class TestController extends HttpServlet {
     private void listTests(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        TestDAO testDAO = new TestDAO();
         // Get pagination parameters
         int page = 1;
         int pageSize = 10;
@@ -223,16 +224,27 @@ public class TestController extends HttpServlet {
         // Get current user for filtering
         HttpSession session = request.getSession();
         Account account = (Account) session.getAttribute("account");
-        Integer createdBy = null;
 
-        if (AuthUtil.hasRole(request, RoleConstants.TEACHER) && !AuthUtil.hasRole(request, RoleConstants.ADMIN)) {
-            createdBy = account.getId(); // Teachers only see their own tests
+        List<Map<String, Object>> testList;
+        int totalTests;
+
+        if (AuthUtil.hasRole(request, RoleConstants.ADMIN)) {
+            // Admin sees all tests
+            testList = testDAO.getTestsWithPaginationAndFilters(
+                    searchKeyword, testType, courseId, null, page, pageSize);
+            totalTests = testDAO.getTotalTestsCountWithFilters(searchKeyword, testType, courseId, null);
+        } else if (AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
+            // Teacher sees only their tests using the new method
+            testList = testDAO.getTestsByTeacherWithPagination(
+                    account.getId(), searchKeyword, testType, courseId, page, pageSize);
+            totalTests = testDAO.getTotalTestsByTeacherCountWithFilters(
+                    account.getId(), searchKeyword, testType, courseId);
+        } else {
+            // Students see all tests (for taking tests)
+            testList = testDAO.getTestsWithPaginationAndFilters(
+                    searchKeyword, testType, courseId, null, page, pageSize);
+            totalTests = testDAO.getTotalTestsCountWithFilters(searchKeyword, testType, courseId, null);
         }
-
-        TestDAO testDAO = new TestDAO();
-        List<Map<String, Object>> testList = testDAO.getTestsWithPaginationAndFilters(
-                searchKeyword, testType, courseId, createdBy, page, pageSize);
-        int totalTests = testDAO.getTotalTestsCountWithFilters(searchKeyword, testType, courseId, createdBy);
 
         // Calculate pagination info
         int totalPages = (int) Math.ceil((double) totalTests / pageSize);
