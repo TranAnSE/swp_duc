@@ -54,7 +54,7 @@ CREATE TABLE `chapter` (
   PRIMARY KEY (`id`),
   KEY `chapter_subject_id_fk` (`subject_id`),
   CONSTRAINT `chapter_subject_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subject` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -78,7 +78,7 @@ CREATE TABLE `course_chapter` (
   KEY `idx_course_active` (`course_id`,`is_active`),
   CONSTRAINT `course_chapter_chapter_id_fk` FOREIGN KEY (`chapter_id`) REFERENCES `chapter` (`id`),
   CONSTRAINT `course_chapter_course_id_fk` FOREIGN KEY (`course_id`) REFERENCES `study_package` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -132,7 +132,7 @@ CREATE TABLE `course_lesson` (
   CONSTRAINT `course_lesson_chapter_id_fk` FOREIGN KEY (`chapter_id`) REFERENCES `chapter` (`id`),
   CONSTRAINT `course_lesson_course_id_fk` FOREIGN KEY (`course_id`) REFERENCES `study_package` (`id`),
   CONSTRAINT `course_lesson_lesson_id_fk` FOREIGN KEY (`lesson_id`) REFERENCES `lesson` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -198,7 +198,7 @@ CREATE TABLE `course_test` (
   CONSTRAINT `course_test_chapter_id_fk` FOREIGN KEY (`chapter_id`) REFERENCES `chapter` (`id`),
   CONSTRAINT `course_test_course_id_fk` FOREIGN KEY (`course_id`) REFERENCES `study_package` (`id`),
   CONSTRAINT `course_test_test_id_fk` FOREIGN KEY (`test_id`) REFERENCES `test` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -216,7 +216,7 @@ CREATE TABLE `grade` (
   PRIMARY KEY (`id`),
   KEY `grade_account_id_fk` (`teacher_id`),
   CONSTRAINT `grade_account_id_fk` FOREIGN KEY (`teacher_id`) REFERENCES `account` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -230,7 +230,7 @@ CREATE TABLE `image` (
   `id` int NOT NULL AUTO_INCREMENT,
   `image_data` longtext,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -250,7 +250,7 @@ CREATE TABLE `invoice` (
   PRIMARY KEY (`id`),
   KEY `invoice_account_id_fk` (`parent_id`),
   CONSTRAINT `invoice_account_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `account` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -289,7 +289,7 @@ CREATE TABLE `lesson` (
   PRIMARY KEY (`id`),
   KEY `lesson_chapter_id_fk` (`chapter_id`),
   CONSTRAINT `lesson_chapter_id_fk` FOREIGN KEY (`chapter_id`) REFERENCES `chapter` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -439,7 +439,7 @@ CREATE TABLE `question` (
   CONSTRAINT `question_lesson_id_fk` FOREIGN KEY (`lesson_id`) REFERENCES `lesson` (`id`),
   CONSTRAINT `chk_category` CHECK ((`category` in (_utf8mb4'conceptual',_utf8mb4'application',_utf8mb4'analysis',_utf8mb4'synthesis',_utf8mb4'evaluation',_utf8mb4'mixed'))),
   CONSTRAINT `chk_difficulty` CHECK ((`difficulty` in (_utf8mb4'easy',_utf8mb4'medium',_utf8mb4'hard',_utf8mb4'mixed')))
-) ENGINE=InnoDB AUTO_INCREMENT=263 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=293 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -457,7 +457,7 @@ CREATE TABLE `question_option` (
   PRIMARY KEY (`id`),
   KEY `question_option_question_id_fk` (`question_id`),
   CONSTRAINT `question_option_question_id_fk` FOREIGN KEY (`question_id`) REFERENCES `question` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=968 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1081 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -556,7 +556,7 @@ CREATE TABLE `student_course_progress` (
   KEY `student_course_progress_course_id_fk` (`course_id`),
   CONSTRAINT `student_course_progress_course_id_fk` FOREIGN KEY (`course_id`) REFERENCES `study_package` (`id`),
   CONSTRAINT `student_course_progress_student_id_fk` FOREIGN KEY (`student_id`) REFERENCES `student` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=73 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -587,7 +587,7 @@ CREATE TABLE `student_lesson_progress` (
   CONSTRAINT `student_lesson_progress_course_id_fk` FOREIGN KEY (`course_id`) REFERENCES `study_package` (`id`),
   CONSTRAINT `student_lesson_progress_lesson_id_fk` FOREIGN KEY (`lesson_id`) REFERENCES `lesson` (`id`),
   CONSTRAINT `student_lesson_progress_student_id_fk` FOREIGN KEY (`student_id`) REFERENCES `student` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=70 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -623,7 +623,7 @@ CREATE TABLE `student_package` (
   CONSTRAINT `student_package_package_id_fk` FOREIGN KEY (`package_id`) REFERENCES `study_package` (`id`),
   CONSTRAINT `student_package_parent_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `account` (`id`),
   CONSTRAINT `student_package_student_id_fk` FOREIGN KEY (`student_id`) REFERENCES `student` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -709,7 +709,7 @@ CREATE TABLE `study_package` (
   CONSTRAINT `study_package_created_by_fk` FOREIGN KEY (`created_by`) REFERENCES `account` (`id`),
   CONSTRAINT `study_package_image_thumbnail_fk` FOREIGN KEY (`image_thumbnail_id`) REFERENCES `image` (`id`),
   CONSTRAINT `study_package_subject_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subject` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -727,7 +727,7 @@ CREATE TABLE `subject` (
   PRIMARY KEY (`id`),
   KEY `subject_grade_id_fk` (`grade_id`),
   CONSTRAINT `subject_grade_id_fk` FOREIGN KEY (`grade_id`) REFERENCES `grade` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -764,7 +764,7 @@ CREATE TABLE `test` (
   CONSTRAINT `test_course_id_fk` FOREIGN KEY (`course_id`) REFERENCES `study_package` (`id`),
   CONSTRAINT `test_created_by_fk` FOREIGN KEY (`created_by`) REFERENCES `account` (`id`),
   CONSTRAINT `test_lesson_id_fk` FOREIGN KEY (`lesson_id`) REFERENCES `lesson` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -785,6 +785,7 @@ SET @saved_cs_client     = @@character_set_client;
  1 AS `test_order`,
  1 AS `created_at`,
  1 AS `updated_at`,
+ 1 AS `created_by`,
  1 AS `course_id`,
  1 AS `course_name`,
  1 AS `chapter_id`,
@@ -831,7 +832,7 @@ CREATE TABLE `test_record` (
   KEY `test_record_test_id_fk` (`test_id`),
   CONSTRAINT `test_record_student_id_fk` FOREIGN KEY (`student_id`) REFERENCES `student` (`id`),
   CONSTRAINT `test_record_test_id_fk` FOREIGN KEY (`test_id`) REFERENCES `test` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1009,7 +1010,7 @@ CREATE TABLE `test_record` (
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `test_management_view` AS select `t`.`id` AS `test_id`,`t`.`name` AS `test_name`,`t`.`description` AS `test_description`,`t`.`is_practice` AS `is_practice`,`t`.`duration_minutes` AS `duration_minutes`,`t`.`num_questions` AS `num_questions`,`t`.`test_order` AS `test_order`,`t`.`created_at` AS `created_at`,`t`.`updated_at` AS `updated_at`,`sp`.`id` AS `course_id`,`sp`.`course_title` AS `course_name`,`c`.`id` AS `chapter_id`,`c`.`name` AS `chapter_name`,`s`.`name` AS `subject_name`,`g`.`name` AS `grade_name`,`creator`.`full_name` AS `created_by_name`,count(`tq`.`question_id`) AS `total_questions_assigned` from ((((((`test` `t` left join `study_package` `sp` on((`t`.`course_id` = `sp`.`id`))) left join `chapter` `c` on((`t`.`chapter_id` = `c`.`id`))) left join `subject` `s` on((`sp`.`subject_id` = `s`.`id`))) left join `grade` `g` on((`s`.`grade_id` = `g`.`id`))) left join `account` `creator` on((`t`.`created_by` = `creator`.`id`))) left join `test_question` `tq` on((`t`.`id` = `tq`.`test_id`))) group by `t`.`id`,`t`.`name`,`t`.`description`,`t`.`is_practice`,`t`.`duration_minutes`,`t`.`num_questions`,`t`.`test_order`,`t`.`created_at`,`t`.`updated_at`,`sp`.`id`,`sp`.`course_title`,`c`.`id`,`c`.`name`,`s`.`name`,`g`.`name`,`creator`.`full_name` */;
+/*!50001 VIEW `test_management_view` AS select `t`.`id` AS `test_id`,`t`.`name` AS `test_name`,`t`.`description` AS `test_description`,`t`.`is_practice` AS `is_practice`,`t`.`duration_minutes` AS `duration_minutes`,`t`.`num_questions` AS `num_questions`,`t`.`test_order` AS `test_order`,`t`.`created_at` AS `created_at`,`t`.`updated_at` AS `updated_at`,`t`.`created_by` AS `created_by`,`sp`.`id` AS `course_id`,`sp`.`course_title` AS `course_name`,`c`.`id` AS `chapter_id`,`c`.`name` AS `chapter_name`,`s`.`name` AS `subject_name`,`g`.`name` AS `grade_name`,`creator`.`full_name` AS `created_by_name`,count(`tq`.`question_id`) AS `total_questions_assigned` from ((((((`test` `t` left join `study_package` `sp` on((`t`.`course_id` = `sp`.`id`))) left join `chapter` `c` on((`t`.`chapter_id` = `c`.`id`))) left join `subject` `s` on((`sp`.`subject_id` = `s`.`id`))) left join `grade` `g` on((`s`.`grade_id` = `g`.`id`))) left join `account` `creator` on((`t`.`created_by` = `creator`.`id`))) left join `test_question` `tq` on((`t`.`id` = `tq`.`test_id`))) group by `t`.`id`,`t`.`name`,`t`.`description`,`t`.`is_practice`,`t`.`duration_minutes`,`t`.`num_questions`,`t`.`test_order`,`t`.`created_at`,`t`.`updated_at`,`t`.`created_by`,`sp`.`id`,`sp`.`course_title`,`c`.`id`,`c`.`name`,`s`.`name`,`g`.`name`,`creator`.`full_name` */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
