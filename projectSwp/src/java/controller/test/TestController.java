@@ -229,12 +229,12 @@ public class TestController extends HttpServlet {
         int totalTests;
 
         if (AuthUtil.hasRole(request, RoleConstants.ADMIN)) {
-            // Admin sees all tests
-            testList = testDAO.getTestsWithPaginationAndFilters(
-                    searchKeyword, testType, courseId, null, page, pageSize);
-            totalTests = testDAO.getTotalTestsCountWithFilters(searchKeyword, testType, courseId, null);
+            // Admin sees all tests using new method
+            testList = testDAO.getAllTestsWithPaginationAndFilters(
+                    searchKeyword, testType, courseId, page, pageSize);
+            totalTests = testDAO.getTotalTestsCountForAdmin(searchKeyword, testType, courseId);
         } else if (AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
-            // Teacher sees only their tests using the new method
+            // Teacher sees only their tests
             testList = testDAO.getTestsByTeacherWithPagination(
                     account.getId(), searchKeyword, testType, courseId, page, pageSize);
             totalTests = testDAO.getTotalTestsByTeacherCountWithFilters(
@@ -254,12 +254,12 @@ public class TestController extends HttpServlet {
         int displayEnd = Math.min(page * pageSize, totalTests);
 
         // Get courses for filter dropdown
-        CourseDAO courseDAO = new CourseDAO();
         List<Map<String, Object>> courses = new ArrayList<>();
         try {
             if (AuthUtil.hasRole(request, RoleConstants.ADMIN)) {
-                courses = courseDAO.getAllCoursesWithDetails();
+                courses = testDAO.getAllCoursesForAdmin();
             } else if (AuthUtil.hasRole(request, RoleConstants.TEACHER)) {
+                CourseDAO courseDAO = new CourseDAO();
                 courses = courseDAO.getCoursesByTeacher(account.getId());
             }
         } catch (Exception e) {

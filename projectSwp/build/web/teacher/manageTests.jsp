@@ -9,6 +9,10 @@
         <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
         <link rel="stylesheet" href="/assets/css/style.css">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap4-theme@1.0.0/dist/select2-bootstrap4.min.css" rel="stylesheet" />
+
         <style>
             body {
                 background: #f9f9f9;
@@ -80,6 +84,30 @@
                 background-color: #ffc107;
                 color: #212529;
             }
+
+            /* Select2 custom styles */
+            .select2-container--bootstrap4 .select2-selection--single {
+                height: calc(1.5em + 0.75rem + 2px) !important;
+                padding: 0.375rem 0.75rem !important;
+                font-size: 1rem !important;
+                line-height: 1.5 !important;
+                border: 1px solid #ced4da !important;
+                border-radius: 0.25rem !important;
+            }
+
+            .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+
+            .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow {
+                height: calc(1.5em + 0.75rem) !important;
+            }
+
+            /* Disable nice-select */
+            .nice-select {
+                display: none !important;
+            }
         </style>
     </head>
     <body>
@@ -109,7 +137,7 @@
 
             <!-- Filters -->
             <div class="filters">
-                <form method="get" action="${pageContext.request.contextPath}/test">
+                <form method="get" action="${pageContext.request.contextPath}/test" id="filterForm">
                     <div class="row">
                         <div class="col-md-3">
                             <label for="search">Tìm kiếm:</label>
@@ -118,7 +146,7 @@
                         </div>
                         <div class="col-md-3">
                             <label for="testType">Loại test:</label>
-                            <select class="form-control" id="testType" name="testType">
+                            <select class="form-control select2-dropdown" id="testType" name="testType" data-theme="bootstrap4">
                                 <option value="all" ${selectedTestType == 'all' ? 'selected' : ''}>Tất cả</option>
                                 <option value="practice" ${selectedTestType == 'practice' ? 'selected' : ''}>Practice</option>
                                 <option value="official" ${selectedTestType == 'official' ? 'selected' : ''}>Official</option>
@@ -126,7 +154,7 @@
                         </div>
                         <div class="col-md-3">
                             <label for="courseId">Khóa học:</label>
-                            <select class="form-control" id="courseId" name="courseId">
+                            <select class="form-control select2-dropdown" id="courseId" name="courseId" data-theme="bootstrap4">
                                 <option value="">Tất cả khóa học</option>
                                 <c:forEach var="course" items="${courses}">
                                     <option value="${course.course_id}" ${selectedCourseId == course.course_id ? 'selected' : ''}>
@@ -292,7 +320,70 @@
 
         <jsp:include page="../footer.jsp" />
 
-        <script src="/assets/js/jquery-1.12.4.min.js"></script>
+        <!-- Scripts -->
+        <script src="/assets/js/disable-nice-select.js"></script>
+        <script src="/assets/js/vendor/jquery-1.12.4.min.js"></script>
         <script src="/assets/js/bootstrap.min.js"></script>
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+        <script>
+                                                   $(document).ready(function () {
+                                                       // Force remove any nice-select elements that might have been created
+                                                       $('.nice-select').remove();
+                                                       $('select').removeClass('nice-select-processed');
+
+                                                       // Prevent nice-select from being applied
+                                                       if (typeof $.fn.niceSelect !== 'undefined') {
+                                                           $.fn.niceSelect = function () {
+                                                               return this;
+                                                           };
+                                                       }
+
+                                                       // Initialize Select2 with delay to ensure nice-select is completely disabled
+                                                       setTimeout(function () {
+                                                           $('.select2-dropdown').each(function () {
+                                                               var $this = $(this);
+                                                               var theme = $this.data('theme') || 'bootstrap4';
+
+                                                               // Remove any nice-select wrapper
+                                                               if ($this.next('.nice-select').length) {
+                                                                   $this.next('.nice-select').remove();
+                                                               }
+
+                                                               // Show the original select
+                                                               $this.show();
+
+                                                               // Initialize Select2
+                                                               $this.select2({
+                                                                   theme: theme,
+                                                                   width: '100%',
+                                                                   allowClear: false,
+                                                                   placeholder: function () {
+                                                                       return $(this).data('placeholder') || 'Chọn...';
+                                                                   }
+                                                               });
+                                                           });
+                                                       }, 100);
+
+                                                       // Continuous monitoring to remove nice-select
+                                                       setInterval(function () {
+                                                           $('.nice-select').each(function () {
+                                                               $(this).remove();
+                                                           });
+                                                       }, 500);
+
+                                                       // Handle form submission
+                                                       $('#filterForm').on('submit', function () {
+                                                           $('.select2-dropdown').each(function () {
+                                                               var $select = $(this);
+                                                               var value = $select.val();
+                                                               if (value) {
+                                                                   $select.attr('value', value);
+                                                               }
+                                                           });
+                                                       });
+                                                   });
+        </script>
     </body>
 </html>
