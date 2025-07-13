@@ -54,7 +54,7 @@ CREATE TABLE `chapter` (
   PRIMARY KEY (`id`),
   KEY `chapter_subject_id_fk` (`subject_id`),
   CONSTRAINT `chapter_subject_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subject` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -78,7 +78,7 @@ CREATE TABLE `course_chapter` (
   KEY `idx_course_active` (`course_id`,`is_active`),
   CONSTRAINT `course_chapter_chapter_id_fk` FOREIGN KEY (`chapter_id`) REFERENCES `chapter` (`id`),
   CONSTRAINT `course_chapter_course_id_fk` FOREIGN KEY (`course_id`) REFERENCES `study_package` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -132,7 +132,7 @@ CREATE TABLE `course_lesson` (
   CONSTRAINT `course_lesson_chapter_id_fk` FOREIGN KEY (`chapter_id`) REFERENCES `chapter` (`id`),
   CONSTRAINT `course_lesson_course_id_fk` FOREIGN KEY (`course_id`) REFERENCES `study_package` (`id`),
   CONSTRAINT `course_lesson_lesson_id_fk` FOREIGN KEY (`lesson_id`) REFERENCES `lesson` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -198,7 +198,7 @@ CREATE TABLE `course_test` (
   CONSTRAINT `course_test_chapter_id_fk` FOREIGN KEY (`chapter_id`) REFERENCES `chapter` (`id`),
   CONSTRAINT `course_test_course_id_fk` FOREIGN KEY (`course_id`) REFERENCES `study_package` (`id`),
   CONSTRAINT `course_test_test_id_fk` FOREIGN KEY (`test_id`) REFERENCES `test` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -230,7 +230,7 @@ CREATE TABLE `image` (
   `id` int NOT NULL AUTO_INCREMENT,
   `image_data` longtext,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -250,7 +250,7 @@ CREATE TABLE `invoice` (
   PRIMARY KEY (`id`),
   KEY `invoice_account_id_fk` (`parent_id`),
   CONSTRAINT `invoice_account_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `account` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -289,7 +289,7 @@ CREATE TABLE `lesson` (
   PRIMARY KEY (`id`),
   KEY `lesson_chapter_id_fk` (`chapter_id`),
   CONSTRAINT `lesson_chapter_id_fk` FOREIGN KEY (`chapter_id`) REFERENCES `chapter` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -331,49 +331,6 @@ SET @saved_cs_client     = @@character_set_client;
  1 AS `total_parents`,
  1 AS `total_active_assignments`,
  1 AS `total_assignments`*/;
-SET character_set_client = @saved_cs_client;
-
---
--- Table structure for table `package_purchase`
---
-
-DROP TABLE IF EXISTS `package_purchase`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `package_purchase` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `parent_id` int NOT NULL,
-  `package_id` int NOT NULL,
-  `purchase_date` datetime DEFAULT CURRENT_TIMESTAMP,
-  `total_amount` varchar(50) NOT NULL,
-  `invoice_id` int DEFAULT NULL,
-  `status` enum('PENDING','COMPLETED','CANCELLED') DEFAULT 'PENDING',
-  `max_assignable_students` int NOT NULL COMMENT 'How many students this purchase allows',
-  PRIMARY KEY (`id`),
-  KEY `package_purchase_parent_id_fk` (`parent_id`),
-  KEY `package_purchase_package_id_fk` (`package_id`),
-  KEY `package_purchase_invoice_id_fk` (`invoice_id`),
-  CONSTRAINT `package_purchase_invoice_id_fk` FOREIGN KEY (`invoice_id`) REFERENCES `invoice` (`id`),
-  CONSTRAINT `package_purchase_package_id_fk` FOREIGN KEY (`package_id`) REFERENCES `study_package` (`id`),
-  CONSTRAINT `package_purchase_parent_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `account` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Temporary view structure for view `parent_package_available_slots`
---
-
-DROP TABLE IF EXISTS `parent_package_available_slots`;
-/*!50001 DROP VIEW IF EXISTS `parent_package_available_slots`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `parent_package_available_slots` AS SELECT 
- 1 AS `parent_id`,
- 1 AS `package_id`,
- 1 AS `package_name`,
- 1 AS `total_purchased_slots`,
- 1 AS `currently_assigned`,
- 1 AS `available_slots`*/;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -446,16 +403,13 @@ DROP TABLE IF EXISTS `parent_purchase_history`;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
 /*!50001 CREATE VIEW `parent_purchase_history` AS SELECT 
- 1 AS `purchase_id`,
  1 AS `parent_id`,
  1 AS `package_id`,
+ 1 AS `package_name`,
  1 AS `purchase_date`,
  1 AS `total_amount`,
- 1 AS `max_assignable_students`,
- 1 AS `status`,
- 1 AS `package_name`,
- 1 AS `parent_name`,
- 1 AS `students_assigned`*/;
+ 1 AS `student_name`,
+ 1 AS `status`*/;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -580,6 +534,63 @@ CREATE TABLE `student` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `student_course_progress`
+--
+
+DROP TABLE IF EXISTS `student_course_progress`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `student_course_progress` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `student_id` int NOT NULL,
+  `course_id` int NOT NULL,
+  `total_lessons` int DEFAULT '0',
+  `completed_lessons` int DEFAULT '0',
+  `completion_percentage` decimal(5,2) DEFAULT '0.00',
+  `started_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `last_accessed_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `estimated_completion_date` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_student_course` (`student_id`,`course_id`),
+  KEY `student_course_progress_student_id_fk` (`student_id`),
+  KEY `student_course_progress_course_id_fk` (`course_id`),
+  CONSTRAINT `student_course_progress_course_id_fk` FOREIGN KEY (`course_id`) REFERENCES `study_package` (`id`),
+  CONSTRAINT `student_course_progress_student_id_fk` FOREIGN KEY (`student_id`) REFERENCES `student` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `student_lesson_progress`
+--
+
+DROP TABLE IF EXISTS `student_lesson_progress`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `student_lesson_progress` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `student_id` int NOT NULL,
+  `lesson_id` int NOT NULL,
+  `course_id` int NOT NULL,
+  `watch_duration` int DEFAULT '0' COMMENT 'Thời gian đã xem (giây)',
+  `total_duration` int DEFAULT '0' COMMENT 'Tổng thời gian video (giây)',
+  `completion_percentage` decimal(5,2) DEFAULT '0.00',
+  `is_completed` bit(1) DEFAULT b'0',
+  `last_position` int DEFAULT '0' COMMENT 'Vị trí cuối cùng đã xem (giây)',
+  `first_watched_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `last_watched_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `completed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_student_lesson_course` (`student_id`,`lesson_id`,`course_id`),
+  KEY `student_lesson_progress_student_id_fk` (`student_id`),
+  KEY `student_lesson_progress_lesson_id_fk` (`lesson_id`),
+  KEY `student_lesson_progress_course_id_fk` (`course_id`),
+  CONSTRAINT `student_lesson_progress_course_id_fk` FOREIGN KEY (`course_id`) REFERENCES `study_package` (`id`),
+  CONSTRAINT `student_lesson_progress_lesson_id_fk` FOREIGN KEY (`lesson_id`) REFERENCES `lesson` (`id`),
+  CONSTRAINT `student_lesson_progress_student_id_fk` FOREIGN KEY (`student_id`) REFERENCES `student` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `student_package`
 --
 
@@ -597,7 +608,6 @@ CREATE TABLE `student_package` (
   `assigned_by` int DEFAULT NULL COMMENT 'Who assigned this package',
   `assignment_date` datetime DEFAULT CURRENT_TIMESTAMP,
   `package_slots_purchased` int DEFAULT '1' COMMENT 'Number of slots this parent purchased for this package',
-  `purchase_id` int DEFAULT NULL COMMENT 'Link to the purchase that enabled this assignment',
   `enrollment_date` datetime DEFAULT CURRENT_TIMESTAMP,
   `completion_status` enum('NOT_STARTED','IN_PROGRESS','COMPLETED') DEFAULT 'NOT_STARTED',
   PRIMARY KEY (`id`),
@@ -609,13 +619,11 @@ CREATE TABLE `student_package` (
   KEY `student_package_assigned_by_fk` (`assigned_by`),
   KEY `idx_parent_package_active` (`parent_id`,`package_id`,`is_active`,`expires_at`),
   KEY `idx_student_active_package` (`student_id`,`package_id`,`is_active`,`expires_at`),
-  KEY `student_package_purchase_id_fk` (`purchase_id`),
   CONSTRAINT `student_package_assigned_by_fk` FOREIGN KEY (`assigned_by`) REFERENCES `account` (`id`),
   CONSTRAINT `student_package_package_id_fk` FOREIGN KEY (`package_id`) REFERENCES `study_package` (`id`),
   CONSTRAINT `student_package_parent_id_fk` FOREIGN KEY (`parent_id`) REFERENCES `account` (`id`),
-  CONSTRAINT `student_package_purchase_id_fk` FOREIGN KEY (`purchase_id`) REFERENCES `package_purchase` (`id`),
   CONSTRAINT `student_package_student_id_fk` FOREIGN KEY (`student_id`) REFERENCES `student` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -637,6 +645,29 @@ SET @saved_cs_client     = @@character_set_client;
  1 AS `package_type`,
  1 AS `package_grade_id`,
  1 AS `has_access`*/;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `student_progress_summary`
+--
+
+DROP TABLE IF EXISTS `student_progress_summary`;
+/*!50001 DROP VIEW IF EXISTS `student_progress_summary`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `student_progress_summary` AS SELECT 
+ 1 AS `student_id`,
+ 1 AS `course_id`,
+ 1 AS `course_title`,
+ 1 AS `teacher_id`,
+ 1 AS `teacher_name`,
+ 1 AS `total_lessons`,
+ 1 AS `completed_lessons`,
+ 1 AS `course_completion`,
+ 1 AS `started_at`,
+ 1 AS `last_accessed_at`,
+ 1 AS `lessons_in_progress`,
+ 1 AS `avg_lesson_completion`*/;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -678,7 +709,7 @@ CREATE TABLE `study_package` (
   CONSTRAINT `study_package_created_by_fk` FOREIGN KEY (`created_by`) REFERENCES `account` (`id`),
   CONSTRAINT `study_package_image_thumbnail_fk` FOREIGN KEY (`image_thumbnail_id`) REFERENCES `image` (`id`),
   CONSTRAINT `study_package_subject_id_fk` FOREIGN KEY (`subject_id`) REFERENCES `subject` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -800,7 +831,7 @@ CREATE TABLE `test_record` (
   KEY `test_record_test_id_fk` (`test_id`),
   CONSTRAINT `test_record_student_id_fk` FOREIGN KEY (`student_id`) REFERENCES `student` (`id`),
   CONSTRAINT `test_record_test_id_fk` FOREIGN KEY (`test_id`) REFERENCES `test` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -840,24 +871,6 @@ CREATE TABLE `test_record` (
 /*!50001 SET collation_connection      = @saved_col_connection */;
 
 --
--- Final view structure for view `parent_package_available_slots`
---
-
-/*!50001 DROP VIEW IF EXISTS `parent_package_available_slots`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8mb4 */;
-/*!50001 SET character_set_results     = utf8mb4 */;
-/*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `parent_package_available_slots` AS select `pp`.`parent_id` AS `parent_id`,`pp`.`package_id` AS `package_id`,`pkg`.`name` AS `package_name`,sum(`pp`.`max_assignable_students`) AS `total_purchased_slots`,count((case when ((`sp`.`is_active` = 1) and (`sp`.`expires_at` > now())) then 1 end)) AS `currently_assigned`,(sum(`pp`.`max_assignable_students`) - count((case when ((`sp`.`is_active` = 1) and (`sp`.`expires_at` > now())) then 1 end))) AS `available_slots` from ((`package_purchase` `pp` join `study_package` `pkg` on((`pp`.`package_id` = `pkg`.`id`))) left join `student_package` `sp` on((`pp`.`id` = `sp`.`purchase_id`))) where (`pp`.`status` = 'COMPLETED') group by `pp`.`parent_id`,`pp`.`package_id`,`pkg`.`name` */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
-
---
 -- Final view structure for view `parent_package_management`
 --
 
@@ -888,7 +901,7 @@ CREATE TABLE `test_record` (
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `parent_package_slots` AS select `sp`.`parent_id` AS `parent_id`,`sp`.`package_id` AS `package_id`,`pkg`.`name` AS `package_name`,`pkg`.`max_students` AS `max_students_per_parent`,count((case when ((`sp`.`is_active` = 1) and (`sp`.`expires_at` > now())) then 1 end)) AS `active_assignments`,(`pkg`.`max_students` - count((case when ((`sp`.`is_active` = 1) and (`sp`.`expires_at` > now())) then 1 end))) AS `available_slots` from (`study_package` `pkg` left join `student_package` `sp` on((`pkg`.`id` = `sp`.`package_id`))) where (`pkg`.`is_active` = 1) group by `sp`.`parent_id`,`sp`.`package_id`,`pkg`.`name`,`pkg`.`max_students` */;
+/*!50001 VIEW `parent_package_slots` AS select `sp`.`parent_id` AS `parent_id`,`sp`.`package_id` AS `package_id`,`pkg`.`name` AS `package_name`,`pkg`.`max_students` AS `max_students_per_parent`,count((case when ((`sp`.`is_active` = 1) and (`sp`.`expires_at` > now())) then 1 end)) AS `active_assignments`,greatest(0,(`pkg`.`max_students` - count((case when ((`sp`.`is_active` = 1) and (`sp`.`expires_at` > now())) then 1 end)))) AS `available_slots` from (`study_package` `pkg` left join `student_package` `sp` on((`pkg`.`id` = `sp`.`package_id`))) where (`pkg`.`is_active` = 1) group by `sp`.`parent_id`,`sp`.`package_id`,`pkg`.`name`,`pkg`.`max_students` */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -924,7 +937,7 @@ CREATE TABLE `test_record` (
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `parent_purchase_history` AS select `pp`.`id` AS `purchase_id`,`pp`.`parent_id` AS `parent_id`,`pp`.`package_id` AS `package_id`,`pp`.`purchase_date` AS `purchase_date`,`pp`.`total_amount` AS `total_amount`,`pp`.`max_assignable_students` AS `max_assignable_students`,`pp`.`status` AS `status`,`pkg`.`name` AS `package_name`,`a`.`full_name` AS `parent_name`,count((case when ((`sp`.`is_active` = 1) and (`sp`.`expires_at` > now())) then 1 end)) AS `students_assigned` from (((`package_purchase` `pp` join `study_package` `pkg` on((`pp`.`package_id` = `pkg`.`id`))) join `account` `a` on((`pp`.`parent_id` = `a`.`id`))) left join `student_package` `sp` on((`pp`.`id` = `sp`.`purchase_id`))) group by `pp`.`id`,`pp`.`parent_id`,`pp`.`package_id`,`pp`.`purchase_date`,`pp`.`total_amount`,`pp`.`max_assignable_students`,`pp`.`status`,`pkg`.`name`,`a`.`full_name` */;
+/*!50001 VIEW `parent_purchase_history` AS select `sp`.`parent_id` AS `parent_id`,`sp`.`package_id` AS `package_id`,`pkg`.`name` AS `package_name`,`sp`.`purchased_at` AS `purchase_date`,`pkg`.`price` AS `total_amount`,`s`.`full_name` AS `student_name`,(case when ((`sp`.`expires_at` > now()) and (`sp`.`is_active` = 1)) then 'ACTIVE' when (`sp`.`expires_at` <= now()) then 'EXPIRED' else 'INACTIVE' end) AS `status` from ((`student_package` `sp` join `study_package` `pkg` on((`sp`.`package_id` = `pkg`.`id`))) join `student` `s` on((`sp`.`student_id` = `s`.`id`))) order by `sp`.`purchased_at` desc */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -961,6 +974,24 @@ CREATE TABLE `test_record` (
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
 /*!50001 VIEW `student_package_access` AS select `sp`.`student_id` AS `student_id`,`sp`.`package_id` AS `package_id`,`sp`.`parent_id` AS `parent_id`,`sp`.`purchased_at` AS `purchased_at`,`sp`.`expires_at` AS `expires_at`,`sp`.`is_active` AS `is_active`,`pkg`.`name` AS `package_name`,`pkg`.`type` AS `package_type`,`pkg`.`grade_id` AS `package_grade_id`,(case when ((`sp`.`expires_at` > now()) and (`sp`.`is_active` = 1)) then 1 else 0 end) AS `has_access` from (`student_package` `sp` join `study_package` `pkg` on((`sp`.`package_id` = `pkg`.`id`))) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `student_progress_summary`
+--
+
+/*!50001 DROP VIEW IF EXISTS `student_progress_summary`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `student_progress_summary` AS select `scp`.`student_id` AS `student_id`,`scp`.`course_id` AS `course_id`,`sp`.`course_title` AS `course_title`,`sp`.`created_by` AS `teacher_id`,`teacher`.`full_name` AS `teacher_name`,`scp`.`total_lessons` AS `total_lessons`,`scp`.`completed_lessons` AS `completed_lessons`,`scp`.`completion_percentage` AS `course_completion`,`scp`.`started_at` AS `started_at`,`scp`.`last_accessed_at` AS `last_accessed_at`,count(`slp`.`id`) AS `lessons_in_progress`,avg(`slp`.`completion_percentage`) AS `avg_lesson_completion` from (((`student_course_progress` `scp` join `study_package` `sp` on((`scp`.`course_id` = `sp`.`id`))) left join `account` `teacher` on((`sp`.`created_by` = `teacher`.`id`))) left join `student_lesson_progress` `slp` on(((`scp`.`student_id` = `slp`.`student_id`) and (`scp`.`course_id` = `slp`.`course_id`)))) group by `scp`.`student_id`,`scp`.`course_id`,`sp`.`course_title`,`sp`.`created_by`,`teacher`.`full_name`,`scp`.`total_lessons`,`scp`.`completed_lessons`,`scp`.`completion_percentage`,`scp`.`started_at`,`scp`.`last_accessed_at` */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
