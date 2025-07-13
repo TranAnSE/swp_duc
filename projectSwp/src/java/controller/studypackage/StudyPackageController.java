@@ -232,6 +232,7 @@ public class StudyPackageController extends HttpServlet {
                     Map<String, Integer> slotInfo = studentPackageDAO.getParentTotalAvailableSlots(account.getId(), id);
                     int currentlyAssigned = slotInfo.getOrDefault("currentlyAssigned", 0);
                     int availableSlots = slotInfo.getOrDefault("availableSlots", 1);
+                    int totalSlotsCanAssign = slotInfo.getOrDefault("totalSlotsCanAssign", 1);
 
                     request.setAttribute("packageId", id);
                     request.setAttribute("packageName", sp.getName());
@@ -241,6 +242,7 @@ public class StudyPackageController extends HttpServlet {
 
                     request.setAttribute("currentlyAssigned", currentlyAssigned);
                     request.setAttribute("availableSlots", availableSlots);
+                    request.setAttribute("totalSlotsCanAssign", totalSlotsCanAssign);
                     request.setAttribute("maxStudentsPerPurchase", sp.getMax_students());
 
                     // Get children
@@ -272,11 +274,11 @@ public class StudyPackageController extends HttpServlet {
 
                         if (currentlyAssigned > 0) {
                             request.setAttribute("purchaseInfoMessage",
-                                    "You have assigned this package to " + currentlyAssigned + " student(s). "
+                                    "You have assigned this package to " + currentlyAssigned + "/" + totalSlotsCanAssign + " student(s). "
                                     + "Available slots: " + availableSlots);
                         } else {
                             request.setAttribute("purchaseInfoMessage",
-                                    "You can assign this package to up to " + sp.getMax_students() + " student(s).");
+                                    "You can assign this package to up to " + totalSlotsCanAssign + " student(s).");
                         }
 
                     } catch (Exception e) {
@@ -955,46 +957,6 @@ public class StudyPackageController extends HttpServlet {
             }
         } else {
             response.sendRedirect("/error.jsp");
-        }
-    }
-
-    private void assignStudentsWithPurchaseTracking(String[] studentIds, int packageId, int parentId, int durationDays,
-            HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-
-        int successCount = 0;
-        List<String> failedStudents = new ArrayList<>();
-
-        for (String studentIdStr : studentIds) {
-            try {
-                int studentId = Integer.parseInt(studentIdStr);
-                boolean assigned = studentPackageDAO.assignPackageToStudentWithPurchase(
-                        studentId, packageId, parentId, durationDays
-                );
-
-                if (assigned) {
-                    successCount++;
-                } else {
-                    try {
-                        Student student = studentDAO.findById(studentId);
-                        failedStudents.add(student != null ? student.getFull_name() : "ID:" + studentId);
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                        failedStudents.add("ID:" + studentId + " (Error retrieving student info)");
-                    }
-                }
-            } catch (NumberFormatException e) {
-                failedStudents.add("Invalid ID: " + studentIdStr);
-            }
-        }
-
-        if (successCount > 0) {
-            request.setAttribute("message",
-                    "Study package successfully assigned to " + successCount + " student(s)!");
-            showMyPackages(request, response);
-        } else {
-            request.setAttribute("errorMessage",
-                    "Assignment failed for all students: " + String.join(", ", failedStudents));
-            checkoutStudyPackage(request, response);
         }
     }
 

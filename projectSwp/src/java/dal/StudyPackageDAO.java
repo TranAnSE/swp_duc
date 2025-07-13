@@ -633,8 +633,7 @@ public class StudyPackageDAO extends DBContext {
                 packageInfo.put("subjectName", rs.getString("subject_name"));
                 packageInfo.put("gradeName", rs.getString("grade_name"));
 
-                // Statistics
-                packageInfo.put("totalPurchasedSlots", currentlyAssigned);
+                packageInfo.put("totalSlotsCanAssign", maxStudents);
                 packageInfo.put("currentlyAssigned", currentlyAssigned);
                 packageInfo.put("availableSlots", availableSlots);
                 packageInfo.put("totalAssignments", rs.getInt("total_assignments"));

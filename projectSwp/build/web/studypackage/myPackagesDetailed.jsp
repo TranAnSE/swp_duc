@@ -530,16 +530,24 @@
                             <!-- Package Statistics -->
                             <div class="package-stats">
                                 <div class="stat-item">
-                                    <div class="stat-number">${packageInfo.totalPurchasedSlots}</div>
-                                    <div class="stat-label">Total Purchased Slots</div>
+                                    <div class="stat-number">${packageInfo.totalSlotsCanAssign}</div>
+                                    <div class="stat-label">Total Slots Can Assign</div>
+                                    <small class="text-muted">Maximum students allowed for this package</small>
                                 </div>
                                 <div class="stat-item">
                                     <div class="stat-number">${packageInfo.currentlyAssigned}</div>
                                     <div class="stat-label">Currently Assigned</div>
+                                    <small class="text-muted">Active assignments</small>
                                 </div>
                                 <div class="stat-item">
                                     <div class="stat-number">${packageInfo.availableSlots}</div>
                                     <div class="stat-label">Available Slots</div>
+                                    <small class="text-muted">Remaining slots you can assign</small>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-number">${packageInfo.totalAssignments}</div>
+                                    <div class="stat-label">Total Assignments</div>
+                                    <small class="text-muted">All assignments (including expired)</small>
                                 </div>
                             </div>
 

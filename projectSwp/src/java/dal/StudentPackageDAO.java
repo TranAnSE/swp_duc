@@ -736,14 +736,14 @@ public class StudentPackageDAO extends DBContext {
         Map<String, Integer> result = new HashMap<>();
 
         String sql = """
-            SELECT 
-                pkg.max_students as max_per_parent,
-                COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as currently_assigned
-            FROM study_package pkg
-            LEFT JOIN student_package sp ON pkg.id = sp.package_id AND sp.parent_id = ?
-            WHERE pkg.id = ?
-            GROUP BY pkg.max_students
-        """;
+        SELECT 
+            pkg.max_students as total_slots_can_assign,
+            COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as currently_assigned
+        FROM study_package pkg
+        LEFT JOIN student_package sp ON pkg.id = sp.package_id AND sp.parent_id = ?
+        WHERE pkg.id = ?
+        GROUP BY pkg.max_students
+    """;
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, parentId);
@@ -751,21 +751,21 @@ public class StudentPackageDAO extends DBContext {
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
-                int maxPerParent = rs.getInt("max_per_parent");
+                int totalSlotsCanAssign = rs.getInt("total_slots_can_assign");
                 int currentlyAssigned = rs.getInt("currently_assigned");
-                int availableSlots = Math.max(0, maxPerParent - currentlyAssigned);
+                int availableSlots = Math.max(0, totalSlotsCanAssign - currentlyAssigned);
 
-                result.put("totalPurchasedSlots", currentlyAssigned); // Đổi tên để phù hợp
+                result.put("totalSlotsCanAssign", totalSlotsCanAssign);
                 result.put("currentlyAssigned", currentlyAssigned);
                 result.put("availableSlots", availableSlots);
             } else {
-                result.put("totalPurchasedSlots", 0);
+                result.put("totalSlotsCanAssign", 1);
                 result.put("currentlyAssigned", 0);
-                result.put("availableSlots", 1); // Max students luôn là 1
+                result.put("availableSlots", 1);
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            result.put("totalPurchasedSlots", 0);
+            result.put("totalSlotsCanAssign", 0);
             result.put("currentlyAssigned", 0);
             result.put("availableSlots", 0);
         }
