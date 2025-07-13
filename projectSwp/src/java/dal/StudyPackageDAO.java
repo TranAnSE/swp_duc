@@ -793,4 +793,59 @@ public class StudyPackageDAO extends DBContext {
 
         return children;
     }
+
+    public Map<String, Object> getPackageInfoForPayment(int packageId) throws SQLException {
+        Map<String, Object> packageInfo = new HashMap<>();
+        String sql = """
+        SELECT sp.id, sp.course_title, sp.name, sp.price, sp.duration_days, sp.description,
+               s.name as subject_name, g.name as grade_name
+        FROM study_package sp
+        LEFT JOIN subject s ON sp.subject_id = s.id
+        LEFT JOIN grade g ON s.grade_id = g.id
+        WHERE sp.id = ? AND sp.is_active = 1 AND sp.approval_status = 'APPROVED'
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                packageInfo.put("id", rs.getInt("id"));
+
+                String courseTitle = rs.getString("course_title");
+                String name = rs.getString("name");
+                packageInfo.put("name", (courseTitle != null && !courseTitle.trim().isEmpty()) ? courseTitle : name);
+
+                packageInfo.put("price", rs.getString("price"));
+                packageInfo.put("duration_days", rs.getInt("duration_days"));
+                packageInfo.put("description", rs.getString("description"));
+                packageInfo.put("subject_name", rs.getString("subject_name"));
+                packageInfo.put("grade_name", rs.getString("grade_name"));
+            }
+        }
+
+        return packageInfo;
+    }
+
+    /**
+     * Check if student can be assigned to package (not already assigned)
+     */
+    public boolean canAssignStudentToPackage(int studentId, int packageId) throws SQLException {
+        String sql = """
+        SELECT COUNT(*) FROM student_package 
+        WHERE student_id = ? AND package_id = ? 
+        AND is_active = 1 AND expires_at > NOW()
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1) == 0; // Can assign if count is 0
+            }
+        }
+        return false;
+    }
 }

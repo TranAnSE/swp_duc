@@ -45,40 +45,75 @@ public class PaymentResultController extends HttpServlet {
                 // Get invoice details
                 int invoiceId = Integer.parseInt(vnp_TxnRef);
 
-                // Get selected student IDs from session
-                String[] studentIds = (String[]) session.getAttribute("selectedStudentIds");
+                // Check for pending purchase in session
+                Integer packageId = (Integer) session.getAttribute("pendingPurchase_packageId");
+                Integer studentId = (Integer) session.getAttribute("pendingPurchase_studentId");
+                Integer parentId = (Integer) session.getAttribute("pendingPurchase_parentId");
+                Integer durationDays = (Integer) session.getAttribute("pendingPurchase_durationDays");
 
-                if (studentIds != null && studentIds.length > 0 && account != null) {
-                    // Get package ID from invoice
-                    int packageId = getPackageIdFromInvoice(invoiceId);
+                if (packageId != null && studentId != null && parentId != null && durationDays != null && account != null) {
+                    StudyPackageDAO studyPackageDAO = new StudyPackageDAO();
                     StudyPackage studyPackage = studyPackageDAO.findStudyPackageById(packageId);
 
                     if (studyPackage != null) {
-                        // Assign package to each selected student
-                        for (String studentIdStr : studentIds) {
-                            int studentId = Integer.parseInt(studentIdStr);
-                            boolean assigned = studentPackageDAO.assignPackageToStudent(
-                                    studentId,
-                                    packageId,
-                                    account.getId(),
-                                    studyPackage.getDuration_days()
-                            );
+                        // Assign package to the selected student
+                        boolean assigned = studentPackageDAO.assignPackageToStudent(
+                                studentId,
+                                packageId,
+                                parentId,
+                                durationDays
+                        );
 
-                            if (!assigned) {
-                                // Log error but continue with other students
-                                System.err.println("Failed to assign package " + packageId + " to student " + studentId);
-                            }
+                        if (assigned) {
+                            // Update invoice with student assignment
+                            invoiceDAO.updateInvoiceLineWithStudent(invoiceId, studentId);
+
+                            // Clear pending purchase from session
+                            session.removeAttribute("pendingPurchase_packageId");
+                            session.removeAttribute("pendingPurchase_studentId");
+                            session.removeAttribute("pendingPurchase_parentId");
+                            session.removeAttribute("pendingPurchase_durationDays");
+
+                            request.setAttribute("message", "Payment successful! Study package has been assigned to the selected student.");
+                            request.setAttribute("packageName", studyPackage.getName());
+                            request.setAttribute("studentCount", 1);
+                        } else {
+                            request.setAttribute("errorMessage", "Payment was successful but there was an error assigning the package. Please contact support.");
                         }
+                    } else {
+                        request.setAttribute("errorMessage", "Payment was successful but package not found. Please contact support.");
+                    }
+                } else {
+                    // Fallback to old logic for backward compatibility
+                    String[] studentIds = (String[]) session.getAttribute("selectedStudentIds");
+                    if (studentIds != null && studentIds.length > 0 && account != null) {
+                        // Existing logic for multiple students...
+                        int packageIdFromInvoice = getPackageIdFromInvoice(invoiceId);
+                        StudyPackageDAO studyPackageDAO = new StudyPackageDAO();
+                        StudyPackage studyPackage = studyPackageDAO.findStudyPackageById(packageIdFromInvoice);
 
-                        // Update invoice with student assignments
-                        updateInvoiceWithStudents(invoiceId, studentIds);
+                        if (studyPackage != null) {
+                            for (String studentIdStr : studentIds) {
+                                int studentIdInt = Integer.parseInt(studentIdStr);
+                                boolean assigned = studentPackageDAO.assignPackageToStudent(
+                                        studentIdInt,
+                                        packageIdFromInvoice,
+                                        account.getId(),
+                                        studyPackage.getDuration_days()
+                                );
 
-                        // Clear session data
-                        session.removeAttribute("selectedStudentIds");
+                                if (!assigned) {
+                                    System.err.println("Failed to assign package " + packageIdFromInvoice + " to student " + studentIdInt);
+                                }
+                            }
 
-                        request.setAttribute("message", "Payment successful! Study package has been assigned to selected students.");
-                        request.setAttribute("packageName", studyPackage.getName());
-                        request.setAttribute("studentCount", studentIds.length);
+                            updateInvoiceWithStudents(invoiceId, studentIds);
+                            session.removeAttribute("selectedStudentIds");
+
+                            request.setAttribute("message", "Payment successful! Study package has been assigned to selected students.");
+                            request.setAttribute("packageName", studyPackage.getName());
+                            request.setAttribute("studentCount", studentIds.length);
+                        }
                     }
                 }
 
@@ -88,7 +123,12 @@ public class PaymentResultController extends HttpServlet {
             }
 
         } else {
-            // Payment failed
+            // Payment failed - clear pending purchase
+            session.removeAttribute("pendingPurchase_packageId");
+            session.removeAttribute("pendingPurchase_studentId");
+            session.removeAttribute("pendingPurchase_parentId");
+            session.removeAttribute("pendingPurchase_durationDays");
+
             request.setAttribute("errorMessage", "Payment failed. Please try again.");
         }
 

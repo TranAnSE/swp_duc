@@ -7,6 +7,7 @@ package controller.payment;
 import com.vnpay.common.Config;
 import dal.InvoiceDAO;
 import dal.StudentPackageDAO;
+import dal.StudyPackageDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import model.Invoice;
+import model.StudyPackage;
 
 /**
  *
@@ -36,6 +38,13 @@ import model.Invoice;
 public class PaymentController extends HttpServlet {
 
     private StudentPackageDAO studentPackageDAO = new StudentPackageDAO();
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+        // Forward GET requests to POST handler
+        doPost(req, resp);
+    }
 
     /**
      * Handles the HTTP <code>POST</code> method.
@@ -48,9 +57,29 @@ public class PaymentController extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-        // Lấy thông tin từ request
+        // Lấy thông tin từ request parameters hoặc session
         String packageIdStr = req.getParameter("packageId");
         String amountStr = req.getParameter("amount");
+
+        // Nếu không có trong parameter, lấy từ session (từ StudyPackageController)
+        if (packageIdStr == null) {
+            HttpSession session = req.getSession();
+            Integer sessionPackageId = (Integer) session.getAttribute("pendingPurchase_packageId");
+            if (sessionPackageId != null) {
+                packageIdStr = sessionPackageId.toString();
+
+                // Get package info for amount
+                StudyPackageDAO studyPackageDAO = new StudyPackageDAO();
+                try {
+                    StudyPackage studyPackage = studyPackageDAO.findStudyPackageById(sessionPackageId);
+                    if (studyPackage != null) {
+                        amountStr = studyPackage.getPrice();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
 
         if (packageIdStr == null || amountStr == null) {
             resp.sendRedirect("study_package");
@@ -65,7 +94,7 @@ public class PaymentController extends HttpServlet {
         Invoice invoice = new Invoice();
         invoice.setTotal_amount(amountStr);
 
-        // Lấy parent_id từ session thay vì sử dụng giá trị cố định
+        // Lấy parent_id từ session
         int parentId = 1; // Giá trị mặc định nếu không tìm thấy trong session
         HttpSession session = req.getSession();
         Object accountObj = session.getAttribute("account");
@@ -86,6 +115,9 @@ public class PaymentController extends HttpServlet {
             resp.sendRedirect("study_package");
             return;
         }
+
+        // Add invoice line
+        invoiceDAO.insertInvoiceLine(invoiceId, packageId);
 
         // Tạo các tham số VNPay
         String vnp_Version = "2.1.0";
@@ -130,12 +162,6 @@ public class PaymentController extends HttpServlet {
         // Lưu thông tin package vào session để xử lý sau khi thanh toán
         session.setAttribute("packageId", packageId);
         session.setAttribute("invoiceId", invoiceId);
-        // After successful payment, assign package to selected students
-        String[] studentIds = req.getParameterValues("studentIds");
-        if (studentIds != null && studentIds.length > 0) {
-            // Store student IDs in session for processing after payment confirmation
-            session.setAttribute("selectedStudentIds", studentIds);
-        }
 
         // Chuyển hướng đến cổng thanh toán
         resp.sendRedirect(paymentUrl);

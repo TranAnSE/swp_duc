@@ -434,9 +434,10 @@
                         </div>
 
                         <form id="purchaseForm" action="${pageContext.request.contextPath}/study_package" method="post">
-                            <input type="hidden" name="service" value="assignPackage">
+                            <input type="hidden" name="service" value="checkoutForPayment">
                             <input type="hidden" name="packageId" value="${packageId}">
 
+                            <!-- Phần còn lại giữ nguyên -->
                             <c:forEach items="${availableChildren}" var="child">
                                 <div class="child-card" data-child-id="${child.id}" onclick="selectChild(${child.id})">
                                     <div class="child-info">
@@ -544,7 +545,7 @@
 
                                             // Update button
                                             purchaseBtn.disabled = false;
-                                            purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Purchase Package for ' + selectedChildName + ' - ' + formattedPrice + ' VND';
+                                            purchaseBtn.innerHTML = '<i class="fas fa-credit-card"></i> Proceed to Payment - ' + formattedPrice + ' VND';
 
                                             // Show selection info
                                             selectedChildNameSpan.textContent = selectedChildName;
@@ -573,18 +574,26 @@
                                                 const price = '${studyPackage.price}';
                                                 const formattedPrice = parseInt(price).toLocaleString();
 
-                                                const confirmMessage = 'Purchase Confirmation:\n\n' +
+                                                const confirmMessage = 'Proceed to Payment:\n\n' +
                                                         'Package: ${studyPackage.name}\n' +
                                                         'Student: ' + selectedChildName + '\n' +
                                                         'Duration: ${studyPackage.duration_days} days\n' +
                                                         'Price: ' + formattedPrice + ' VND\n\n' +
-                                                        'This will provide individual access for ' + selectedChildName + ' only.\n\n' +
-                                                        'Do you want to proceed with the purchase?';
+                                                        'You will be redirected to VNPay for secure payment.\n\n' +
+                                                        'Do you want to proceed?';
 
                                                 if (!confirm(confirmMessage)) {
                                                     e.preventDefault();
                                                     return false;
                                                 }
+
+                                                // Show loading state
+                                                const btn = document.getElementById('purchaseBtn');
+                                                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirecting to VNPay...';
+                                                btn.disabled = true;
+
+                                                // Allow form to submit
+                                                return true;
                                             });
                                         }
 

@@ -144,6 +144,9 @@ public class StudyPackageController extends HttpServlet {
                 case "activate":
                     activateStudyPackage(request, response);
                     break;
+                case "checkoutForPayment":
+                    checkoutPackageForPayment(request, response);
+                    break;
                 default:
                     listStudyPackage(request, response);
                     break;
@@ -1217,5 +1220,59 @@ public class StudyPackageController extends HttpServlet {
     @Override
     public String getServletInfo() {
         return "Study Package Controller with package management";
+    }
+
+    private void checkoutPackageForPayment(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        Account account = (Account) session.getAttribute("account");
+
+        if (account == null || !RoleConstants.PARENT.equals(account.getRole())) {
+            response.sendRedirect("/error.jsp");
+            return;
+        }
+
+        try {
+            int packageId = Integer.parseInt(request.getParameter("packageId"));
+            String studentIdParam = request.getParameter("studentIds");
+
+            if (studentIdParam == null || studentIdParam.trim().isEmpty()) {
+                request.setAttribute("errorMessage", "Please select a student.");
+                checkoutStudyPackage(request, response);
+                return;
+            }
+
+            int studentId = Integer.parseInt(studentIdParam);
+            StudyPackage studyPackage = dao.findStudyPackageById(packageId);
+
+            if (studyPackage == null) {
+                request.setAttribute("errorMessage", "Study package not found.");
+                listStudyPackage(request, response);
+                return;
+            }
+
+            // Check if student already has this package
+            List<Integer> studentsWithPackage = dao.getStudentsWithPackageForParent(account.getId(), packageId);
+            if (studentsWithPackage.contains(studentId)) {
+                request.setAttribute("errorMessage", "Selected student already has this package.");
+                checkoutStudyPackage(request, response);
+                return;
+            }
+
+            // Store purchase info in session for payment processing
+            session.setAttribute("pendingPurchase_packageId", packageId);
+            session.setAttribute("pendingPurchase_studentId", studentId);
+            session.setAttribute("pendingPurchase_parentId", account.getId());
+            session.setAttribute("pendingPurchase_durationDays", studyPackage.getDuration_days());
+
+            // Redirect to payment controller with parameters
+            String redirectUrl = request.getContextPath() + "/payment?packageId=" + packageId + "&amount=" + studyPackage.getPrice();
+            response.sendRedirect(redirectUrl);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Error processing checkout: " + e.getMessage());
+            checkoutStudyPackage(request, response);
+        }
     }
 }
