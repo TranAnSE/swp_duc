@@ -1022,7 +1022,7 @@ public class StudyPackageController extends HttpServlet {
         }
 
         try {
-            List<Map<String, Object>> parentPackages = dao.getParentPackagesWithPurchaseHistory(account.getId());
+            List<Map<String, Object>> parentPackages = dao.getParentPackagesWithCorrectStats(account.getId());
             request.setAttribute("parentPackages", parentPackages);
             request.setAttribute("parent", account);
 

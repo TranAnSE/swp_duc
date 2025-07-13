@@ -515,7 +515,7 @@
                                     <div class="package-subtitle">
                                         Duration: ${packageInfo.durationDays} days per assignment<br>
                                         <span class="package-price">
-                                            <i class="fas fa-money-bill-wave"></i>${packageInfo.price} VND
+                                            <i class="fas fa-money-bill-wave"></i> ${packageInfo.price} VND
                                         </span>
                                     </div>
                                 </div>
@@ -530,25 +530,15 @@
                             <!-- Package Statistics -->
                             <div class="package-stats">
                                 <div class="stat-item">
-                                    <div class="stat-number">${packageInfo.maxStudents}</div>
-                                    <div class="stat-label">Slots Per Purchase</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-number">
-                                        <c:set var="totalSlots" value="0"/>
-                                        <c:forEach items="${packageInfo.purchaseHistory}" var="purchase">
-                                            <c:set var="totalSlots" value="${totalSlots + purchase.maxAssignableStudents}"/>
-                                        </c:forEach>
-                                        ${totalSlots}
-                                    </div>
+                                    <div class="stat-number">${packageInfo.totalPurchasedSlots}</div>
                                     <div class="stat-label">Total Purchased Slots</div>
                                 </div>
                                 <div class="stat-item">
-                                    <div class="stat-number">${packageInfo.activeAssignments}</div>
+                                    <div class="stat-number">${packageInfo.currentlyAssigned}</div>
                                     <div class="stat-label">Currently Assigned</div>
                                 </div>
                                 <div class="stat-item">
-                                    <div class="stat-number">${totalSlots - packageInfo.activeAssignments}</div>
+                                    <div class="stat-number">${packageInfo.availableSlots}</div>
                                     <div class="stat-label">Available Slots</div>
                                 </div>
                             </div>
