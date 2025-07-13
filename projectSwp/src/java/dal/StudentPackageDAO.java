@@ -23,23 +23,9 @@ public class StudentPackageDAO extends DBContext {
 
     // Assign package to student
     public boolean assignPackageToStudent(int studentId, int packageId, int parentId, int durationDays) {
-        // Check if parent has reached the limit
-        if (!hasParentAvailableSlots(parentId, packageId)) {
-            return false;
-        }
-
-        // Check if student has this package
-        if (hasStudentActivePackage(studentId, packageId)) {
-            return false;
-        }
-
-        String sql = "INSERT INTO student_package (student_id, package_id, parent_id, expires_at) VALUES (?, ?, ?, ?)";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, studentId);
-            ps.setInt(2, packageId);
-            ps.setInt(3, parentId);
-            ps.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now().plusDays(durationDays)));
-            return ps.executeUpdate() > 0;
+        // Use the new single student assignment logic
+        try {
+            return assignPackageToSingleStudent(studentId, packageId, parentId, durationDays);
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -847,5 +833,68 @@ public class StudentPackageDAO extends DBContext {
             e.printStackTrace();
         }
         return list;
+    }
+
+    /**
+     * Assign package to single student (new logic: 1 package = 1 student)
+     */
+    public boolean assignPackageToSingleStudent(int studentId, int packageId, int parentId, int durationDays) throws SQLException {
+        // Check if student already has this package
+        if (hasStudentActivePackage(studentId, packageId)) {
+            return false;
+        }
+
+        String sql = "INSERT INTO student_package (student_id, package_id, parent_id, expires_at, is_active, purchased_at) VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, packageId);
+            ps.setInt(3, parentId);
+            ps.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now().plusDays(durationDays)));
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Get parent's purchase summary for a package
+     */
+    public Map<String, Object> getParentPackageSummary(int parentId, int packageId) throws SQLException {
+        Map<String, Object> summary = new HashMap<>();
+
+        String sql = """
+        SELECT 
+            COUNT(*) as total_purchases,
+            COUNT(CASE WHEN is_active = 1 AND expires_at > NOW() THEN 1 END) as active_purchases,
+            COUNT(CASE WHEN expires_at <= NOW() THEN 1 END) as expired_purchases,
+            COUNT(CASE WHEN is_active = 0 THEN 1 END) as inactive_purchases,
+            MIN(purchased_at) as first_purchase,
+            MAX(purchased_at) as latest_purchase
+        FROM student_package 
+        WHERE parent_id = ? AND package_id = ?
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                summary.put("totalPurchases", rs.getInt("total_purchases"));
+                summary.put("activePurchases", rs.getInt("active_purchases"));
+                summary.put("expiredPurchases", rs.getInt("expired_purchases"));
+                summary.put("inactivePurchases", rs.getInt("inactive_purchases"));
+                summary.put("firstPurchase", rs.getTimestamp("first_purchase"));
+                summary.put("latestPurchase", rs.getTimestamp("latest_purchase"));
+            } else {
+                // No purchases yet
+                summary.put("totalPurchases", 0);
+                summary.put("activePurchases", 0);
+                summary.put("expiredPurchases", 0);
+                summary.put("inactivePurchases", 0);
+                summary.put("firstPurchase", null);
+                summary.put("latestPurchase", null);
+            }
+        }
+
+        return summary;
     }
 }

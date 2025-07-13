@@ -653,4 +653,144 @@ public class StudyPackageDAO extends DBContext {
 
         return packages;
     }
+
+    /**
+     * Check if parent has already purchased this package for any student
+     */
+    public boolean hasParentPurchasedPackage(int parentId, int packageId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM student_package WHERE parent_id = ? AND package_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get students who already have this package (for this parent)
+     */
+    public List<Integer> getStudentsWithPackageForParent(int parentId, int packageId) throws SQLException {
+        List<Integer> studentIds = new ArrayList<>();
+        String sql = """
+        SELECT sp.student_id 
+        FROM student_package sp 
+        WHERE sp.parent_id = ? AND sp.package_id = ? 
+        AND sp.is_active = 1 AND sp.expires_at > NOW()
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                studentIds.add(rs.getInt("student_id"));
+            }
+        }
+        return studentIds;
+    }
+
+    /**
+     * Get available children for package purchase (children without this
+     * package)
+     */
+    public List<Map<String, Object>> getAvailableChildrenForPackage(int parentId, int packageId) throws SQLException {
+        List<Map<String, Object>> children = new ArrayList<>();
+
+        String sql = """
+        SELECT 
+            s.id,
+            s.full_name,
+            s.username,
+            g.name as grade_name
+        FROM student s
+        JOIN grade g ON s.grade_id = g.id
+        WHERE s.parent_id = ?
+        AND s.id NOT IN (
+            SELECT sp.student_id 
+            FROM student_package sp 
+            WHERE sp.package_id = ? 
+            AND sp.is_active = 1 
+            AND sp.expires_at > NOW()
+        )
+        ORDER BY s.full_name
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> child = new HashMap<>();
+                child.put("id", rs.getInt("id"));
+                child.put("full_name", rs.getString("full_name"));
+                child.put("username", rs.getString("username"));
+                child.put("grade_name", rs.getString("grade_name"));
+                children.add(child);
+            }
+        }
+
+        return children;
+    }
+
+    /**
+     * Get children who already have this package (for display)
+     */
+    public List<Map<String, Object>> getChildrenWithPackage(int parentId, int packageId) throws SQLException {
+        List<Map<String, Object>> children = new ArrayList<>();
+
+        String sql = """
+        SELECT 
+            s.id,
+            s.full_name,
+            s.username,
+            g.name as grade_name,
+            sp.purchased_at,
+            sp.expires_at,
+            sp.is_active
+        FROM student s
+        JOIN grade g ON s.grade_id = g.id
+        JOIN student_package sp ON s.id = sp.student_id
+        WHERE s.parent_id = ? AND sp.package_id = ?
+        ORDER BY sp.purchased_at DESC
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> child = new HashMap<>();
+                child.put("id", rs.getInt("id"));
+                child.put("full_name", rs.getString("full_name"));
+                child.put("username", rs.getString("username"));
+                child.put("grade_name", rs.getString("grade_name"));
+                child.put("purchased_at", rs.getTimestamp("purchased_at"));
+                child.put("expires_at", rs.getTimestamp("expires_at"));
+                child.put("is_active", rs.getBoolean("is_active"));
+
+                // Calculate status
+                Timestamp expiresAt = rs.getTimestamp("expires_at");
+                boolean isActive = rs.getBoolean("is_active");
+                boolean isExpired = expiresAt.before(new Timestamp(System.currentTimeMillis()));
+
+                if (isActive && !isExpired) {
+                    child.put("status", "ACTIVE");
+                } else if (isExpired) {
+                    child.put("status", "EXPIRED");
+                } else {
+                    child.put("status", "INACTIVE");
+                }
+
+                children.add(child);
+            }
+        }
+
+        return children;
+    }
 }
