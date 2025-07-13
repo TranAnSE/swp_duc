@@ -547,25 +547,23 @@
                             <c:if test="${not empty packageInfo.purchaseHistory}">
                                 <div class="assignments-section">
                                     <div class="section-title">
-                                        <i class="fas fa-receipt"></i> Purchase History (${fn:length(packageInfo.purchaseHistory)} purchases)
+                                        <i class="fas fa-receipt"></i> Assignment History (${fn:length(packageInfo.purchaseHistory)} assignments)
                                     </div>
                                     <div class="assignment-grid">
-                                        <c:forEach items="${packageInfo.purchaseHistory}" var="purchase">
+                                        <c:forEach items="${packageInfo.purchaseHistory}" var="assignment">
                                             <div class="student-assignment" style="border-left-color: #17a2b8;">
                                                 <div class="student-name">
-                                                    <i class="fas fa-shopping-cart"></i> Purchase #${purchase.purchaseId}
+                                                    <i class="fas fa-user"></i> ${assignment.studentName}
                                                 </div>
                                                 <div class="assignment-info">
                                                     <div><strong>Date:</strong> 
-                                                        <fmt:formatDate value="${purchase.purchaseDate}" pattern="dd/MM/yyyy HH:mm"/>
+                                                        <fmt:formatDate value="${assignment.purchaseDate}" pattern="dd/MM/yyyy HH:mm"/>
                                                     </div>
-                                                    <div><strong>Amount:</strong> ${purchase.totalAmount} VND</div>
-                                                    <div><strong>Slots Purchased:</strong> ${purchase.maxAssignableStudents}</div>
-                                                    <div><strong>Students Assigned:</strong> ${purchase.studentsAssigned}</div>
-                                                    <div><strong>Available:</strong> ${purchase.maxAssignableStudents - purchase.studentsAssigned}</div>
+                                                    <div><strong>Amount:</strong> ${assignment.totalAmount} VND</div>
+                                                    <div><strong>Duration:</strong> ${packageInfo.durationDays} days</div>
                                                 </div>
-                                                <span class="status-badge status-${purchase.status == 'COMPLETED' ? 'active' : 'inactive'}">
-                                                    ${purchase.status}
+                                                <span class="status-badge status-${assignment.status == 'ACTIVE' ? 'active' : 'inactive'}">
+                                                    ${assignment.status}
                                                 </span>
                                             </div>
                                         </c:forEach>

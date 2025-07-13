@@ -581,64 +581,6 @@ public class StudyPackageDAO extends DBContext {
         return n;
     }
 
-    /**
-     * Get packages purchased by parent with purchase history details
-     */
-    public List<Map<String, Object>> getParentPackagesWithPurchaseHistory(int parentId) {
-        List<Map<String, Object>> packages = new ArrayList<>();
-        String sql = """
-        SELECT DISTINCT
-            sp.package_id,
-            pkg.name as package_name,
-            pkg.max_students,
-            pkg.price,
-            pkg.duration_days,
-            MIN(sp.purchased_at) as first_purchase_date,
-            COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as active_assignments,
-            COUNT(*) as total_assignments
-        FROM student_package sp
-        JOIN study_package pkg ON sp.package_id = pkg.id
-        WHERE sp.parent_id = ?
-        GROUP BY sp.package_id, pkg.name, pkg.max_students, pkg.price, pkg.duration_days
-        ORDER BY MIN(sp.purchased_at) DESC
-        """;
-
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, parentId);
-            ResultSet rs = ps.executeQuery();
-
-            while (rs.next()) {
-                Map<String, Object> packageInfo = new HashMap<>();
-                int packageId = rs.getInt("package_id");
-
-                packageInfo.put("packageId", packageId);
-                packageInfo.put("packageName", rs.getString("package_name"));
-                packageInfo.put("maxStudents", rs.getInt("max_students"));
-                packageInfo.put("price", rs.getString("price"));
-                packageInfo.put("durationDays", rs.getInt("duration_days"));
-                packageInfo.put("firstPurchaseDate", rs.getTimestamp("first_purchase_date"));
-                packageInfo.put("activeAssignments", rs.getInt("active_assignments"));
-                packageInfo.put("totalAssignments", rs.getInt("total_assignments"));
-
-                // Get detailed assignments for this package
-                packageInfo.put("assignments", getPackageAssignmentDetails(packageId, parentId));
-
-                // Get purchase history for this package
-                PackagePurchaseDAO purchaseDAO = new PackagePurchaseDAO();
-                packageInfo.put("purchaseHistory", purchaseDAO.getParentPurchaseHistory(parentId, packageId));
-
-                packages.add(packageInfo);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return packages;
-    }
-
-    /**
-     * Get parent's packages with correct purchase and assignment statistics
-     */
     public List<Map<String, Object>> getParentPackagesWithCorrectStats(int parentId) {
         List<Map<String, Object>> packages = new ArrayList<>();
         String sql = """
@@ -650,53 +592,59 @@ public class StudyPackageDAO extends DBContext {
         pkg.price,
         pkg.duration_days,
         MIN(sp.purchased_at) as first_purchase_date,
-        -- Calculate total purchased slots across all purchases
-        (SELECT COALESCE(SUM(pp.max_assignable_students), 0) 
-         FROM package_purchase pp 
-         WHERE pp.parent_id = ? AND pp.package_id = sp.package_id AND pp.status = 'COMPLETED') as total_purchased_slots,
-        -- Calculate currently assigned students
-        COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as currently_assigned
+        COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as currently_assigned,
+        COUNT(*) as total_assignments,
+        pkg.description,
+        sub.name as subject_name,
+        g.name as grade_name
     FROM student_package sp
     JOIN study_package pkg ON sp.package_id = pkg.id
+    LEFT JOIN subject sub ON pkg.subject_id = sub.id
+    LEFT JOIN grade g ON sub.grade_id = g.id
     WHERE sp.parent_id = ?
-    GROUP BY sp.package_id, pkg.course_title, pkg.name, pkg.max_students, pkg.price, pkg.duration_days
+    GROUP BY sp.package_id, pkg.course_title, pkg.name, pkg.max_students, 
+             pkg.price, pkg.duration_days, pkg.description, sub.name, g.name
     ORDER BY MIN(sp.purchased_at) DESC
     """;
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, parentId);
-            ps.setInt(2, parentId);
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
                 Map<String, Object> packageInfo = new HashMap<>();
                 int packageId = rs.getInt("package_id");
-                int totalPurchasedSlots = rs.getInt("total_purchased_slots");
                 int currentlyAssigned = rs.getInt("currently_assigned");
-                int availableSlots = Math.max(0, totalPurchasedSlots - currentlyAssigned);
+                int maxStudents = rs.getInt("max_students");
+                int availableSlots = Math.max(0, maxStudents - currentlyAssigned);
 
                 packageInfo.put("packageId", packageId);
-                // Use course_title if available, otherwise use name
+
                 String courseTitle = rs.getString("course_title");
                 String packageName = rs.getString("package_name");
-                packageInfo.put("packageName", (courseTitle != null && !courseTitle.trim().isEmpty()) ? courseTitle : packageName);
+                packageInfo.put("packageName",
+                        (courseTitle != null && !courseTitle.trim().isEmpty()) ? courseTitle : packageName);
 
-                packageInfo.put("maxStudents", rs.getInt("max_students"));
+                packageInfo.put("maxStudents", maxStudents);
                 packageInfo.put("price", rs.getString("price"));
                 packageInfo.put("durationDays", rs.getInt("duration_days"));
                 packageInfo.put("firstPurchaseDate", rs.getTimestamp("first_purchase_date"));
+                packageInfo.put("description", rs.getString("description"));
+                packageInfo.put("subjectName", rs.getString("subject_name"));
+                packageInfo.put("gradeName", rs.getString("grade_name"));
 
-                // Correct statistics
-                packageInfo.put("totalPurchasedSlots", totalPurchasedSlots);
+                // Statistics
+                packageInfo.put("totalPurchasedSlots", currentlyAssigned);
                 packageInfo.put("currentlyAssigned", currentlyAssigned);
                 packageInfo.put("availableSlots", availableSlots);
+                packageInfo.put("totalAssignments", rs.getInt("total_assignments"));
 
-                // Get detailed assignments for this package
+                // Get detailed assignments
                 packageInfo.put("assignments", getPackageAssignmentDetails(packageId, parentId));
 
-                // Get purchase history for this package
-                PackagePurchaseDAO purchaseDAO = new PackagePurchaseDAO();
-                packageInfo.put("purchaseHistory", purchaseDAO.getParentPurchaseHistory(parentId, packageId));
+                // Get purchase history
+                StudentPackageDAO studentPackageDAO = new StudentPackageDAO();
+                packageInfo.put("purchaseHistory", studentPackageDAO.getParentPurchaseHistory(parentId, packageId));
 
                 packages.add(packageInfo);
             }

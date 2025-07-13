@@ -10,7 +10,6 @@ import dal.InvoiceDAO;
 import dal.StudyPackageDAO;
 import dal.StudentPackageDAO;
 import dal.GradeDAO;
-import dal.PackagePurchaseDAO;
 import dal.StudentDAO;
 import model.StudyPackage;
 import model.StudentPackage;
@@ -76,9 +75,6 @@ public class StudyPackageController extends HttpServlet {
             switch (service) {
                 case "search":
                     searchStudyPackage(request, response);
-                    break;
-                case "checkout":
-                    checkoutStudyPackage(request, response);
                     break;
                 case "detail":
                     showDetail(request, response);
@@ -233,17 +229,9 @@ public class StudyPackageController extends HttpServlet {
                 Account account = (Account) session.getAttribute("account");
 
                 if (account != null && RoleConstants.PARENT.equals(account.getRole())) {
-                    // Get parent's total available slots across all purchases
                     Map<String, Integer> slotInfo = studentPackageDAO.getParentTotalAvailableSlots(account.getId(), id);
-                    int totalPurchasedSlots = slotInfo.getOrDefault("totalPurchasedSlots", 0);
                     int currentlyAssigned = slotInfo.getOrDefault("currentlyAssigned", 0);
-                    int availableSlots = slotInfo.getOrDefault("availableSlots", 0);
-
-                    // For first-time buyers, they have 0 purchased slots but can still purchase
-                    // Available slots should be the package's max_students for new buyers
-                    if (totalPurchasedSlots == 0) {
-                        availableSlots = sp.getMax_students(); // Allow full package capacity for new purchase
-                    }
+                    int availableSlots = slotInfo.getOrDefault("availableSlots", 1);
 
                     request.setAttribute("packageId", id);
                     request.setAttribute("packageName", sp.getName());
@@ -251,13 +239,11 @@ public class StudyPackageController extends HttpServlet {
                     request.setAttribute("userId", account.getId());
                     request.setAttribute("studyPackage", sp);
 
-                    // Add comprehensive package statistics
-                    request.setAttribute("totalPurchasedSlots", totalPurchasedSlots);
                     request.setAttribute("currentlyAssigned", currentlyAssigned);
                     request.setAttribute("availableSlots", availableSlots);
                     request.setAttribute("maxStudentsPerPurchase", sp.getMax_students());
 
-                    // Get parent's children and separate available vs unavailable
+                    // Get children
                     try {
                         List<Student> allChildren = studentDAO.getStudentsByParentId(account.getId());
                         List<Integer> studentsWithPackage = studentPackageDAO.getStudentsWithActivePackage(id);
@@ -276,27 +262,21 @@ public class StudyPackageController extends HttpServlet {
                         request.setAttribute("children", availableChildren);
                         request.setAttribute("unavailableChildren", unavailableChildren);
 
-                        // Get grades for display
-                        List<Grade> grades = gradeDAO.findAllFromGrade();
-                        request.setAttribute("gradeList", grades);
-
-                        // Add purchase history information
                         List<Map<String, Object>> purchaseHistory = studentPackageDAO.getParentPurchaseHistory(account.getId(), id);
                         request.setAttribute("purchaseHistory", purchaseHistory);
 
-                        // Add informational messages
                         if (!unavailableChildren.isEmpty()) {
                             request.setAttribute("infoMessage",
-                                    unavailableChildren.size() + " of your children already have this package and cannot be selected again.");
+                                    unavailableChildren.size() + " of your children already have this package.");
                         }
 
-                        if (totalPurchasedSlots > 0) {
+                        if (currentlyAssigned > 0) {
                             request.setAttribute("purchaseInfoMessage",
-                                    "You have purchased " + totalPurchasedSlots + " total slots for this package. "
-                                    + "Currently assigned: " + currentlyAssigned + ", Available: " + availableSlots);
+                                    "You have assigned this package to " + currentlyAssigned + " student(s). "
+                                    + "Available slots: " + availableSlots);
                         } else {
                             request.setAttribute("purchaseInfoMessage",
-                                    "This is your first purchase of this package. You can assign up to " + sp.getMax_students() + " students.");
+                                    "You can assign this package to up to " + sp.getMax_students() + " student(s).");
                         }
 
                     } catch (Exception e) {
@@ -304,13 +284,7 @@ public class StudyPackageController extends HttpServlet {
                     }
 
                     request.getRequestDispatcher("/studypackage/purchase.jsp").forward(request, response);
-                } else {
-                    request.setAttribute("errorMessage", "Only parents can purchase study packages.");
-                    listStudyPackage(request, response);
                 }
-            } else {
-                request.setAttribute("errorMessage", "Study package not found for payment.");
-                listStudyPackage(request, response);
             }
         } catch (Exception e) {
             request.setAttribute("errorMessage", "Processing error: " + e.getMessage());
@@ -910,55 +884,68 @@ public class StudyPackageController extends HttpServlet {
                     return;
                 }
 
-                // Get parent's total available slots across all purchases
+                // available slots
                 Map<String, Integer> slotInfo = studentPackageDAO.getParentTotalAvailableSlots(account.getId(), packageId);
-                int availableSlots = slotInfo.getOrDefault("availableSlots", 0);
+                int availableSlots = slotInfo.getOrDefault("availableSlots", 1);
 
-                // Check if need to purchase more slots
                 if (studentIds.length > availableSlots) {
-                    // Create a new purchase for the additional slots needed
-                    PackagePurchaseDAO purchaseDAO = new PackagePurchaseDAO();
-                    int slotsNeeded = studentIds.length - availableSlots;
+                    request.setAttribute("errorMessage",
+                            "Cannot assign " + studentIds.length + " student(s). You have only " + availableSlots + " available slot(s).");
+                    checkoutStudyPackage(request, response);
+                    return;
+                }
 
-                    // Create purchase record
-                    int purchaseId = purchaseDAO.createPurchase(
-                            account.getId(),
-                            packageId,
-                            studyPackage.getPrice(),
-                            studyPackage.getMax_students() // Each purchase gives max_students slots
-                    );
+                InvoiceDAO invoiceDAO = new InvoiceDAO();
+                Invoice invoice = new Invoice();
+                invoice.setTotal_amount(studyPackage.getPrice());
+                invoice.setParent_id(account.getId());
+                invoice.setCreated_at(LocalDate.now());
+                invoice.setStatus("Completed");
+                invoice.setPay_at(LocalDate.now());
 
-                    if (purchaseId > 0) {
-                        // Create invoice
-                        InvoiceDAO invoiceDAO = new InvoiceDAO();
-                        Invoice invoice = new Invoice();
-                        invoice.setTotal_amount(studyPackage.getPrice());
-                        invoice.setParent_id(account.getId());
-                        invoice.setCreated_at(LocalDate.now());
-                        invoice.setStatus("Completed");
-                        invoice.setPay_at(LocalDate.now());
+                int invoiceId = invoiceDAO.insertInvoice(invoice);
 
-                        int invoiceId = invoiceDAO.insertInvoice(invoice);
+                if (invoiceId > 0) {
+                    int successCount = 0;
+                    List<String> failedStudents = new ArrayList<>();
 
-                        if (invoiceId > 0) {
-                            // Complete the purchase
-                            purchaseDAO.completePurchase(purchaseId, invoiceId);
+                    for (String studentIdStr : studentIds) {
+                        try {
+                            int studentId = Integer.parseInt(studentIdStr);
+                            boolean assigned = studentPackageDAO.assignPackageToStudent(
+                                    studentId, packageId, account.getId(), studyPackage.getDuration_days()
+                            );
 
-                            // Add invoice line
-                            invoiceDAO.insertInvoiceLine(invoiceId, packageId);
-
-                            // Now assign students using the new purchase tracking system
-                            assignStudentsWithPurchaseTracking(studentIds, packageId, account.getId(), studyPackage.getDuration_days(), request, response);
-                            return;
+                            if (assigned) {
+                                successCount++;
+                                // Add invoice line
+                                invoiceDAO.insertInvoiceLine(invoiceId, packageId);
+                                invoiceDAO.updateInvoiceLineWithStudent(invoiceId, studentId);
+                            } else {
+                                try {
+                                    Student student = studentDAO.findById(studentId);
+                                    failedStudents.add(student != null ? student.getFull_name() : "ID:" + studentId);
+                                } catch (SQLException e) {
+                                    failedStudents.add("ID:" + studentId);
+                                }
+                            }
+                        } catch (NumberFormatException e) {
+                            failedStudents.add("Invalid ID: " + studentIdStr);
                         }
                     }
 
-                    request.setAttribute("errorMessage", "Failed to create purchase record.");
-                    checkoutStudyPackage(request, response);
-                    return;
+                    if (successCount > 0) {
+                        request.setAttribute("message",
+                                "Study package successfully assigned to " + successCount + " student(s)!");
+                        showMyPackages(request, response);
+                    } else {
+                        request.setAttribute("errorMessage",
+                                "Assignment failed for all students: " + String.join(", ", failedStudents));
+                        checkoutStudyPackage(request, response);
+                    }
                 } else {
-                    // Use existing available slots
-                    assignStudentsWithPurchaseTracking(studentIds, packageId, account.getId(), studyPackage.getDuration_days(), request, response);
+                    request.setAttribute("errorMessage", "Failed to create invoice for assignment.");
+                    checkoutStudyPackage(request, response);
                 }
 
             } catch (Exception e) {

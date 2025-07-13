@@ -14,7 +14,6 @@ import java.util.Map;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import model.PackagePurchase;
 
 /**
  *
@@ -22,10 +21,18 @@ import model.PackagePurchase;
  */
 public class StudentPackageDAO extends DBContext {
 
-    private PackagePurchaseDAO packagePurchaseDAO = new PackagePurchaseDAO();
-
     // Assign package to student
     public boolean assignPackageToStudent(int studentId, int packageId, int parentId, int durationDays) {
+        // Check if parent has reached the limit
+        if (!hasParentAvailableSlots(parentId, packageId)) {
+            return false;
+        }
+
+        // Check if student has this package
+        if (hasStudentActivePackage(studentId, packageId)) {
+            return false;
+        }
+
         String sql = "INSERT INTO student_package (student_id, package_id, parent_id, expires_at) VALUES (?, ?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, studentId);
@@ -721,63 +728,22 @@ public class StudentPackageDAO extends DBContext {
     }
 
     public boolean assignPackageToStudentWithPurchase(int studentId, int packageId, int parentId, int durationDays) {
-        // Find an available purchase for this parent and package
-        PackagePurchase availablePurchase = packagePurchaseDAO.getAvailablePurchaseForAssignment(parentId, packageId);
-
-        if (availablePurchase == null) {
-            System.out.println("No available purchase found for parent " + parentId + " and package " + packageId);
-            return false;
-        }
-
-        // Check if student already has active package
-        if (hasStudentActivePackage(studentId, packageId)) {
-            System.out.println("Student " + studentId + " already has active package " + packageId);
-            return false;
-        }
-
-        String sql = "INSERT INTO student_package (student_id, package_id, parent_id, expires_at, purchase_id) VALUES (?, ?, ?, ?, ?)";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, studentId);
-            ps.setInt(2, packageId);
-            ps.setInt(3, parentId);
-            ps.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now().plusDays(durationDays)));
-            ps.setInt(5, availablePurchase.getId());
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
+        return assignPackageToStudent(studentId, packageId, parentId, durationDays);
     }
 
     // Get parent's total available slots across all purchases
     public Map<String, Integer> getParentTotalAvailableSlots(int parentId, int packageId) {
         Map<String, Integer> result = new HashMap<>();
 
-        // First check if parent has any purchases for this package
-        String purchaseCheckSql = "SELECT COUNT(*) as purchase_count FROM package_purchase WHERE parent_id = ? AND package_id = ? AND status = 'COMPLETED'";
-
-        try (PreparedStatement ps = connection.prepareStatement(purchaseCheckSql)) {
-            ps.setInt(1, parentId);
-            ps.setInt(2, packageId);
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                int purchaseCount = rs.getInt("purchase_count");
-
-                if (purchaseCount == 0) {
-                    // Parent has never purchased this package
-                    result.put("totalPurchasedSlots", 0);
-                    result.put("currentlyAssigned", 0);
-                    result.put("availableSlots", 0); // Will be handled in controller for new purchases
-                    return result;
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        // If parent has purchases, use the existing view
-        String sql = "SELECT * FROM parent_package_available_slots WHERE parent_id = ? AND package_id = ?";
+        String sql = """
+            SELECT 
+                pkg.max_students as max_per_parent,
+                COUNT(CASE WHEN sp.is_active = 1 AND sp.expires_at > NOW() THEN 1 END) as currently_assigned
+            FROM study_package pkg
+            LEFT JOIN student_package sp ON pkg.id = sp.package_id AND sp.parent_id = ?
+            WHERE pkg.id = ?
+            GROUP BY pkg.max_students
+        """;
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, parentId);
@@ -785,18 +751,20 @@ public class StudentPackageDAO extends DBContext {
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
-                result.put("totalPurchasedSlots", rs.getInt("total_purchased_slots"));
-                result.put("currentlyAssigned", rs.getInt("currently_assigned"));
-                result.put("availableSlots", rs.getInt("available_slots"));
+                int maxPerParent = rs.getInt("max_per_parent");
+                int currentlyAssigned = rs.getInt("currently_assigned");
+                int availableSlots = Math.max(0, maxPerParent - currentlyAssigned);
+
+                result.put("totalPurchasedSlots", currentlyAssigned); // Đổi tên để phù hợp
+                result.put("currentlyAssigned", currentlyAssigned);
+                result.put("availableSlots", availableSlots);
             } else {
-                // Fallback - parent has no completed purchases
                 result.put("totalPurchasedSlots", 0);
                 result.put("currentlyAssigned", 0);
-                result.put("availableSlots", 0);
+                result.put("availableSlots", 1); // Max students luôn là 1
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            // Set default values if error occurs
             result.put("totalPurchasedSlots", 0);
             result.put("currentlyAssigned", 0);
             result.put("availableSlots", 0);
@@ -805,21 +773,41 @@ public class StudentPackageDAO extends DBContext {
         return result;
     }
 
-// Updated method to count parent assigned students across all purchases
-    public int countParentAssignedStudentsTotal(int parentId, int packageId) {
-        Map<String, Integer> slots = getParentTotalAvailableSlots(parentId, packageId);
-        return slots.getOrDefault("currentlyAssigned", 0);
-    }
-
-// Check if parent has any available slots across all purchases
-    public boolean hasParentAvailableSlotsAcrossPurchases(int parentId, int packageId) {
-        Map<String, Integer> slots = getParentTotalAvailableSlots(parentId, packageId);
-        return slots.getOrDefault("availableSlots", 0) > 0;
-    }
-
-// Get parent's purchase history
+    // Get parent's purchase history
     public List<Map<String, Object>> getParentPurchaseHistory(int parentId, int packageId) {
-        return packagePurchaseDAO.getParentPurchaseHistory(parentId, packageId);
+        List<Map<String, Object>> history = new ArrayList<>();
+
+        String sql = """
+        SELECT 
+            purchase_date,
+            total_amount,
+            student_name,
+            status
+        FROM parent_purchase_history
+        WHERE parent_id = ? AND package_id = ?
+        ORDER BY purchase_date DESC
+    """;
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, parentId);
+            ps.setInt(2, packageId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> purchase = new HashMap<>();
+                purchase.put("purchaseDate", rs.getTimestamp("purchase_date"));
+                purchase.put("totalAmount", rs.getString("total_amount"));
+                purchase.put("studentName", rs.getString("student_name"));
+                purchase.put("status", rs.getString("status"));
+                purchase.put("maxAssignableStudents", 1);
+                purchase.put("studentsAssigned", 1);
+                history.add(purchase);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return history;
     }
 
     /**
