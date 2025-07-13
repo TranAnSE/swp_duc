@@ -891,4 +891,178 @@ public class TestDAO extends DBContext {
 
         return 0;
     }
+
+    /**
+     * Get tests grouped by course for a specific student Only returns tests
+     * from courses the student has access to
+     */
+    public Map<String, List<Map<String, Object>>> getTestsByCourseForStudent(int studentId) {
+        Map<String, List<Map<String, Object>>> testsByCourse = new LinkedHashMap<>();
+
+        String sql = """
+        SELECT DISTINCT
+            t.id as test_id,
+            t.name as test_name,
+            t.description as test_description,
+            t.is_practice,
+            t.duration_minutes,
+            t.num_questions,
+            t.test_order,
+            sp.id as course_id,
+            COALESCE(sp.course_title, sp.name) as course_name,
+            s.name as subject_name,
+            g.name as grade_name,
+            c.name as chapter_name,
+            -- Check if student has taken this test (for official tests only)
+            CASE 
+                WHEN t.is_practice = 0 THEN 
+                    (SELECT COUNT(*) FROM test_record tr 
+                     WHERE tr.student_id = ? AND tr.test_id = t.id AND tr.finish_at IS NOT NULL) > 0
+                ELSE 0
+            END as has_taken
+        FROM test t
+        JOIN study_package sp ON t.course_id = sp.id
+        LEFT JOIN subject s ON sp.subject_id = s.id
+        LEFT JOIN grade g ON s.grade_id = g.id
+        LEFT JOIN chapter c ON t.chapter_id = c.id
+        WHERE t.course_id IS NOT NULL
+        AND EXISTS (
+            SELECT 1 FROM student_package stp 
+            WHERE stp.student_id = ? 
+            AND stp.package_id = sp.id 
+            AND stp.is_active = 1 
+            AND stp.expires_at > NOW()
+        )
+        ORDER BY 
+            course_name,
+            CASE WHEN t.chapter_id IS NULL THEN 0 ELSE 1 END,
+            c.name,
+            t.test_order,
+            t.name
+    """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, studentId);
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                String courseName = rs.getString("course_name");
+                String subjectName = rs.getString("subject_name");
+                String gradeName = rs.getString("grade_name");
+
+                // Create course display name
+                String courseDisplayName = courseName;
+                if (subjectName != null && gradeName != null) {
+                    courseDisplayName = courseName + " (" + subjectName + " - " + gradeName + ")";
+                }
+
+                Map<String, Object> testInfo = new HashMap<>();
+                testInfo.put("test_id", rs.getInt("test_id"));
+                testInfo.put("test_name", rs.getString("test_name"));
+                testInfo.put("test_description", rs.getString("test_description"));
+                testInfo.put("is_practice", rs.getBoolean("is_practice"));
+                testInfo.put("duration_minutes", rs.getInt("duration_minutes"));
+                testInfo.put("num_questions", rs.getInt("num_questions"));
+                testInfo.put("test_order", rs.getInt("test_order"));
+                testInfo.put("course_id", rs.getInt("course_id"));
+                testInfo.put("course_name", courseName);
+                testInfo.put("chapter_name", rs.getString("chapter_name"));
+                testInfo.put("has_taken", rs.getBoolean("has_taken"));
+
+                // Group by course
+                testsByCourse.computeIfAbsent(courseDisplayName, k -> new ArrayList<>()).add(testInfo);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return testsByCourse;
+    }
+
+    /**
+     * Get standalone tests (not associated with any course) for student
+     */
+    public List<Map<String, Object>> getStandaloneTestsForStudent(int studentId) {
+        List<Map<String, Object>> tests = new ArrayList<>();
+
+        String sql = """
+        SELECT 
+            t.id as test_id,
+            t.name as test_name,
+            t.description as test_description,
+            t.is_practice,
+            t.duration_minutes,
+            t.num_questions,
+            -- Check if student has taken this test (for official tests only)
+            CASE 
+                WHEN t.is_practice = 0 THEN 
+                    (SELECT COUNT(*) FROM test_record tr 
+                     WHERE tr.student_id = ? AND tr.test_id = t.id AND tr.finish_at IS NOT NULL) > 0
+                ELSE 0
+            END as has_taken
+        FROM test t
+        WHERE t.course_id IS NULL
+        ORDER BY 
+            CASE WHEN t.is_practice = 1 THEN 0 ELSE 1 END,
+            t.name
+    """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Map<String, Object> testInfo = new HashMap<>();
+                testInfo.put("test_id", rs.getInt("test_id"));
+                testInfo.put("test_name", rs.getString("test_name"));
+                testInfo.put("test_description", rs.getString("test_description"));
+                testInfo.put("is_practice", rs.getBoolean("is_practice"));
+                testInfo.put("duration_minutes", rs.getInt("duration_minutes"));
+                testInfo.put("num_questions", rs.getInt("num_questions"));
+                testInfo.put("has_taken", rs.getBoolean("has_taken"));
+
+                tests.add(testInfo);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return tests;
+    }
+
+    /**
+     * Check if student has access to a specific test
+     */
+    public boolean hasStudentAccessToTest(int studentId, int testId) {
+        String sql = """
+        SELECT COUNT(*) FROM test t
+        LEFT JOIN study_package sp ON t.course_id = sp.id
+        LEFT JOIN student_package stp ON (stp.package_id = sp.id AND stp.student_id = ?)
+        WHERE t.id = ?
+        AND (
+            t.course_id IS NULL  -- Standalone test
+            OR (
+                stp.is_active = 1 
+                AND stp.expires_at > NOW()
+            )
+        )
+    """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            ps.setInt(2, testId);
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
 }

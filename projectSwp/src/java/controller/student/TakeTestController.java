@@ -116,22 +116,32 @@ public class TakeTestController extends HttpServlet {
                 return;
             }
 
-            List<Test> practiceTests = testDAO.getTestsByType(true);
-            List<Test> officialTests = testDAO.getTestsByType(false);
+            // Get tests grouped by course for this student
+            Map<String, List<Map<String, Object>>> testsByCourse = testDAO.getTestsByCourseForStudent(student.getId());
 
-            // Check which official tests student has already taken
-            Map<Integer, Boolean> takenTests = new HashMap<>();
-            for (Test test : officialTests) {
-                boolean hasTaken = testRecordDAO.hasStudentTakenTest(student.getId(), test.getId());
-                takenTests.put(test.getId(), hasTaken);
+            // Get standalone tests (not associated with any course)
+            List<Map<String, Object>> standaloneTests = testDAO.getStandaloneTestsForStudent(student.getId());
+
+            // Separate practice and official standalone tests
+            List<Map<String, Object>> standalonePracticeTests = new ArrayList<>();
+            List<Map<String, Object>> standaloneOfficialTests = new ArrayList<>();
+
+            for (Map<String, Object> test : standaloneTests) {
+                boolean isPractice = (Boolean) test.get("is_practice");
+                if (isPractice) {
+                    standalonePracticeTests.add(test);
+                } else {
+                    standaloneOfficialTests.add(test);
+                }
             }
 
-            request.setAttribute("practiceTests", practiceTests);
-            request.setAttribute("officialTests", officialTests);
-            request.setAttribute("takenTests", takenTests);
+            request.setAttribute("testsByCourse", testsByCourse);
+            request.setAttribute("standalonePracticeTests", standalonePracticeTests);
+            request.setAttribute("standaloneOfficialTests", standaloneOfficialTests);
 
             RequestDispatcher dispatcher = request.getRequestDispatcher("/student/testList.jsp");
             dispatcher.forward(request, response);
+
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
@@ -151,6 +161,13 @@ public class TakeTestController extends HttpServlet {
             if (student == null) {
                 System.out.println("No student found in session! Redirecting to login");
                 response.sendRedirect("/login.jsp");
+                return;
+            }
+
+            // Check if student has access to this test
+            if (!testDAO.hasStudentAccessToTest(student.getId(), testId)) {
+                request.setAttribute("error", "Bạn không có quyền truy cập bài test này!");
+                showTestList(request, response);
                 return;
             }
 
